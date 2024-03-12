@@ -1,1 +1,1 @@
-Before running the code make sure that the .mat files which are empty are deleted from the impot folder.
+Before running the code make sure that the .mat files "XP_PARAM" which are empty are deleted from the source files. We can alter the code so that it ignores them but for now i think it's fine like this
