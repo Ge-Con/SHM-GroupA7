@@ -45,9 +45,12 @@ def list_files(dir):
 
                             # Write the DataFrame to CSV
                             data.to_csv(csv_file_path, index=False)
+                        elif (key == "Trigger_Info"):
+                            data = pd.DataFrame(flattened_data)
+                            data.to_csv(csv_file_path, index=False)
                         else:
-                            print(f"Array length is not divisible by 9 for key {key}. Skipping.")
-                    # Extract all numeric values from the loaded .mat file
+                            print(f"Data format invalid for key {key}. Skipping.")
+                
 
 
-list_files(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
+list_files(r"YOUR-DIRECTORY-HERE\PZT-L1-03") #This should be the directory leading up to the main PZT file. 
