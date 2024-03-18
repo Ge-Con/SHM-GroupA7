@@ -22,4 +22,4 @@ def make_features(sensor, samples):
 
     return features
 
-print(make_features(test_data.get_data(), 2000))
+#print(make_features(test_data.get_data(), 2000))
