@@ -2,6 +2,14 @@ import numpy as np
 import torch
 import scipy
 
+
+#Monotonicity (Mo)
+
+
+#Trendability (Tr)
+
+#Prognosability (Pr)
+
 def train_regressor_nn(n_features, n_hidden_neurons, learning_rate, n_epochs, X, Y):
 
     # Define the model:
