@@ -62,5 +62,5 @@ def PCA(X, n):
 
 X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
-explained_variance_ratio = np.sum(eigenvalues / total_variance)*100
-print("Total Explained Variance Ratio:", explained_variance_ratio, "%")
+explained_variance = np.sum(eigenvalues / total_variance)*100
+print("Total explained variance:", explained_variance, "%")
