@@ -17,11 +17,12 @@ breast_dataset = pd.DataFrame(final_breast_data)
 def PCA(X, num_components):
 
     #1. Finding normalized matrix
-    X = StandardScaler().fit_transform(X)
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
     #2. Finding covariance matrix
 
     #3. Finding eigenvectors+values
-    eigenvalues,  eigenvectors = np.linalg.eig(X.cov())
+    eigenvalues,  eigenvectors = np.linalg.eig(np.cov(X, rowvar=False))
 
     #4. Sort eigenvectors+values
     idx = eigenvalues.argsort()[::-1]
@@ -30,6 +31,6 @@ def PCA(X, num_components):
     PC = eigenvectors[:num_components]
 
     #5. Transform original data
-    X_transf = PC.fit_transform(X)
+    X_transf = scaler.fit_transform(X)
 
 PCA(breast_dataset,2)
