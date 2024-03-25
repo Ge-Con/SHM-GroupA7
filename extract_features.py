@@ -142,13 +142,20 @@ def feature_correlation(features):
 
     return features
 
+def time_to_feature(data):
+    data = data[1::]
+    features = np.empty((len(data), 19))
 
-test = np.array([[1, 4, 5, 7, 3, 4, 6, 3, 4, 3, 4, 6, 7, 5, 3, 5, 7, 5], [2, 3, 5, 6, 3, 4, 5, 4, 5, 8, 7, 4, 3, 5, 4, 3, 2, 4], [2, 3, 1, 5, 3, 2, 3, 5, 8, 6, 4, 12, 5, 1, 2, 3, 3, 4], [2, 3, 1, 5, 3, 2, 3, 5, 8, 6, 4, 12, 5, 1, 2, 3, 3, 4]])
+    for i in range(len(data)):
+        features[i] = Time_domain_features(data[i])
 
-#19 rows if time domain, 14 if frequency domain
-features = np.empty((len(test), 19))
+    return feature_correlation(features)
 
-for i in range(len(test)):
-    features[i] = Time_domain_features(test[i])
+def freq_to_feature(data):
+    data = data[1::]
+    features = np.empty((len(data), 14))
 
-print(feature_correlation(features))
+    for i in range(len(data)):
+        features[i] = Frequency_domain_features(data[i])
+
+    return feature_correlation(features)
