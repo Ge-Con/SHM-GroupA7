@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 import matplotlib.pyplot as plt
 import pandas as pd
-from emd import sift
+import emd
 
 # Assuming df is your dataframe read from csv
 df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
@@ -12,7 +12,7 @@ dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['C
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
 
 x_values = []
-
+#1
 for df in dataframes:
     # Assuming the first column is time and the second column is the data to perform FFT on
     time = df.iloc[:, 0]

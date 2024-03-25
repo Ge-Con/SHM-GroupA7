@@ -12,7 +12,15 @@ final_breast_data = np.concatenate([breast_data, labels], axis=1)
 breast_dataset = pd.DataFrame(final_breast_data)
 print(final_breast_data)
 
-def PCA(X, n):
+def PCA(X, n): # n is the number of principal components
+
+    #TODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
+    # flag (variable) for the function, where we can determine whether we want to do so or not.
+    # In the case of HI construction or RUL prediction, you should be aware that we are not allowed
+    # to use future data as they are not available in reality. So, if you are applying PCA at the
+    # lower level, i.e., GW data at one inspection time step, without needing future data, normalization
+    # is okay. But if you do so at the higher level, i.e., all GW data at all time steps until the end
+    # of life, normalization is not possible in reality. a
 
     #1. Finding normalized matrix
     scaler = StandardScaler()
