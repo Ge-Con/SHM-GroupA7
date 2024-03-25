@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import signal
 import matplotlib.pyplot as plt
 import pandas as pd
 import emd
@@ -12,21 +11,25 @@ dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['C
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
 
 x_values = []
-#1
+
 for df in dataframes:
     # Assuming the first column is time and the second column is the data to perform FFT on
-    time = df.iloc[:, 0]
-    data = df.iloc[:, 1]
+    #dtime = df.iloc[:, 0].to_numpy() * 10e8
+    time = df.iloc[:, 0].to_numpy()
+    data = df.iloc[:, 1].to_numpy()
+
 
     proto_imf = data.copy()
     upper_env = emd.sift.interp_envelope(proto_imf, mode='upper')
     lower_env = emd.sift.interp_envelope(proto_imf, mode='lower')
+    print(upper_env)
     #average envelope
     avg_env = (upper_env + lower_env) / 2
     plt.figure()
-    plt.plot(time, data)
-    plt.plot(upper_env)
-    plt.plot(lower_env)
-    plt.plot(avg_env)
+    plt.plot(time, data, color='red')
+    plt.plot(time, upper_env, color='blue')
+    plt.plot(time, lower_env, color='green')
+    plt.plot(time, avg_env, color='black')
+    #plt.xlim(-1,1)
     plt.legend(['Signal', 'Upper Env', 'Lower Env', 'Avg Env'])
     plt.show()
