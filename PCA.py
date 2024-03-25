@@ -12,7 +12,15 @@ final_breast_data = np.concatenate([breast_data, labels], axis=1)
 breast_dataset = pd.DataFrame(final_breast_data)
 print(final_breast_data)
 
-def PCA(X, n):
+def PCA(X, n): # n is the number of principal components
+
+    #TODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
+    # flag (variable) for the function, where we can determine whether we want to do so or not.
+    # In the case of HI construction or RUL prediction, you should be aware that we are not allowed
+    # to use future data as they are not available in reality. So, if you are applying PCA at the
+    # lower level, i.e., GW data at one inspection time step, without needing future data, normalization
+    # is okay. But if you do so at the higher level, i.e., all GW data at all time steps until the end
+    # of life, normalization is not possible in reality. a
 
     #1. Finding normalized matrix
     scaler = StandardScaler()
@@ -25,10 +33,11 @@ def PCA(X, n):
     #3. Finding eigenvectors+values
     eigenvalues,  eigenvectors = np.linalg.eig(covX_scaled)
 
-    #4. Sort eigenvectors+values in descending order
+    #4. Sort eigenvectors+values in descending order. Saving the total variance for later
     idx = eigenvalues.argsort()[::-1]
     eigenvalues = eigenvalues[idx]
     eigenvectors = eigenvectors[:,idx]
+    total_variance = np.sum(eigenvalues)
 
     #5. Creating the S and inv(S) matrices - a diagonal matrix containing sqrt(eigenvalues)
     S = np.diag(np.sqrt(eigenvalues))
@@ -42,11 +51,12 @@ def PCA(X, n):
     U = np.matmul(X_scaled, V)
     U = np.matmul(U, S_inv)
 
-    #8. Truncating the S,U,V matrices to only include columns up to the number of principal components
+    #8. Truncating the S,U,V and eigenvalue matrices to only include columns up to the number of principal components
     # V_truncated contains the principal components - the n eigenvectors with the highest eigenvalues (these contain the most variance)
     U_truncated = U[:, :n]
     S_truncated = S[:n, :n]
     V_truncated = V[:, :n]
+    eigenvalues_truncated = eigenvalues[:n]
 
     #9. Finding the normalized reduced dataset - Multiplying U_truncated x S_truncated x V_truncated. We multiply 2 matrices at a time
     PC = np.matmul(U_truncated, S_truncated)
@@ -55,15 +65,10 @@ def PCA(X, n):
     #10. Converting the reduced dataset back to original proportions, as currently it is normalized
     X_transf = scaler.inverse_transform(PC)
 
-    #11. Return reduced dataset, the eigenvalues, the eigenvectors and the original covariance matrix
-    return X_transf,S_truncated, V_truncated, covX
+    #11. Return reduced dataset, the eigenvalues, the eigenvectors, and the original total variance
+    return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
-X_new, eigenvalues, eigenvectors, covX = PCA(final_breast_data, n=4)
+X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
-original_var = np.trace(covX)
-new_var = np.trace(np.cov(X_new, rowvar=False))
-var_explained = (new_var / original_var)*100
-
-print("Total explained variation:", var_explained, "%")
-
-print()
+explained_variance = np.sum(eigenvalues / total_variance)*100
+print("Total explained variance:", explained_variance, "%")
