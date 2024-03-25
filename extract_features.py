@@ -120,9 +120,30 @@ def Time_domain_features(sensor):
 
     return T_features
 
+def feature_correlation(features):
+    #2D array
+
+    correlation_matrix = np.corrcoef(features.T)
+    correlation_threshold = 0.95
+    correlation_bool = correlation_matrix > correlation_threshold
+
+    to_delete = []
+
+    for column in range(len(correlation_bool)):
+        for row in range(column+1, len(correlation_bool)):
+            if correlation_bool[column, row] == True and row not in to_delete:
+                to_delete.append(row)
+
+    to_delete.sort()
+    #print(to_delete)
+
+    #print(features)
+    features = np.delete(features, to_delete, axis=1)
+
+    return features
 
 
-test = np.array([[1, 4, 5, 7, 3, 4, 6, 3, 4, 3, 4, 6, 7, 5, 3, 5, 7, 5], [2, 3, 5, 6, 3, 4, 5, 4, 5, 7, 5, 4, 3, 5, 4, 3, 2, 4]])
+test = np.array([[1, 4, 5, 7, 3, 4, 6, 3, 4, 3, 4, 6, 7, 5, 3, 5, 7, 5], [2, 3, 5, 6, 3, 4, 5, 4, 5, 8, 7, 4, 3, 5, 4, 3, 2, 4], [2, 3, 1, 5, 3, 2, 3, 5, 8, 6, 4, 12, 5, 1, 2, 3, 3, 4], [2, 3, 1, 5, 3, 2, 3, 5, 8, 6, 4, 12, 5, 1, 2, 3, 3, 4]])
 
 #19 rows if time domain, 14 if frequency domain
 features = np.empty((len(test), 19))
@@ -130,4 +151,4 @@ features = np.empty((len(test), 19))
 for i in range(len(test)):
     features[i] = Time_domain_features(test[i])
 
-print(features)
+print(feature_correlation(features))
