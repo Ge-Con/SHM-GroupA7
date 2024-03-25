@@ -14,7 +14,7 @@ print(final_breast_data)
 
 def PCA(X, n): # n is the number of principal components
 
-    #T/ODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
+    #TODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
     # flag (variable) for the function, where we can determine whether we want to do so or not.
     # In the case of HI construction or RUL prediction, you should be aware that we are not allowed
     # to use future data as they are not available in reality. So, if you are applying PCA at the
