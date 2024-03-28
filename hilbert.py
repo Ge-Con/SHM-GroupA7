@@ -24,6 +24,10 @@ for df in dataframes:
     instantaneous_phase = np.unwrap(np.angle(analytic_signal))
     instantaneous_frequency = (np.diff(instantaneous_phase) /
                                (2.0*np.pi) * fs)
+    # if statement tu cut off noise
+    mask = np.logical_and(time[:-1] >= 0.0006, np.abs(instantaneous_frequency) >= 100000)
+    instantaneous_frequency[mask] = 0
+
     fig, (ax0, ax1) = plt.subplots(nrows=2)
     ax0.plot(time, data, label='signal')
     ax0.plot(time, amplitude_envelope, label='envelope')

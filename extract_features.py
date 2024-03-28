@@ -8,10 +8,10 @@ def Frequency_domain_features(sensor):
        Extracts frequency domain features from sensor data.
 
        Parameters:
-       - sensor (ndarray): 1D array containing sensor data.
+       - sensor (1D array): Frequency domain transform of data.
 
        Returns:
-       - F_features (ndarray): Array containing frequency domain features.
+       - F_features (1D array): Array containing frequency domain features.
 
        Example:
 
@@ -84,10 +84,10 @@ def Time_domain_features(sensor):
         Extracts time domain features from sensor data.
 
         Parameters:
-        - sensor (ndarray): 1D array containing sensor data.
+        - sensor (1D array): Array containing sensor data.
 
         Returns:
-        - T_features (ndarray): Array containing time domain features.
+        - T_features (1D array): Array containing time domain features.
 
         Example:
 
@@ -156,15 +156,16 @@ def feature_correlation(features):
        Filters features based on correlation coefficient threshold.
 
        Parameters:
-       - features (ndarray): 2D array containing feature data.
+       - features (2D array): Feature data for each trial.
 
        Returns:
-       - features (ndarray): Filtered feature array.
+       - features (2D array): Reduced statistically significant feature array.
+       - to_keep (list): Indices of features contained in returned array
 
        Example:
 
         # Example usage of the function
-       result = feature_correlation(feature_data)
+       result, indices = feature_correlation(feature_data)
     """
     #2D array
 
@@ -185,17 +186,20 @@ def feature_correlation(features):
     #print(features)
     features = np.delete(features, to_delete, axis=1)
 
-    return features
+    indices = set(np.arange(len(features)))
+    to_keep = np.array(list(indices - set(to_delete)))
+
+    return features, to_keep
 
 def time_to_feature(data):
     """
         Converts time domain sensor data to feature data.
 
         Parameters:
-        - data (ndarray): 2D array containing time domain sensor data.
+        - data (2D array): Time domain sensor data.
 
         Returns:
-        - features (ndarray): Feature data extracted from time domain data.
+        - features (2D array): Feature data extracted from time domain data.
 
         Example:
 
@@ -216,10 +220,10 @@ def freq_to_feature(data):
         Converts frequency domain sensor data to feature data.
 
         Parameters:
-        - data (ndarray): 2D array containing frequency domain sensor data.
+        - data (2D array): Frequency domain sensor data.
 
         Returns:
-        - features (ndarray): Feature data extracted from frequency domain data.
+        - features (2D array): Feature data extracted from frequency domain data.
 
         Example:
 
@@ -234,3 +238,5 @@ def freq_to_feature(data):
         features[i] = Frequency_domain_features(data[i])
 
     return feature_correlation(features)
+
+#print(freq_to_feature([[2, 3, 4, 5], [1, 2, 3, 5], [4, 5, 7, 4], [1, 3, 5, 7]]))
