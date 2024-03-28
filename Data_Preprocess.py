@@ -13,8 +13,6 @@ np.set_printoptions(linewidth=400)
 
 def matToCsv(dir):
     csv_dir = dir.replace('PZT','PZT-CSV')
-    #     dir2 = dir
-    #     csv_dir = dir2.replace('PZT', 'PZT-CSV')
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(csv_dir):
@@ -30,11 +28,11 @@ def matToCsv(dir):
                     os.makedirs(root_new)
                 arrayfile = combine_act(os.path.join(root,name))
                 #for i in range(1,8):
-                time_col = arrayfile.iloc[:, 0]
+                #time_col = arrayfile.iloc[:, 0]
                 arrayfile = arrayfile.drop(columns = 'Sensor_0', axis=1)
-                csv_file_path = os.path.join(root_new, f"{name.replace('.mat', '')}_{'nameTest5'}.csv")
-                arrayfile = pd.concat([time_col, arrayfile], axis=1)
-                arrayfile.rename(columns={'Sensor_0': 'Time'}, inplace= True)
+                csv_file_path = os.path.join(root_new, f"{name.replace('_5cycles', '')}.csv")
+                #arrayfile = pd.concat([time_col, arrayfile], axis=1)
+                #arrayfile.rename(columns={'Sensor_0': 'Time'}, inplace= True)
                 # print(arrayfile)
                 arrayfile.to_csv(csv_file_path, index=False)
 

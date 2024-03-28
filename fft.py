@@ -4,64 +4,65 @@ from numpy.fft import fft
 from scipy import stats
 from matplotlib import pyplot as plt
 
-# Assuming df is your dataframe read from csv
-df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
+def fast_fourier(data):
 
-dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['Column_1', 'Column_4']],
-              df[['Column_1', 'Column_5']], df[['Column_1', 'Column_6']], df[['Column_1', 'Column_7']],
-              df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
-
-x_values = []
-for df in dataframes:
-    # Assuming the first column is time and the second column is the data to perform FFT on
-    time = df.iloc[:, 0]
-    data = df.iloc[:, 1]
-
-    X = fft(data)
-    print(X)
-    N = len(X)
-    n = np.arange(N)
-    sr = 1 / (time.iloc[1] - time.iloc[0])  # Sample rate calculation
-    T = N / sr
-    freq = n / T
-    print(freq)
-
-    # Get the one-sided spectrum
-    n_oneside = N // 2
-    # get the one side frequency
-    f_oneside = freq[:n_oneside]
-
-    x_values.append(X[:n_oneside])
-
-    plt.figure(figsize=(12, 6))
-    plt.plot(f_oneside, np.abs(X[:n_oneside]), 'b')
-    plt.xlabel('Freq (Hz)')
-    plt.ylabel('FFT Amplitude |X(freq)|')
-    plt.show()
-
-
-#print("THIS IS THE OUTPUT!!!!!!! ", x_values)
-print(len(x_values[1]))
-print(len(x_values))
-
-# def make_features(sensor, samples):
-#     #np 1D array of fft
-#     features = np.empty(4)
+# """
+#     Brief description of what the function does.
 #
-#     S = np.abs(sensor**2)/samples
+#     Parameters:
+#     - data (dataframe):
+#     - param2 (type): Description of param2.
 #
-#     #Mean
-#     features[0] = np.mean(S)
+#     Returns:
+#     - return_type: Description of the return value(s).
 #
-#     #variance
-#     features[1] = np.var(S)
-#
-#     #skewness
-#     features[2] = stats.skew(S)
-#
-#     #kurtosis
-#     features[3] = stats.kurtosis(S)
-#
-#     return features
-#
-# print(make_features(x_values[0], samples=2000))
+# """
+    #print(data)
+
+
+    timecol =data.iloc[:,0]
+    # freqcol = np.array([])
+    # ampcol = np.array([])
+    freq_arr = []
+    amp_arr = []
+    for i in range(8):
+        x_values = []
+        for j in range(8):
+            k = 8 * i + j
+            # Extracting data to perform FFT on
+            x = data.iloc[:, k]
+
+            X = fft(x)
+            #print(X)
+            N = len(X)
+            n = np.arange(N)
+            sr = 1 / 5e-7 # Sample rate calculation
+            T = N / sr                              # total time
+            freq = n / T
+            #print(freq)
+
+            # Get the one-sided spectrum
+            n_oneside = N // 2
+            # get the one side frequency
+            f_oneside = freq[:n_oneside]
+
+            x_values.append(X[:n_oneside])
+
+            # freq_arr = np.append(freq_arr, f_oneside, axis=1)
+            # amp_array = np.append(amp_array, np.abs(X[:n_oneside]), axis=1)
+            freq_arr.insert(k-1,f_oneside)
+            amp_arr.insert(k-1,X[:n_oneside])
+            # ampcol = np.append(ampcol, np.abs(X[:n_oneside]))
+
+            # plt.figure(figsize=(12, 6))
+            # plt.plot(f_oneside, np.abs(X[:n_oneside]), 'b')
+            # plt.xlabel('Freq (Hz)')
+            # plt.ylabel('FFT Amplitude |X(freq)|')
+            # plt.show()
+            #print("done ",k)
+        #print(x_values[0])
+
+    #print("THIS IS THE OUTPUT!!!!!!! ", x_values)
+    # print(len(x_values[1]))
+    # print(len(x_values))
+    return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
