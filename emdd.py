@@ -14,22 +14,25 @@ x_values = []
 
 for df in dataframes:
     # Assuming the first column is time and the second column is the data to perform FFT on
-    #dtime = df.iloc[:, 0].to_numpy() * 10e8
     time = df.iloc[:, 0].to_numpy()
     data = df.iloc[:, 1].to_numpy()
-
 
     proto_imf = data.copy()
     upper_env = emd.sift.interp_envelope(proto_imf, mode='upper')
     lower_env = emd.sift.interp_envelope(proto_imf, mode='lower')
-    print(upper_env)
     #average envelope
     avg_env = (upper_env + lower_env) / 2
-    plt.figure()
+
+    data = data - avg_env
+    proto_imf = data.copy() - avg_env
+    upper_env = emd.sift.interp_envelope(proto_imf, mode='upper')
+    lower_env = emd.sift.interp_envelope(proto_imf, mode='lower')
+    # average envelope
+    avg_env = (upper_env + lower_env) / 2
+
     plt.plot(time, data, color='red')
-    plt.plot(time, upper_env, color='blue')
-    plt.plot(time, lower_env, color='green')
+    #plt.plot(time, upper_env, color='blue')
+    #plt.plot(time, lower_env, color='green')
     plt.plot(time, avg_env, color='black')
-    #plt.xlim(-1,1)
     plt.legend(['Signal', 'Upper Env', 'Lower Env', 'Avg Env'])
     plt.show()
