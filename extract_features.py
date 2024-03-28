@@ -4,6 +4,21 @@ import test_data
 
                                  ## Frequency domain ##
 def Frequency_domain_features(sensor):
+    """
+       Extracts frequency domain features from sensor data.
+
+       Parameters:
+       - sensor (ndarray): 1D array containing sensor data.
+
+       Returns:
+       - F_features (ndarray): Array containing frequency domain features.
+
+       Example:
+
+        # Example usage of the function
+       result = Frequency_domain_features(sensor_data)
+    """
+
     #np 1D array of fft
     F_features = np.empty(14)
 
@@ -65,10 +80,26 @@ def Frequency_domain_features(sensor):
 
                                    ## Time domain ##
 def Time_domain_features(sensor):
+    """
+        Extracts time domain features from sensor data.
+
+        Parameters:
+        - sensor (ndarray): 1D array containing sensor data.
+
+        Returns:
+        - T_features (ndarray): Array containing time domain features.
+
+        Example:
+
+        # Example usage of the function
+        result = Time_domain_features(sensor_data)
+    """
+
     # np 1D array of time domain data
     T_features = np.empty(19)
 
     X = sensor
+
     # Mean
     T_features[0] = np.mean(X)
 
@@ -121,6 +152,20 @@ def Time_domain_features(sensor):
     return T_features
 
 def feature_correlation(features):
+    """
+       Filters features based on correlation coefficient threshold.
+
+       Parameters:
+       - features (ndarray): 2D array containing feature data.
+
+       Returns:
+       - features (ndarray): Filtered feature array.
+
+       Example:
+
+        # Example usage of the function
+       result = feature_correlation(feature_data)
+    """
     #2D array
 
     correlation_matrix = np.corrcoef(features.T)
@@ -145,6 +190,21 @@ def feature_correlation(features):
     return features, list(indices - set(to_delete))
 
 def time_to_feature(data):
+    """
+        Converts time domain sensor data to feature data.
+
+        Parameters:
+        - data (ndarray): 2D array containing time domain sensor data.
+
+        Returns:
+        - features (ndarray): Feature data extracted from time domain data.
+
+        Example:
+
+        # Example usage of the function
+        result = time_to_feature(sensor_data)
+    """
+
     data = data[1::]
     features = np.empty((len(data), 19))
 
@@ -154,6 +214,21 @@ def time_to_feature(data):
     return feature_correlation(features)
 
 def freq_to_feature(data):
+    """
+        Converts frequency domain sensor data to feature data.
+
+        Parameters:
+        - data (ndarray): 2D array containing frequency domain sensor data.
+
+        Returns:
+        - features (ndarray): Feature data extracted from frequency domain data.
+
+        Example:
+
+        # Example usage of the function
+        result = freq_to_feature(sensor_data)
+    """
+
     data = data[1::]
     features = np.empty((len(data), 14))
 
