@@ -15,13 +15,13 @@ def Pr(X):
 
     return prognosability
 
-def fitness(X, a=1,b=1,c=1):
+def fitness(X, Mo_a=1,Tr_b=1,Pr_c=1):
 
     monoticity = Mo(X)
     trendability = Tr(X)
     prognosability = Pr(X)
 
-    ftn = a*monoticity + b*trendability + c*prognosability
+    ftn = Mo_a*monoticity + Tr_b*trendability + Pr_c*prognosability
 
     error = a+b+c - ftn
 
