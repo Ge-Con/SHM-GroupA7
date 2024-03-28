@@ -140,7 +140,9 @@ def feature_correlation(features):
     #print(features)
     features = np.delete(features, to_delete, axis=1)
 
-    return features
+    indices = set(np.arange(len(features)))
+
+    return features, list(indices - set(to_delete))
 
 def time_to_feature(data):
     data = data[1::]
@@ -159,3 +161,5 @@ def freq_to_feature(data):
         features[i] = Frequency_domain_features(data[i])
 
     return feature_correlation(features)
+
+print(freq_to_feature([[2, 3, 4, 5], [1, 2, 3, 5], [4, 5, 7, 4], [1, 3, 5, 7]]))
