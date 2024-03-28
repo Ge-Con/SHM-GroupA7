@@ -11,7 +11,7 @@ def Frequency_domain_features(sensor):
        - sensor (1D array): Frequency domain transform of data.
 
        Returns:
-       - F_features (ndarray): Array containing frequency domain features.
+       - F_features (1D array): Array containing frequency domain features.
 
        Example:
 
