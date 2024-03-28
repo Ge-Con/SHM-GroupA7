@@ -14,3 +14,15 @@ def Pr(X):
     prognosability = np.exp(-np.std(top)/np.mean(bottom))
 
     return prognosability
+
+def fitness(X, a=1,b=1,c=1):
+
+    monoticity = Mo(X)
+    trendability = Tr(X)
+    prognosability = Pr(X)
+
+    ftn = a*monoticity + b*trendability + c*prognosability
+
+    error = a+b+c - ftn
+
+    return ftn, error
