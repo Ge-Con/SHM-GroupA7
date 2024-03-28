@@ -105,6 +105,7 @@ def truncator(X):
     print("Truncation Value (ie. # of components kept) = {}" .format(r))
     return r
 
+# if truncation function to be used: use n = truncator(final_breast_data)
 X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
 explained_variance = np.sum(eigenvalues / total_variance)*100
