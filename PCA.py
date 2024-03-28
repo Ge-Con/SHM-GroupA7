@@ -68,6 +68,43 @@ def PCA(X, n): # n is the number of principal components
     #11. Return reduced dataset, the eigenvalues, the eigenvectors, and the original total variance
     return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
+def truncator(X):
+    n, m = X.shape  # n = rows, m = columns
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    covX_scaled = np.cov(X_scaled, rowvar=False)
+    eigenvalues,  eigenvectors = np.linalg.eig(covX_scaled)
+
+    idx = eigenvalues.argsort()[::-1]
+    singular_values = np.sqrt(eigenvalues[idx])
+
+    # y_m: median value of S matrix (ie. median value of singular_values list)
+    y_m = np.median(singular_values)
+
+    # Calculate omega_approx
+    # if m << n, beta = m / n and if n << m, beta = n / m
+    if m < n:
+        beta = m / n
+    else:
+        beta = n / m
+    omega_approx = 0.56 * beta**3 - 0.95 * beta**2 + 1.82 * beta + 1.43
+
+    # threshold (%) is defined as threshold = y_m * omega_approx
+    threshold = y_m * omega_approx
+
+    # check if eigenvalue is more than threshold
+    i = 0
+    more_statement = 0
+    while more_statement != 1:
+        if singular_values[i] > threshold:
+            more_statement = 0
+        else:
+            more_statement = 1
+        i += 1
+    r = i-1
+    print("Truncation Value (ie. # of components kept) = {}" .format(r))
+    return r
+
 X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
 explained_variance = np.sum(eigenvalues / total_variance)*100
