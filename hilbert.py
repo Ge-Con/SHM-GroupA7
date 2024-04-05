@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import hilbert, chirp
 import pandas as pd
 
+"""
 # Assuming df is your dataframe read from csv
 df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
 
@@ -11,6 +12,34 @@ dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['C
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
 
 x_values = []
+"""
+
+def Hilbert(data):
+    freq_arr = []
+    amp_arr = []
+    for i in range(8):
+        for j in range(8):
+            k = 8 * i + j
+            x = data.iloc[:, k]
+            fs = 1 / 5e-7
+
+            analytic_signal = hilbert(data)  # bruv rename the file
+            amplitude_envelope = np.abs(analytic_signal)
+            instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+            instantaneous_frequency = (np.diff(instantaneous_phase) / (2.0 * np.pi) * fs)
+            # if statement tu cut off noise
+            mask = np.logical_and(time[:-1] >= 0.0006, np.abs(instantaneous_frequency) >= 100000)
+            instantaneous_frequency[mask] = 0
+
+            freq_arr.insert(k - 1, instantaneous_frequency)
+            amp_arr.insert(k - 1, amplitude_envelope)
+    return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
+
+
+
+
+
+"""
 for df in dataframes:
     time = df.iloc[:, 0]
     data = df.iloc[:, 1]
@@ -37,3 +66,4 @@ for df in dataframes:
     ax1.set_xlabel("time in seconds")
     fig.tight_layout()
     plt.show()
+"""

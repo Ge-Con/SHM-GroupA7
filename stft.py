@@ -3,13 +3,45 @@ from scipy import signal
 import pandas as pd
 import matplotlib.pyplot as plt
 
+"""
 # Assuming df is your dataframe read from csv
 df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
 
 dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['Column_1', 'Column_4']],
               df[['Column_1', 'Column_5']], df[['Column_1', 'Column_6']], df[['Column_1', 'Column_7']],
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
+"""
+def Short_Fourier(data):
+    freq_arr = []
+    amp_arr = []
+    for i in range(8):
+        x_values = []
+        for j in range(8):
+            k = 8 * i + j
+            # Extracting data to perform FFT on
+            # x = data.iloc[:, 0]
+            y = data.iloc[:, k]
 
+            # time_intervals = np.diff(x)
+            # mean_interval = np.mean(time_intervals)
+            # dont need bc all our time intervals are the same
+            fs = 1 / 5e-7
+
+            f, t, Zxx = signal.stft(y, fs, nperseg=1000)
+            amp = np.abs(Zxx).max()
+
+            freq_arr.insert(k - 1, f)
+            amp_arr.insert(k - 1, amp)
+
+    return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
+
+
+
+
+
+
+
+"""
 x_values = []
 for df in dataframes:
     # Extract the time (x) and the data column (y) for analysis
@@ -53,3 +85,5 @@ for df in dataframes:
 #
 #     #variance
 #     features[1] = np.var(S)
+
+"""

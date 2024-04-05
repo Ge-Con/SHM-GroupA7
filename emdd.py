@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import emd
 
+'''
 # Assuming df is your dataframe read from csv
 df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
 
@@ -11,7 +12,43 @@ dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['C
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
 
 x_values = []
+'''
 
+def empirical_mode(data):
+    upper_env_arr = []
+    lower_env_arr = []
+    avg_env_arr = []
+    for i in range(8):
+        x_values = []
+        for j in range(8):
+            k = 8 * i + j
+            # Extracting data to perform FFT on
+            x = data.iloc[:, k]
+
+            proto_imf = x.copy()
+            upper_env = emd.sift.interp_envelope(proto_imf, mode='upper')
+            lower_env = emd.sift.interp_envelope(proto_imf, mode='lower')
+            # average envelope
+            avg_env = (upper_env + lower_env) / 2
+
+            x = x - avg_env
+            proto_imf = x.copy() - avg_env
+            upper_env = emd.sift.interp_envelope(proto_imf, mode='upper')
+            lower_env = emd.sift.interp_envelope(proto_imf, mode='lower')
+            # average envelope
+            avg_env = (upper_env + lower_env) / 2
+
+            upper_env_arr.insert(k - 1, upper_env)
+            lower_env_arr.insert(k - 1, lower_env)
+            avg_env_arr.insert(k - 1, avg_env)
+
+    return pd.DataFrame(upper_env_arr), pd.DataFrame(lower_env_arr), pd.DataFrame(avg_env_arr)
+
+
+
+
+
+'''
 for df in dataframes:
     # Assuming the first column is time and the second column is the data to perform FFT on
     time = df.iloc[:, 0].to_numpy()
@@ -30,9 +67,10 @@ for df in dataframes:
     # average envelope
     avg_env = (upper_env + lower_env) / 2
 
-    plt.plot(time, data, color='red')
-    #plt.plot(time, upper_env, color='blue')
-    #plt.plot(time, lower_env, color='green')
-    plt.plot(time, avg_env, color='black')
-    plt.legend(['Signal', 'Upper Env', 'Lower Env', 'Avg Env'])
-    plt.show()
+    # plt.plot(time, data, color='red')
+    # plt.plot(time, upper_env, color='blue')
+    # plt.plot(time, lower_env, color='green')
+    # plt.plot(time, avg_env, color='black')
+    # plt.legend(['Signal', 'Upper Env', 'Lower Env', 'Avg Env'])
+    # plt.show()
+'''
