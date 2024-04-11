@@ -21,7 +21,9 @@ def matToCsv(dir):
     #Iterates over all the frequency files in the directory
     for root, dirs, files in os.walk(dir):
          for name in dirs:
-             if name.endswith('cycles'):
+             #print(name)
+             if name.endswith("cycles"):
+                #print("mat")
                 root_new = root.replace('PZT', 'PZT-CSV')
 
                 if not os.path.exists(root_new):
@@ -34,6 +36,7 @@ def matToCsv(dir):
                 #arrayfile = pd.concat([time_col, arrayfile], axis=1)
                 #arrayfile.rename(columns={'Sensor_0': 'Time'}, inplace= True)
                 # print(arrayfile)
+                #print(arrayfile)
                 arrayfile.to_csv(csv_file_path, index=False)
 
 

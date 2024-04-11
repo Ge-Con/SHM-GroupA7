@@ -30,7 +30,7 @@ def fast_fourier(data):
 
             freq_arr.insert(k,f_oneside)
             amp_arr.insert(k,X[:n_oneside])
-
+    #print(pd.DataFrame(amp_arr))
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
 

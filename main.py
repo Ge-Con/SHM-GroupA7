@@ -69,7 +69,7 @@ def saveHilbert(dir):
             if name.endswith('kHz.csv'):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2 = hilbert.Hilbert(data,giveTime())
+                arrayfile1 = hilbert.Hilbert(data,giveTime())
                 csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilb_Freq.csv'}")
                 csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilb_Amp.csv'}")
                 # arrayfile1.to_csv(csv_file_path1, index=False)
@@ -82,6 +82,8 @@ def giveTime():
     return pd.DataFrame(time)
 
 # Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
+print("ok")
+#saveFFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
+#Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 
-saveFFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
-#Data_Preprocess.matToCsv(r"C:\Users\edlyn\Desktop\PZT-L1-04")
+saveHilbert(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
