@@ -3,41 +3,69 @@ import matplotlib.pyplot as plt
 from scipy.signal import hilbert, chirp
 import pandas as pd
 
-"""
+
 # Assuming df is your dataframe read from csv
-df = pd.read_csv('Actionneur1/measured_data_rep_1_Time_Response.csv')
+def Hilbert(data, time):
+    df = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50kHz.csv")
 
-dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['Column_1', 'Column_4']],
-              df[['Column_1', 'Column_5']], df[['Column_1', 'Column_6']], df[['Column_1', 'Column_7']],
-              df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
+    x_values = []
 
-x_values = []
-"""
-
-def Hilbert(data):
-    freq_arr = []
-    amp_arr = []
     for i in range(8):
-        for j in range(8):
-            k = 8 * i + j
-            x = data.iloc[:, k]
-            fs = 1 / 5e-7
+        data = df.iloc[:, i]
 
-            analytic_signal = hilbert(data)  # bruv rename the file
-            amplitude_envelope = np.abs(analytic_signal)
-            instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-            instantaneous_frequency = (np.diff(instantaneous_phase) / (2.0 * np.pi) * fs)
-            # if statement tu cut off noise
-            mask = np.logical_and(time[:-1] >= 0.0006, np.abs(instantaneous_frequency) >= 100000)
-            instantaneous_frequency[mask] = 0
-
-            freq_arr.insert(k - 1, instantaneous_frequency)
-            amp_arr.insert(k - 1, amplitude_envelope)
-    return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
+        time_intervals = np.diff(time)
+        mean_interval = np.mean(time_intervals)
+        fs = 1 / 5e-7
 
 
+        analytic_signal = hilbert(data)
+        amplitude_envelope = np.abs(analytic_signal)
+        instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+        instantaneous_frequency = (np.diff(instantaneous_phase) / (2.0 * np.pi) * fs)
+
+        # if statement tu cut off noise
+        mask = np.logical_and(time[:-1] >= 0.0006, np.abs(instantaneous_frequency) >= 100000)
+        instantaneous_frequency[mask] = 0
+
+        fig, (ax0, ax1) = plt.subplots(nrows=2)
+        ax0.plot(time, data, label='signal')
+        ax0.plot(time, amplitude_envelope, label='envelope')
+        ax0.set_xlabel("time in seconds")
+        ax0.legend()
+        ax1.plot(time[1:], instantaneous_frequency)
+        ax1.set_xlabel("time in seconds")
+        fig.tight_layout()
+        plt.show()
+
+def giveTime():
+    time = []
+    for i in range(2000):
+        time.append(i*(5e-7))
+    return pd.DataFrame(time)
+
+# def Hilbert(data, time):
+#     freq_arr = []
+#     amp_arr = []
+#     for i in range(8):
+#         for j in range(8):
+#             k = 8 * i + j
+#             x = data.iloc[:, k]
+#             fs = 1 / 5e-7
+#
+#             analytic_signal = hilbert(x)  # bruv rename the file
+#             amplitude_envelope = np.abs(analytic_signal)
+#             instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+#             instantaneous_frequency = (np.diff(instantaneous_phase) / (2.0 * np.pi) * fs)
+#             # if statement tu cut off noise
+#             mask = np.logical_and(time[:-1] >= 0.0006, np.abs(instantaneous_frequency) >= 100000)
+#             instantaneous_frequency[mask] = 0
+#
+#             freq_arr.insert(k - 1, instantaneous_frequency)
+#             amp_arr.insert(k - 1, amplitude_envelope)
+#     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
 
+"Shape of passed values is (1999, 1999), indices imply (1999, 1) "
 
 """
 for df in dataframes:
@@ -67,3 +95,4 @@ for df in dataframes:
     fig.tight_layout()
     plt.show()
 """
+

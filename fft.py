@@ -28,8 +28,8 @@ def fast_fourier(data):
 
             x_values.append(X[:n_oneside])  # why do we need this line?
 
-            freq_arr.insert(k-1,f_oneside)
-            amp_arr.insert(k-1,X[:n_oneside])
+            freq_arr.insert(k,f_oneside)
+            amp_arr.insert(k,X[:n_oneside])
 
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
