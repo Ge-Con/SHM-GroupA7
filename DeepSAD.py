@@ -7,10 +7,11 @@ class DeepSAD_net(nn.Module):
 
     def __init__(self, rep_dim=64):
         super().__init__()
-        self.c = None
-        self.rep_dim = rep_dim
-        self.pool = nn.MaxPool2d(2, 2)
+        self.c = None           #Hypersphere centre
+        self.rep_dim = rep_dim  #Number of dimensions
 
+        #CNN
+        self.pool = nn.MaxPool2d(2, 2)
         self.conv1 = nn.Conv2d(1, 8, 5, bias=False, padding=2)
         self.bn1 = nn.BatchNorm2d(8, eps=1e-04, affine=False)
         self.conv2 = nn.Conv2d(8, 4, 5, bias=False, padding=2)
@@ -81,24 +82,31 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
         None
     """
 
+    #Setup optimizer and scheduler
     optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
+
+    #Initialise c if necessary
     if model.c == None:
         model.c = init_c(model, train_data, eps)
+
+    #Iterate epochs to train model
     model.train()
     for epoch in range(n_epochs):
         scheduler.step()
 
-        if epoch in lr_milestones:
+        if epoch in lr_milestones:  #Report new learning rate on milestones
             print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
         epoch_loss = 0.0
         n_batches = 0
 
-        for data in training_data:
+        for data in training_data:  #Batches training data?
 
+            #Forward and backward pass
             optimizer.zero_grad()
             outputs = model(data)
 
+            #Calculating loss function
             Y = outputs - model.c
             dist = torch.sum(Y ** 2, dim=1)
             if reg != 0:  # If we want to diversify
@@ -109,7 +117,8 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
             losses = torch.where(semi_targets == 0, dist, eta * ((dist + eps) ** semi_targets.float()))
             losses += reg * loss_d
 
-            loss = torch.mean(losses)  # Finish off training the network
+            # Finish off training the network
+            loss = torch.mean(losses)
             loss.backward()
             optimizer.step()
 
