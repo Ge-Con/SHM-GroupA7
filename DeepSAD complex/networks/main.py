@@ -7,8 +7,8 @@ from .dgm import DeepGenerativeModel, StackedDeepGenerativeModel
 
 ###########################################################
 # If you're here looking for DeepSAD code you're in the wrong place!
-# This program appears mostly useless but let's keep it for now because it's called by DeepSAD.py, which is incidentally
-# where you'll find what you were actually looking for.
+# This is where networks are generated, but they've already been implemented so we don't have to worry about that.
+# This called by DeepSAD.py, which is incidentally where you'll find what you were actually looking for.
 ###########################################################
 
 def build_network(net_name, ae_net=None):
