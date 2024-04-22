@@ -5,7 +5,6 @@ import os
 import Data_Preprocess
 import emdfinal
 import fft
-import emdd
 import stft
 import hilbert
 
@@ -52,18 +51,11 @@ def saveEMD(dir):
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
-                print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2, arrayfile3 = emdfinal.runEMD(data,giveTime())
-                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Upper.csv'}")
-                csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Lower.csv'}")
-                csv_file_path3 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Avg.csv'}")
-                # print(arrayfile1)
-                # print(arrayfile2)
-                # print(arrayfile3)
-                # arrayfile1.to_csv(csv_file_path1, index=False)
-                # arrayfile2.to_csv(csv_file_path2, index=False)
-                # arrayfile3.to_csv(csv_file_path3, index=False)
+                arrayfile1 = emdfinal.runEMD(data,giveTime())
+                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD.csv'}")
+                arrayfile1.to_csv(csv_file_path1, index=False)
+
 
 def saveHilbert(dir):
     for root, dirs, files in os.walk(dir):
@@ -81,7 +73,7 @@ def giveTime():
     time = []
     for i in range(2000):
         time.append(i*(5e-7))
-    return pd.DataFrame(time)
+    return time
 
 # Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 #print("ok")

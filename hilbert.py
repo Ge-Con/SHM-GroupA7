@@ -9,7 +9,7 @@ def Hilbert(data, time):
     df = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50kHz.csv")
 
     x_values = []
-
+    time = pd.DataFrame(time)
     inst_freq_arr = []
     amp_arr = []
     for i in range(8):

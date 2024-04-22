@@ -51,14 +51,12 @@ def runEMD(data, time):
             k = 8 * i + j
             # Extracting data to perform FFT on=
             # Assuming the first column is time and the second column is the data to perform FFT on
-            time = time.to_numpy()
-            data = data.iloc[:, k].to_numpy()
 
-            my_get_next_imf(data, zoom=None, sd_thresh=0.1)
-            # proto_imf.insert(k,my_get_next_imf(data, zoom=None, sd_thresh=0.1))
-            plt.show()
+            x = data.iloc[:, k].to_numpy()
 
+            proto_imf.insert(k,my_get_next_imf(x, zoom=None, sd_thresh=0.1))
 
+    return pd.DataFrame(proto_imf)
 
     #plt.plot(time, data, color='red')
     #plt.plot(time, upper_env, color='blue')
