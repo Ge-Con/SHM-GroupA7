@@ -34,12 +34,12 @@ def Short_Fourier(data):
             amp_arr.insert(k, amp)
 
             pcm = plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp, shading='gouraud')
-            plt.title('STFT Magnitude')
-            plt.ylabel('Frequency [Hz]')
-            plt.xlabel('Time [sec]')
-            cbar = plt.colorbar(pcm)
-            cbar.set_label('Amplitude')
-            plt.show()
+            # plt.title('STFT Magnitude')
+            # plt.ylabel('Frequency [Hz]')
+            # plt.xlabel('Time [sec]')
+            # cbar = plt.colorbar(pcm)
+            # cbar.set_label('Amplitude')
+            # plt.show()
 
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 

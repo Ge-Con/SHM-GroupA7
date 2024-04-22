@@ -6,8 +6,6 @@ import pandas as pd
 
 # Assuming df is your dataframe read from csv
 def Hilbert(data, time):
-    df = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50kHz.csv")
-
     x_values = []
     time = pd.DataFrame(time)
     inst_freq_arr = []
@@ -19,7 +17,7 @@ def Hilbert(data, time):
             # Extracting data to perform FFT on
             x = data.iloc[:, k]
             time_intervals = np.diff(time)
-            mean_interval = np.mean(time_intervals)
+            #mean_interval = np.mean(time_intervals)
             fs = 1 / 5e-7
 
             analytic_signal = hilbert(x)

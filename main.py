@@ -23,6 +23,7 @@ Parameters:
     - return_type: Description of the return value(s).
 '''
 def saveFFT(dir):
+    print("Executing FFT on data:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
@@ -36,6 +37,7 @@ def saveFFT(dir):
                 arrayfile2.to_csv(csv_file_path2, index=False)
 
 def saveSTFT(dir):
+    print("Executing STFT on data:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
@@ -48,6 +50,7 @@ def saveSTFT(dir):
                 arrayfile2.to_csv(csv_file_path2, index=False)
 
 def saveEMD(dir):
+    print("Executing EMD on data:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
@@ -58,6 +61,7 @@ def saveEMD(dir):
 
 
 def saveHilbert(dir):
+    print("Executing Hilbert on data:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
@@ -80,4 +84,55 @@ def giveTime():
 #saveFFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
 #Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 
-saveEMD(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
+#saveSTFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
+def main_menu():
+    print("Welcome! Please choose a signal processing method: ")
+    print("1. FFT")
+    print("2. EMD")
+    print("3. Hilbert")
+    print("4. STFT")
+    print("5.All of the above")
+    print("6. Exit")
+
+def option1(loc):
+    saveFFT(loc)
+
+def option2(loc):
+    saveEMD(loc)
+
+def option3(loc):
+    saveHilbert(loc)
+
+def option4(loc):
+    saveSTFT(loc)
+
+def option5(loc):
+    saveFFT(loc)
+    saveEMD(loc)
+    saveHilbert(loc)
+    saveSTFT(loc)
+
+# Prompt the user to input the folder path
+folder_path = input("Enter the folder path of the Matlab files: ")
+Data_Preprocess.matToCsv(folder_path)
+csv_dir = folder_path.replace('PZT','PZT-CSV')
+# Main program loop
+while True:
+    main_menu()
+    choice = input("Enter your choice: ")
+
+    if choice == '1':
+        option1(csv_dir)
+    elif choice == '2':
+        option2(csv_dir)
+    elif choice == '3':
+        option3(csv_dir)
+    elif choice == '4':
+        option4(csv_dir)
+    elif choice == '5':
+        option5(csv_dir)
+    elif choice == '6':
+        print("Exiting...")
+        break
+    else:
+        print("Invalid choice. Please enter a number between 1 and 6.")
