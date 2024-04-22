@@ -41,7 +41,9 @@ def empirical_mode(data):
             upper_env_arr.insert(k - 1, upper_env)
             lower_env_arr.insert(k - 1, lower_env)
             avg_env_arr.insert(k - 1, avg_env)
-
+    print(pd.DataFrame(upper_env_arr))
+    print(pd.DataFrame(lower_env_arr))
+    print(pd.DataFrame(avg_env_arr))
     return pd.DataFrame(upper_env_arr), pd.DataFrame(lower_env_arr), pd.DataFrame(avg_env_arr)
 
 

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 import Data_Preprocess
+import emdfinal
 import fft
 import emdd
 import stft
@@ -44,7 +45,6 @@ def saveSTFT(dir):
                 arrayfile1, arrayfile2 = stft.Short_Fourier(data)
                 csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Freq.csv'}")
                 csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
-                # print(arrayfile)
                 arrayfile1.to_csv(csv_file_path1, index=False)
                 arrayfile2.to_csv(csv_file_path2, index=False)
 
@@ -54,14 +54,16 @@ def saveEMD(dir):
             if name.endswith('kHz.csv'):
                 print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2, arrayfile3 = emdd.empirical_mode(data)
+                arrayfile1, arrayfile2, arrayfile3 = emdfinal.runEMD(data,giveTime())
                 csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Upper.csv'}")
                 csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Lower.csv'}")
                 csv_file_path3 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD_Avg.csv'}")
-                print(arrayfile3)
-                arrayfile1.to_csv(csv_file_path1, index=False)
-                arrayfile2.to_csv(csv_file_path2, index=False)
-                arrayfile3.to_csv(csv_file_path3, index=False)
+                # print(arrayfile1)
+                # print(arrayfile2)
+                # print(arrayfile3)
+                # arrayfile1.to_csv(csv_file_path1, index=False)
+                # arrayfile2.to_csv(csv_file_path2, index=False)
+                # arrayfile3.to_csv(csv_file_path3, index=False)
 
 def saveHilbert(dir):
     for root, dirs, files in os.walk(dir):
@@ -70,9 +72,9 @@ def saveHilbert(dir):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
                 arrayfile1 = hilbert.Hilbert(data,giveTime())
-                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilb_Freq.csv'}")
-                csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilb_Amp.csv'}")
-                # arrayfile1.to_csv(csv_file_path1, index=False)
+                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilbert.csv'}")
+                # csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_Hilb_Amp.csv'}")
+                arrayfile1.to_csv(csv_file_path1, index=False)
                 # arrayfile2.to_csv(csv_file_path2, index=False)
 
 def giveTime():
@@ -82,8 +84,8 @@ def giveTime():
     return pd.DataFrame(time)
 
 # Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
-print("ok")
+#print("ok")
 #saveFFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
 #Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 
-saveHilbert(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
+saveEMD(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
