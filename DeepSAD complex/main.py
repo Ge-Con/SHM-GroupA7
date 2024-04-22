@@ -27,8 +27,8 @@ from optim.ae_trainer import AETrainer
 # way to go still.
 #
 # Number 2 is the code you can get started on!
-#  - I suggest making a new function in this file (NOT inside the class definition!) which can take one of our CSVs (of
-#    any size, as it might be after feature extraction), add new columns to it with labels and return it
+#  - I suggest making a new function in the DeepSAD.py file (NOT inside the class definition!) which can take one of our
+#    CSVs (of any size, as it might be after feature extraction) and create a separate list of labels
 #  - The CSVs are each for one moment in time, so you'll have to include another parameter to let the code know what
 #    label to give it. This would ideally by called by a second function which calls the first and tells it which label
 #    to use with which data based on when that data is from, but maybe talk to George about how to implement that.
@@ -38,20 +38,16 @@ from optim.ae_trainer import AETrainer
 #    similar thing, but we could also consider virtual labels by creating a gradient between 1 and -1, kinda similar to
 #    what Moradi did. This is probably something we should ask him about.
 #
-# Number 3 is a problem for everyone, but it's going to be a bit bigger for us because in a way it can be harder to
-# change code someone else has already written than just to write your own. But it's a problem for later
+# Number 3 I have also already had a go at. The DeepSAD.py file is my attempt to recreate what they do in all of these
+# files in one much simpler file, just by throwing away unnecessary features. So it will probably be easier for you to
+# put your work in that one, but it's all these files which provide the reference for the actual code, so they're all
+# here so you can see how it works if you want to. One thing I didn't include was pre-training using autoencoders,
+# because I'm not sure how necessary it is or if we can achieve it just by using the AEs the others are making anyway.
 #
 #
-# A few ramblings about the modules used in this code:
-#
-# The imported modules above seem to all be used and important, except probably build_network, so let's keep them.
-# The others in the subfolders I'm not sure about yet, we might want to delete them later to keep things clean.
-#
-# The DeepSAD class was given and is more or less unchanged, it includes everything for the DeepSAD model
-# BaseADDataset is an object type which contains 'loaders' for the training data. I think it's meant to make handling so
-# much data easier but if it's different to what we're using we'll have to change it.
-#
-# Overall, everything's a bit of a mess but let's just make the progress we can and then fix it as we go!
+# Overall, it's quite messy here and in the papers but once you get your head around it, everything becomes a lot more
+# manageable. That's what will really take the longest time, probably much longer than the coding itself, so don't worry
+# if it takes a bit to understand, and feel free to ask any questions. Good luck!
 #
 # - JJ 10/04/24
 ##############################################################################
