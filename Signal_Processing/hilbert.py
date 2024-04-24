@@ -34,7 +34,7 @@ def Hilbert(data, time):
 
             inst_freq_arr.insert(k, amplitude_envelope)
     #print(pd.DataFrame(inst_freq_arr))
-    return pd.DataFrame(inst_freq_arr)
+    return pd.DataFrame(inst_freq_arr).transpose()
     #
     # for i in range(8):
     #     data = df.iloc[:, i]

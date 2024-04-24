@@ -10,14 +10,6 @@ pd.set_option('display.width', 400)
 np.set_printoptions(linewidth=400)
 
 
-'''
-Parameters:
-    - param1 (type): Description of param1.
-    - param2 (type): Description of param2.
-
-    Returns:
-    - return_type: Description of the return value(s).
-'''
 def saveFFT(dir):
     print("Executing FFT on data:...")
     for root, dirs, files in os.walk(dir):
@@ -170,7 +162,7 @@ while True:
         print("Exiting...")
         break
     else:
-        print("Invalid choice. Please enter a number between 1 and 6.")
+        print("Invalid choice. Please enter a number between 1 and 7.")
 
 #C:\Users\geort\Desktop\Universty\PZT-L1-03
 #C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
