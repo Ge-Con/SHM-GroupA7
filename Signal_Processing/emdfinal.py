@@ -56,7 +56,7 @@ def runEMD(data, time):
 
             proto_imf.insert(k,my_get_next_imf(x, zoom=None, sd_thresh=0.1))
 
-    return pd.DataFrame(proto_imf)
+    return pd.DataFrame(proto_imf).transpose()
 
     #plt.plot(time, data, color='red')
     #plt.plot(time, upper_env, color='blue')
