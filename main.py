@@ -94,6 +94,40 @@ def save_Time_Features(dir):
 
                 features.to_csv(csv_file_path, index=False)
                 '''call new function with toDelete array and return the reduced size feature array'''
+
+
+def save_Freq_Features(dir):
+    print("Extracting Time Domain Features:...")
+    toDelete = np.zeros(20, dtype=int)
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name.endswith('FFT-Amp.csv') or name.endswith('Hilbert.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                data = np.array(data)
+                arrayfile1, arrayfile2 = extract_features.time_to_feature(data)
+                #print("IMPORTED FIRST: ",arrayfile2)
+                for i in range(len(arrayfile2)):
+                    toDelete[arrayfile2[i]] = toDelete[arrayfile2[i]] + 1
+                #print("To Delete: ", toDelete)
+
+    # Get the indices that would sort the array
+    sorted_indices = np.argsort(toDelete)[::-1]
+    # Get the indices of the 10 lowest integers in the initial array
+    indices_of_10_highest = sorted_indices[:9]
+    print(indices_of_10_highest)
+
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name.endswith('EMD.csv') or name.endswith('Hilbert.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                data = np.array(data)
+                features = extract_features.time_to_feature_Reduced(data, indices_of_10_highest)
+                # Determine the new filename based on the original filename
+                new_filename = name.replace('EMD.csv', 'EMD-Features.csv').replace('Hilbert.csv', 'Hilbert-Features.csv')
+                # Construct the new file path
+                csv_file_path = os.path.join(root, new_filename)
+
+                features.to_csv(csv_file_path, index=False)
 def giveTime():
     time = []
     for i in range(2000):
