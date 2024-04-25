@@ -14,7 +14,7 @@ def fast_fourier(data):
             # Extracting data to perform FFT on
             x = data.iloc[:, k]
 
-            X = fft(x)
+            X = np.abs(fft(x))  #Magnitude only
             N = len(X)
             n = np.arange(N)
             sr = 1 / 5e-7 # Sample rate calculation

@@ -30,10 +30,10 @@ def Frequency_domain_features(sensor):
     #frequency value kth spectrum line (needs adjustment)
     F = np.arange(1000, len(S)*1000+1, 1000)
     F_small = F/1000
-    print("here -1")
+
     #Mean
     F_features[0] = np.mean(S)
-    print("here 1")
+
     #Variance
     F_features[1] = np.var(S)
 
@@ -45,22 +45,22 @@ def Frequency_domain_features(sensor):
 
     #P5 (Xfc)
     F_features[4] = np.sum(F * S) / np.sum(S)
-    print("here 2")
+
     # P6
-    F_features[5] = np.sqrt(np.mean( S * (F - (np.sum(F * S) / np.sum(S))) ** 2))
+    F_features[5] = np.sqrt(np.mean( S * (F - F_features[4]) ** 2))
 
     #P7 (Xrmsf)
-    F_features[6] = np.sqrt((np.sum(S * F ** 2)) / np.sum(S))
+    F_features[6] = np.sqrt((np.sum(S * F_small ** 2)) / np.sum(S))*1000
 
     #P8
     F_features[7] = np.sqrt(np.sum(S * F_small ** 4) / np.sum(S * F_small ** 2))*1000
 
     #P9
-    F_features[8] = np.sum(S * F_small ** 2) / (np.sqrt( np.sum(S) * np.sum(S * F_small ** 4)))/1000
+    F_features[8] = np.sum(S * F_small ** 2) / (np.sqrt( np.sum(S) * np.sum(S * F_small ** 4)))
 
     #P10
     F_features[9] = F_features[5] / F_features[4]
-    print("here 3")
+
     # #P11
     F_features[10] = np.mean(S * (F - F_features[4]) ** 3)/(F_features[5] ** 3)
 
@@ -185,12 +185,13 @@ def feature_correlation(features):
     #print("TODELETE: ", to_delete)
 
     #print(features)
-    # features = np.delete(features, to_delete, axis=1)
-    #
+    features = np.delete(features, to_delete, axis=1)
+    #features = features.transpose()
+
     # indices = set(np.arange(len(features)))
     # to_keep = np.array(list(indices - set(to_delete)))
 
-    return features, to_delete
+    return correlation_matrix, features, np.array(to_delete)
 
 def time_to_feature(data):
     """
@@ -207,22 +208,13 @@ def time_to_feature(data):
         # Example usage of the function
         result = time_to_feature(sensor_data)
     """
-
+    data = np.array(data).transpose()
     features = np.empty((len(data), 19))
     for i in range(len(data)):
         features[i] = Time_domain_features(data[i])
-    x, y = feature_correlation(features)
+
     # print(pd.DataFrame(y))
     # print(len(y))
-    return pd.DataFrame(x).transpose(), y
-
-def time_to_feature_Reduced(data, toDelete):
-    features = np.empty((len(data), 19))
-
-    for i in range(len(data)):
-        features[i] = Time_domain_features(data[i])
-
-    features = np.delete(features, toDelete, axis=1)
     return pd.DataFrame(features).transpose()
 
 
@@ -242,15 +234,14 @@ def freq_to_feature(data):
         result = freq_to_feature(sensor_data)
     """
 
+    data = np.array(data).transpose()
+
     features = np.empty((len(data), 14))
 
     for i in range(len(data)):
         features[i] = Frequency_domain_features(data[i])
-        print("LOOP")
-    print("loop finished")
-    x, y = feature_correlation(features)
-    print("correlated")
-    return pd.DataFrame(x).transpose(), y
+
+    return pd.DataFrame(features).transpose()
 
 #print(freq_to_feature([[2, 3, 4, 5], [1, 2, 3, 5], [4, 5, 7, 4], [1, 3, 5, 7]]))
 #

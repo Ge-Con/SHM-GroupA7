@@ -61,75 +61,97 @@ def saveHilbert(dir):
                 arrayfile1.to_csv(csv_file_path1, index=False)
                 # arrayfile2.to_csv(csv_file_path2, index=False)
 
-def save_Time_Features(dir):
-    print("Extracting Time Domain Features:...")
-    toDelete = np.zeros(20, dtype=int)
+def fixname(name):
+    if "50" in name and "150" not in name and "250" not in name:
+        name = "0" + name
+    return name
+
+def saveFeatures(dir):
+    print("Extracting Features:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
+
             if name.endswith('kHz.csv'):
-                data = pd.read_csv(os.path.join(root, name))
-                data = data.transpose()
-                data = np.array(data)
-                arrayfile1, arrayfile2 = extract_features.time_to_feature(data)
-                #print("IMPORTED FIRST: ",arrayfile2)
-                for i in range(len(arrayfile2)):
-                    toDelete[arrayfile2[i]] = toDelete[arrayfile2[i]] + 1
-                #print("To Delete: ", toDelete)
-    #
-    # # Get the indices that would sort the array
-    # sorted_indices = np.argsort(toDelete)[::-1]
-    # # Get the indices of the 10 lowest integers in the initial array
-    # indices_of_10_highest = sorted_indices[:9]
-    # print(indices_of_10_highest)
-    #
-    # for root, dirs, files in os.walk(dir):
-    #     for name in files:
-    #         if name.endswith('EMD.csv') or name.endswith('Hilbert.csv'):
-    #             data = pd.read_csv(os.path.join(root, name))
-    #             data = np.array(data)
-    #             features = extract_features.time_to_feature_Reduced(data, indices_of_10_highest)
-    #             # Determine the new filename based on the original filename
-                new_filename = name.replace('kHz.csv', 'kHz-Time-Features.csv')
-    #             # Construct the new file path
+                data = pd.read_csv(os.path.join(root, name))    #Don't put this line outside if statement
+                features = extract_features.time_to_feature(data)
+                new_filename = fixname(name).replace('kHz.csv', 'kHz-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
 
-                arrayfile1.to_csv(csv_file_path, index=False)
-                '''call new function with toDelete array and return the reduced size feature array'''
+            elif name.endswith('FFT_Amp.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                features = extract_features.freq_to_feature(data)
+                new_filename = fixname(name).replace('FFT_Amp.csv', 'FFT_Amp-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
 
+            elif name.endswith('Hilbert.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                features = extract_features.time_to_feature(data)
+                new_filename = fixname(name).replace('Hilbert.csv', 'Hilbert-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
 
-def save_Freq_Features(dir):
-    print("Extracting Frequency Domain Features:...")
-    toDelete = np.zeros(20, dtype=int)
+            elif name.endswith('EMD.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                features = extract_features.time_to_feature(data)
+                new_filename = fixname(name).replace('EMD.csv', 'EMD-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
+def correlateFeatures(dir):
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    print("Combining Features:...")
+    for root, dirs, files in os.walk(dir):
+        allfeatures = np.empty((6, 4), dtype=object)
+        flag = False
+        for name in files:
+            for freq in frequencies:
+                if freq in name and name.endswith('-Features.csv'):
+                    flag = True
+                    data = np.array(pd.read_csv(os.path.join(root, name)))
+                    if 'FFT_Amp' in name:
+                        allfeatures[frequencies.index(freq)][1] = data
+                    elif 'Hilbert' in name:
+                        allfeatures[frequencies.index(freq)][2] = data
+                    elif 'EMD' in name:
+                        allfeatures[frequencies.index(freq)][3] = data
+                    else: #Time domain
+                        allfeatures[frequencies.index(freq)][0] = data
+
+        if flag:
+            for freq in ["050", "100", "125", "150", "200", "250"]:
+                combinedfeatures = np.concatenate([allfeatures[frequencies.index(freq), i] for i in range(allfeatures[0].shape[0])], axis=0)
+                csv_file_path = os.path.join(root, freq +"_kHz-allfeatures.csv")
+                pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
+
+    print("Averaging features...")
+    meanfeatures = np.empty((6), dtype=object)
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name.endswith('FFT_Amp.csv'):
-                data = pd.read_csv(os.path.join(root, name))
-                data = data.transpose()
-                data = np.array(data)
-                arrayfile1, arrayfile2 = extract_features.freq_to_feature(data)
-                #print("IMPORTED FIRST: ",arrayfile2)
-                for i in range(len(arrayfile2)):
-                    toDelete[arrayfile2[i]] = toDelete[arrayfile2[i]] + 1
-                #print("To Delete: ", toDelete)
-    #
-    # # Get the indices that would sort the array
-    # sorted_indices = np.argsort(toDelete)[::-1]
-    # # Get the indices of the 10 lowest integers in the initial array
-    # indices_of_10_highest = sorted_indices[:9]
-    # print(indices_of_10_highest)
-    #
-    # for root, dirs, files in os.walk(dir):
-    #     for name in files:
-    #         if name.endswith('EMD.csv') or name.endswith('Hilbert.csv'):
-    #             data = pd.read_csv(os.path.join(root, name))
-    #             data = np.array(data)
-    #             features = extract_features.time_to_feature_Reduced(data, indices_of_10_highest)
-    #             # Determine the new filename based on the original filename
-                new_filename = name.replace('FFT-Amp.csv', 'FFT-Features.csv')
-    #             # Construct the new file path
-                csv_file_path = os.path.join(root, new_filename)
+            if name.endswith("kHz-allfeatures.csv"):
+                data = np.array(pd.read_csv(os.path.join(root, name)))
+                data = np.mean(data, axis=1)
+                if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":
+                    meanfeatures[frequencies.index(name[:3])] = np.array([data])
+                else:
+                    meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
 
-                arrayfile1.to_csv(csv_file_path, index=False)
+    alldelete = np.empty((6), dtype=object)
+    for freq in frequencies:
+        csv_file_path = os.path.join(dir, freq + "_kHz-meanfeatures.csv")
+        pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)
+
+        correlation_matrix, features, to_delete = extract_features.feature_correlation(meanfeatures[frequencies.index(freq)])
+        alldelete[frequencies.index(freq)] = to_delete
+        csv_file_path = os.path.join(dir, freq + "_kHz-cmatrix.csv")
+        pd.DataFrame(correlation_matrix).to_csv(csv_file_path, index=False)
+        csv_file_path = os.path.join(dir, freq + "_kHz-rfeatures.csv")
+        pd.DataFrame(features).to_csv(csv_file_path, index=False)
+    csv_file_path = os.path.join(dir, "deleted_features.csv")
+    pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
+
+
 def giveTime():
     time = []
     for i in range(2000):
@@ -149,62 +171,50 @@ def main_menu():
     print("3. Hilbert")
     print("4. STFT")
     print("5. All of the above")
-    print("6. Extract features from time domain data")
-    print("7. Extract features from frequency domain data")
-    print("8. Exit")
-
-def option1(loc):
-    saveFFT(loc)
-
-def option2(loc):
-    saveEMD(loc)
-
-def option3(loc):
-    saveHilbert(loc)
-
-def option4(loc):
-    saveSTFT(loc)
-
-def option5(loc):
-    saveFFT(loc)
-    saveEMD(loc)
-    saveHilbert(loc)
-    saveSTFT(loc)
-
-def option6(loc):
-    save_Time_Features(loc)
-
-def option7(loc):
-    save_Freq_Features(loc)
+    print("6. Extract all features (Requires 5)")
+    print("7. Apply PCA to all (Requires 5)")
+    print("8. Correlate features (Requires 6)")
+    print("9. Evaluate all HIs (Requires 6 & 7)")
+    print("0. Exit")
 
 # Prompt the user to input the folder path
-folder_path = input("Enter the folder path of the Matlab files: ")
-Data_Preprocess.matToCsv(folder_path)
-csv_dir = folder_path.replace('PZT','PZT-CSV')
+extract = bool(int(input("Extract Matlab (0=No, 1=Yes): ")))
+if extract:
+    folder_path = input("Enter the folder path of the Matlab files: ")
+    Data_Preprocess.matToCsv(folder_path)
+    csv_dir = folder_path.replace('PZT','PZT-CSV')
+else:
+    csv_dir = input("Enter the folder path of the CSV files: ")
 # Main program loop
 while True:
     main_menu()
     choice = input("Enter your choice: ")
 
     if choice == '1':
-        option1(csv_dir)
+        saveFFT(csv_dir)
     elif choice == '2':
-        option2(csv_dir)
+        saveEMD(csv_dir)
     elif choice == '3':
-        option3(csv_dir)
+        saveHilbert(csv_dir)
     elif choice == '4':
-        option4(csv_dir)
+        saveSTFT(csv_dir)
     elif choice == '5':
-        option5(csv_dir)
+        saveFFT(csv_dir)
+        saveEMD(csv_dir)
+        saveHilbert(csv_dir)
+        saveSTFT(csv_dir)
     elif choice == '6':
-        option6(csv_dir)
-    elif choice == '7':
-        option7(csv_dir)
+        saveFeatures(csv_dir)
     elif choice == '8':
+        correlateFeatures(csv_dir)
+    elif choice == '0':
         print("Exiting...")
-        break
+        quit()
     else:
-        print("Invalid choice. Please enter a number between 1 and 8.")
+        print("Invalid choice. Please enter a number between 0 and 9.")
 
 #C:\Users\geort\Desktop\Universty\PZT-L1-03
 #C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
+
+#C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\PZT L1-03
+#C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\PZT-CSV L1-03
