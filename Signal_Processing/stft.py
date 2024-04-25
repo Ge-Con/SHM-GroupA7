@@ -18,8 +18,8 @@ def Short_Fourier(data):
     amp_arr = []
     for i in range(8):
         x_values = []
-        for j in range(8):
-            k = 8 * i + j
+        for j in range(7):
+            k = 7 * i + j
             # Extracting data to perform FFT on
             # x = data.iloc[:, 0]
             y = data.iloc[:, k]
@@ -47,8 +47,8 @@ def Short_Fourier(data):
 
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
-data = pd.read_csv(r"C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5\L109_2019_12_18_17_49_44\State_9_2019_12_19_02_02_36\50kHz.csv")
-Short_Fourier(data)
+# data = pd.read_csv(r"C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5\L109_2019_12_18_17_49_44\State_9_2019_12_19_02_02_36\50kHz.csv")
+# Short_Fourier(data)
 
 
 

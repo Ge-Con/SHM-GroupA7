@@ -10,7 +10,7 @@ def Hilbert(data, time):
     time = pd.DataFrame(time)
     inst_freq_arr = []
     amp_arr = []
-    for i in range(8):
+    for i in range(7):
         x_values = []
         for j in range(8):
             k = 8 * i + j

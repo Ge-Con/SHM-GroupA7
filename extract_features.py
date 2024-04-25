@@ -255,7 +255,7 @@ def freq_to_feature(data):
 
 #print(freq_to_feature([[2, 3, 4, 5], [1, 2, 3, 5], [4, 5, 7, 4], [1, 3, 5, 7]]))
 #
-data = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50_kHz_FFT_Freq.csv")
-data = np.array(data)
-print(freq_to_feature(data))
-print("last")
+# data = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50_kHz_FFT_Freq.csv")
+# data = np.array(data)
+# print(freq_to_feature(data))
+# print("last")

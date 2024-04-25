@@ -66,7 +66,7 @@ def save_Time_Features(dir):
     toDelete = np.zeros(20, dtype=int)
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name.endswith('EMD.csv') or name.endswith('Hilbert.csv'):
+            if name.endswith('kHz.csv'):
                 data = pd.read_csv(os.path.join(root, name))
                 data = np.array(data)
                 arrayfile1, arrayfile2 = extract_features.time_to_feature(data)
