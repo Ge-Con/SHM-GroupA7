@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 class VAE(nn.Module):
     def __init__(
@@ -62,13 +63,13 @@ def loss_function(output, x, mu, logvar, z, z_i1, batch_size):
 
     #DTC = torch.sqrt(z - z_i1 - 9)
         
-    return recon_loss + 0.002 * kl_loss
+    return recon_loss + 0.002 * kl_loss + #DTC
 
 def train_model(
     X, 
     learning_rate=0.001, 
     batch_size=128, 
-    num_epochs=200,
+    num_epochs=50,
     hidden_dim=8,
     latent_dim=1
   ):
@@ -108,26 +109,25 @@ def train_model(
           optimizer.step()
 
           # Add batch loss to epoch loss
-          print(loss.item())
           epoch_loss += loss.item()
 
       # Print epoch loss
       print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss/len(X)}")
       
   return model
-print(F)
 X = pd.read_csv('50_kHz_FEATURES.csv')
 scaler = StandardScaler()
 scaler.fit(X)
-X = scaler.transform(X)
+X = scaler.transform(X).transpose()
 pca = PCA(n_components = 15)
 pca.fit(X)
-x = pca.transform(X)
-model = train_model(x)
-
+x_pca = pca.transform(X)
+model = train_model(x_pca)
 z_arr = []
-print(X.shape)
-for i in range(X.shape[1]):
-    z_arr.append(model(torch.from_numpy(x[:, i]))[1])
+for i in range(x_pca.shape[0]):
+    z_arr.append(model(torch.from_numpy(x_pca[i, :]).to(torch.float32))[1].detach().numpy())
 
 print(z_arr)
+
+plt.plot(z_arr)
+plt.show()
