@@ -64,9 +64,9 @@ def combine_act(freq):
 
                              # Create a DataFrame with 9 columns
                              data = pd.DataFrame(reshaped_data, columns=[f'Sensor_{i}' for i in range(9)])
-                             print(data)
+                             #rint(data)
                              data = data.drop(data.columns[actuatorNum], axis=1)
-                             print("NEW",data)
+                             #print("NEW",data)
                              freq_arr.insert(actuatorNum-1,data)  #insterts data in the correct orden (in terms of which sensor acts as actuator) into a list
 
 

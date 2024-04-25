@@ -209,7 +209,6 @@ def time_to_feature(data):
     """
 
     features = np.empty((len(data), 19))
-
     for i in range(len(data)):
         features[i] = Time_domain_features(data[i])
     x, y = feature_correlation(features)
