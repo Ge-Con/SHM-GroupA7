@@ -60,6 +60,22 @@ def Tr(X):
     # Return minimum value
     return min(trendability_list)
 
+def Mo(PC) -> float:
+    sum_samples = 0
+    for i in range(len(PC)):
+        sum_measurements = 0
+        div_sum = 0
+        for j in range(len(PC[i, :])-1):
+            sub_sum = 0
+            div_sub_sum = 0
+            for k in range(len(PC[i, :])):
+                if k > i:
+                    sub_sum += (k - i) * np.sign(PC[i, k] - PC[i, j])
+                    div_sub_sum += k-i
+            sum_measurements += sub_sum
+            div_sum += div_sub_sum
+        sum_samples += abs(sum_measurements/div_sum)
+    return sum_samples/(len(PC) -1)
 
 def fitness(X, Mo_a=1,Tr_b=1,Pr_c=1):
 

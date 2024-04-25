@@ -45,7 +45,7 @@ def my_get_next_imf(x, zoom=None, sd_thresh=0.1, max_iters = 10):
 #This for loop will print 3,4 or 5 graphs. The output we need is the last graph that is made.
 def runEMD(data, time):
     proto_imf = []
-    for i in range(8):
+    for i in range(7):
         x_values = []
         for j in range(8):
             k = 8 * i + j
@@ -56,7 +56,7 @@ def runEMD(data, time):
 
             proto_imf.insert(k,my_get_next_imf(x, zoom=None, sd_thresh=0.1))
 
-    return pd.DataFrame(proto_imf)
+    return pd.DataFrame(proto_imf).transpose()
 
     #plt.plot(time, data, color='red')
     #plt.plot(time, upper_env, color='blue')
