@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 import pandas as pd
 import matplotlib.pyplot as plt
+from torch.utils.data.datapipes.dataframe import dataframes
 
 """
 # Assuming df is your dataframe read from csv
@@ -11,6 +12,7 @@ dataframes = [df[['Column_1', 'Column_2']], df[['Column_1', 'Column_3']], df[['C
               df[['Column_1', 'Column_5']], df[['Column_1', 'Column_6']], df[['Column_1', 'Column_7']],
               df[['Column_1', 'Column_8']], df[['Column_1', 'Column_9']]]
 """
+
 def Short_Fourier(data):
     freq_arr = []
     amp_arr = []
@@ -28,12 +30,14 @@ def Short_Fourier(data):
             fs = 1 / 5e-7
 
             f, t, Zxx = signal.stft(y, fs, nperseg=1000)
-            amp = np.abs(Zxx).max()
-
-            freq_arr.insert(k, f)
-            amp_arr.insert(k, amp)
-
-            pcm = plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp, shading='gouraud')
+            #amp = np.abs(Zxx).max()
+            amp = np.abs(Zxx)
+            #print(amp)
+            #print(len(amp))
+            #freq_arr.insert(k, f)
+            #amp_arr.insert(k, amp)
+            #amp_arr.insert(k, Zxx)
+            #pcm = plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp, shading='gouraud')
             # plt.title('STFT Magnitude')
             # plt.ylabel('Frequency [Hz]')
             # plt.xlabel('Time [sec]')
@@ -43,9 +47,8 @@ def Short_Fourier(data):
 
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
-
-
-
+data = pd.read_csv(r"C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5\L109_2019_12_18_17_49_44\State_9_2019_12_19_02_02_36\50kHz.csv")
+Short_Fourier(data)
 
 
 
