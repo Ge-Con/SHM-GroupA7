@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from sklearn.decomposition import PCA
 
 import extract_features
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
@@ -151,6 +152,17 @@ def correlateFeatures(dir):
     csv_file_path = os.path.join(dir, "deleted_features.csv")
     pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
+def savePCA(dir):
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    components = np.empty((6), dtype=object)
+    print("VAF:")
+    for freq in frequencies:
+        data = pd.read_csv(os.path.join(dir, freq + "_kHz-meanfeatures.csv"))
+        pca = PCA(n_components=1)
+        components[frequencies.index(freq)] = pca.fit_transform(data).flatten()
+        print(pca.explained_variance_ratio_)
+    csv_file_path = os.path.join(dir, "1compPCA.csv")
+    pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
 def giveTime():
     time = []
@@ -205,6 +217,8 @@ while True:
         saveSTFT(csv_dir)
     elif choice == '6':
         saveFeatures(csv_dir)
+    elif choice == '7':
+        savePCA(csv_dir)
     elif choice == '8':
         correlateFeatures(csv_dir)
     elif choice == '0':

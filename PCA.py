@@ -3,14 +3,14 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_breast_cancer
 
-breast = load_breast_cancer()
-breast_data = breast.data
-breast_labels = breast.target
-labels = np.reshape(breast_labels, (569,1))
+#breast = load_breast_cancer()
+#breast_data = breast.data
+#breast_labels = breast.target
+#labels = np.reshape(breast_labels, (569,1))
 
-final_breast_data = np.concatenate([breast_data, labels], axis=1)
-breast_dataset = pd.DataFrame(final_breast_data)
-print(final_breast_data)
+#final_breast_data = np.concatenate([breast_data, labels], axis=1)
+#breast_dataset = pd.DataFrame(final_breast_data)
+#print(final_breast_data)
 
 def PCA(X, n): # n is the number of principal components
 
@@ -106,7 +106,7 @@ def truncator(X):
     return r
 
 # if truncation function to be used: use n = truncator(final_breast_data)
-X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
+#X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
-explained_variance = np.sum(eigenvalues / total_variance)*100
-print("Total explained variance:", explained_variance, "%")
+#explained_variance = np.sum(eigenvalues / total_variance)*100
+#print("Total explained variance:", explained_variance, "%")
