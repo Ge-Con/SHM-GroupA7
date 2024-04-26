@@ -7,14 +7,14 @@ from matplotlib import pyplot as plt
 def fast_fourier(data):
     freq_arr = []
     amp_arr = []
-    for i in range(8):
+    for i in range(7):
         x_values = []
         for j in range(8):
             k = 8 * i + j
             # Extracting data to perform FFT on
             x = data.iloc[:, k]
 
-            X = fft(x)
+            X = np.abs(fft(x))  #Magnitude only
             N = len(X)
             n = np.arange(N)
             sr = 1 / 5e-7 # Sample rate calculation
@@ -31,7 +31,7 @@ def fast_fourier(data):
             freq_arr.insert(k,f_oneside)
             amp_arr.insert(k,X[:n_oneside])
     #print(pd.DataFrame(amp_arr))
-    return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
+    return pd.DataFrame(freq_arr).transpose(), pd.DataFrame(amp_arr).transpose()
 
 #This is the original
 '''

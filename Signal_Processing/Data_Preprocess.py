@@ -32,6 +32,7 @@ def matToCsv(dir):
                 #for i in range(1,8):
                 #time_col = arrayfile.iloc[:, 0]
                 arrayfile = arrayfile.drop(columns = 'Sensor_0', axis=1)
+                #print(arrayfile)
                 csv_file_path = os.path.join(root_new, f"{name.replace('_5cycles', '')}.csv")
                 #arrayfile = pd.concat([time_col, arrayfile], axis=1)
                 #arrayfile.rename(columns={'Sensor_0': 'Time'}, inplace= True)
@@ -63,6 +64,9 @@ def combine_act(freq):
 
                              # Create a DataFrame with 9 columns
                              data = pd.DataFrame(reshaped_data, columns=[f'Sensor_{i}' for i in range(9)])
+                             #rint(data)
+                             data = data.drop(data.columns[actuatorNum], axis=1)
+                             #print("NEW",data)
                              freq_arr.insert(actuatorNum-1,data)  #insterts data in the correct orden (in terms of which sensor acts as actuator) into a list
 
 
@@ -74,6 +78,7 @@ def combine_act(freq):
                             print(f"Data format invalid for key {key}. Skipping.")
                 combined_df = pd.concat(freq_arr, axis=1) #combines all the entries in the list into a single dataframe
                #combined_df.columns = [f'Sensor{i}' for i in range(combined_df.shape[1])]
+
     return combined_df
 
 
