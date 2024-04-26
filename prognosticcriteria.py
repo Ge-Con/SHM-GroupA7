@@ -79,11 +79,11 @@ def Mo(PC) -> float:
 
 def fitness(X, Mo_a=1,Tr_b=1,Pr_c=1):
 
-    monoticity = Mo(X)
+    monotonicity = Mo(X)
     trendability = Tr(X)
     prognosability = Pr(X)
 
-    ftn = Mo_a*monoticity + Tr_b*trendability + Pr_c*prognosability
+    ftn = Mo_a*monotonicity + Tr_b*trendability + Pr_c*prognosability
 
     error = Mo_a+Tr_b+Pr_c - ftn
 
