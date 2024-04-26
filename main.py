@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 
 import extract_features
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
+from prognosticcriteria import fitness
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -164,6 +165,40 @@ def savePCA(dir):
     csv_file_path = os.path.join(dir, "1compPCA.csv")
     pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
+def evaluate():
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    dir = input("Enter the folder path of the CSV folders: ")
+    components = np.empty((6), dtype=object)
+    features = np.empty((6, 71), dtype=object)
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name == "1compPCA.csv":
+                data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
+                for freq in range(6):
+                    if str(type(components[freq])) == "<class 'NoneType'>":
+                        components[freq] = np.array([data[freq][-30::]])
+                    else:
+                        #print(components[freq])
+                        #print(data[freq])
+                        components[freq] = np.vstack([components[freq], data[freq][-30::]])
+                        #print(components[freq])
+            elif name.endswith("meanfeatures.csv"):
+                data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
+                freq = frequencies.index(name[:3])
+                for feat in range(71):
+                    if str(type(features[freq][feat])) == "<class 'NoneType'>":
+                        features[freq][feat] = np.array([data[feat][-30::]])
+                    else:
+                        features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
+
+    results = np.empty((6, 71))
+    for freq in range(6):
+        #print(components)
+        print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
+        for feat in range(71):
+            results[freq][feat] = float(fitness(features[freq][feat])[0])
+    pd.DataFrame(results).to_csv(dir + "\Results.csv", index=False)
+
 def giveTime():
     time = []
     for i in range(2000):
@@ -184,9 +219,9 @@ def main_menu():
     print("4. STFT")
     print("5. All of the above")
     print("6. Extract all features (Requires 5)")
-    print("7. Apply PCA to all (Requires 5)")
-    print("8. Correlate features (Requires 6)")
-    print("9. Evaluate all HIs (Requires 6 & 7)")
+    print("7. Correlate features (Requires 6)")
+    print("8. Apply PCA to all (Requires 7)")
+    print("9. Evaluate all HIs (Requires 8)")
     print("0. Exit")
 
 # Prompt the user to input the folder path
@@ -194,7 +229,9 @@ extract = bool(int(input("Extract Matlab (0=No, 1=Yes): ")))
 if extract:
     folder_path = input("Enter the folder path of the Matlab files: ")
     Data_Preprocess.matToCsv(folder_path)
-    csv_dir = folder_path.replace('PZT','PZT-CSV')
+    print("Done")
+    quit()
+    #csv_dir = folder_path.replace('PZT','PZT-CSV')
 else:
     csv_dir = input("Enter the folder path of the CSV files: ")
 # Main program loop
@@ -217,10 +254,12 @@ while True:
         saveSTFT(csv_dir)
     elif choice == '6':
         saveFeatures(csv_dir)
-    elif choice == '7':
-        savePCA(csv_dir)
     elif choice == '8':
+        savePCA(csv_dir)
+    elif choice == '7':
         correlateFeatures(csv_dir)
+    elif choice == '9':
+        evaluate()
     elif choice == '0':
         print("Exiting...")
         quit()
@@ -230,5 +269,4 @@ while True:
 #C:\Users\geort\Desktop\Universty\PZT-L1-03
 #C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
 
-#C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\PZT L1-03
-#C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\PZT-CSV L1-03
+#C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files
