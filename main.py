@@ -5,7 +5,7 @@ from sklearn.decomposition import PCA
 
 import extract_features
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
-from prognosticcriteria import fitness
+from prognosticcriteria import fitness, Mo, Tr, Pr
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -192,12 +192,19 @@ def evaluate():
                         features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
 
     results = np.empty((6, 71))
+    criteria = np.empty((3, 6, 71))
     for freq in range(6):
         #print(components)
         print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
         for feat in range(71):
             results[freq][feat] = float(fitness(features[freq][feat])[0])
-    pd.DataFrame(results).to_csv(dir + "\Results.csv", index=False)
+            criteria[0][freq][feat] = float(Mo(features[freq][feat]))
+            criteria[1][freq][feat] = float(Tr(features[freq][feat]))
+            criteria[2][freq][feat] = float(Pr(features[freq][feat]))
+    pd.DataFrame(results).to_csv(dir + "\Fitness.csv", index=False)
+    pd.DataFrame(criteria[0]).to_csv(dir + "\Mo.csv", index=False)
+    pd.DataFrame(criteria[1]).to_csv(dir + "\Tr.csv", index=False)
+    pd.DataFrame(criteria[2]).to_csv(dir + "\Pr.csv", index=False)
 
 def giveTime():
     time = []
