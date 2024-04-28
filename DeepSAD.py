@@ -1,7 +1,8 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
-class DeepSAD_net(nn.Module):
+class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
     #mnist_LeNet implementation - this is phi in the equations
 
@@ -26,6 +27,46 @@ class DeepSAD_net(nn.Module):
         x = self.pool(F.leaky_relu(self.bn2(x)))
         x = x.view(int(x.size(0)), -1)
         x = self.fc1(x)
+        return x
+
+class FashionMNIST_LeNet_Decoder(nn.Module):
+    def __init__(self, rep_dim=64):
+        super().__init__()
+
+        self.rep_dim = rep_dim
+
+        self.fc3 = nn.Linear(self.rep_dim, 128, bias=False)
+        self.bn1d2 = nn.BatchNorm1d(128, eps=1e-04, affine=False)
+        self.deconv1 = nn.ConvTranspose2d(8, 32, 5, bias=False, padding=2)
+        self.bn2d3 = nn.BatchNorm2d(32, eps=1e-04, affine=False)
+        self.deconv2 = nn.ConvTranspose2d(32, 16, 5, bias=False, padding=3)
+        self.bn2d4 = nn.BatchNorm2d(16, eps=1e-04, affine=False)
+        self.deconv3 = nn.ConvTranspose2d(16, 1, 5, bias=False, padding=2)
+
+    def forward(self, x):
+        x = self.bn1d2(self.fc3(x))
+        x = x.view(int(x.size(0)), int(128 / 16), 4, 4)
+        x = F.interpolate(F.leaky_relu(x), scale_factor=2)
+        x = self.deconv1(x)
+        x = F.interpolate(F.leaky_relu(self.bn2d3(x)), scale_factor=2)
+        x = self.deconv2(x)
+        x = F.interpolate(F.leaky_relu(self.bn2d4(x)), scale_factor=2)
+        x = self.deconv3(x)
+        x = torch.sigmoid(x)
+        return x
+
+class FashionMNIST_LeNet_Autoencoder(nn.Module):
+
+    def __init__(self, rep_dim=64):
+        super().__init__()
+
+        self.rep_dim = rep_dim
+        self.encoder = FashionMNIST_LeNet(rep_dim=rep_dim)
+        self.decoder = FashionMNIST_LeNet_Decoder(rep_dim=rep_dim)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
         return x
 
 
@@ -83,8 +124,8 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
     """
 
     #Setup optimizer and scheduler
-    optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
     #Initialise c if necessary
     if model.c == None:
@@ -100,7 +141,7 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
         epoch_loss = 0.0
         n_batches = 0
 
-        for data in training_data:  #Batches training data?
+        for data in train_data:  #Batches training data?
 
             #Forward and backward pass
             optimizer.zero_grad()
@@ -126,6 +167,49 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
             n_batches += 1
 
         print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss/n_batches))
+
+def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
+    # Set loss
+    criterion = nn.MSELoss(reduction='none')
+
+    # Set optimizer (Adam optimizer for now)
+    optimizer = nn.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+
+    # Set learning rate scheduler
+    scheduler = nn.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
+
+    model.train()
+    for epoch in range(n_epochs):
+
+        scheduler.step()
+        if epoch in lr_milestones:
+            print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
+
+            epoch_loss = 0.0
+            n_batches = 0
+            for data in train_data:
+                # Zero the network parameter gradients
+                optimizer.zero_grad()
+
+                # Update network parameters via backpropagation: forward + backward + optimize
+                rec = model(data)
+                rec_loss = criterion(rec, data) #Not so sure about this
+                loss = torch.mean(rec_loss)
+                loss.backward()
+                optimizer.step()
+
+                epoch_loss += loss.item()
+                n_batches += 1
+
+        return model
+
+def pretrain(train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
+    model = FashionMNIST_LeNet_Autoencoder()
+
+    model = AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+
+    #Now initialise network weights. How? Good question.
+
 
 def embed(X, model):
     """
