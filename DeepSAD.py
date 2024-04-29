@@ -203,13 +203,22 @@ def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milest
 
         return model
 
-def pretrain(train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
-    model = FashionMNIST_LeNet_Autoencoder()
+def pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
+    ae_model = FashionMNIST_LeNet_Autoencoder()
 
-    model = AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+    ae_model = AE_train(ae_model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
 
-    #Now initialise network weights. How? Good question.
+    model_dict = model.state_dict()
+    ae_model_dict = ae_model.state_dict()
 
+    # Filter out decoder network keys
+    ae_model_dict = {k: v for k, v in ae_model_dict.items() if k in model_dict}
+    # Overwrite values in the existing state_dict
+    model_dict.update(ae_model_dict)
+    # Load the new state_dict
+    model.load_state_dict(model_dict)
+
+    return model
 
 def embed(X, model):
     """
@@ -231,3 +240,13 @@ def embed(X, model):
     model.eval()
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
+
+
+train_data = []
+learning_rate = 0.1
+weight_decay = 0.1
+n_epochs = 1000
+lr_milestones = [500]
+
+model = FashionMNIST_LeNet()
+model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
