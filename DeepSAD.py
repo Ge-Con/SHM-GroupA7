@@ -245,14 +245,6 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
 
-dir = input("Input file location: ")
-data = np.empty((0, 71, 30))
-for root, dirs, files in os.walk(dir):
-    for name in files:
-        if name == "050_kHz-meanfeatures.csv":
-            read = np.array(pd.read_csv(os.path.join(root, name)))
-            features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
-
 learning_rate = 0.1
 weight_decay = 0.1
 n_epochs = 1000
@@ -278,6 +270,21 @@ def batch_data(data, batch_size):
 
     return batches
 
+def load_data(dir):
+    data = np.empty((1), dtype=object)
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name == '050_kHz-allfeatures.csv':
+                read_data = np.array(pd.read_csv(os.path.join(root, name)))
+                if str(type(data[0])) == "<class 'NoneType'>":
+                    data = np.array([read_data])
+                else:
+                    data= np.vstack([data, read_data])
+    return data
+
+dir = input("CSV file location: ")
+train_data = load_data(dir)
+print(train_data)
 train_data = batch_data(train_data, 4)
 model = FashionMNIST_LeNet()
 model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
