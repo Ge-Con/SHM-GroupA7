@@ -29,13 +29,13 @@ def Short_Fourier(data):
             # dont need bc all our time intervals are the same
             fs = 1 / 5e-7
 
-            f, t, Zxx = signal.stft(y, fs, nperseg=1000)
+            f, t, Zxx = signal.stft(y, fs, nperseg=1)
             #amp = np.abs(Zxx).max()
             amp = np.abs(Zxx)
             #print(amp)
             #print(len(amp))
-            #freq_arr.insert(k, f)
-            #amp_arr.insert(k, amp)
+            freq_arr.insert(k, f)
+            amp_arr.insert(k, amp)
             #amp_arr.insert(k, Zxx)
             #pcm = plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp, shading='gouraud')
             # plt.title('STFT Magnitude')
@@ -44,6 +44,7 @@ def Short_Fourier(data):
             # cbar = plt.colorbar(pcm)
             # cbar.set_label('Amplitude')
             # plt.show()
+            print(amp_arr)
 
     return pd.DataFrame(freq_arr), pd.DataFrame(amp_arr)
 
