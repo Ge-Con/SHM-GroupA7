@@ -1,6 +1,9 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+import os
 
 class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
@@ -167,6 +170,7 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
             n_batches += 1
 
         print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss/n_batches))
+    return model
 
 def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
     # Set loss
@@ -241,12 +245,40 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
 
+dir = input("Input file location: ")
+data = np.empty((0, 71, 30))
+for root, dirs, files in os.walk(dir):
+    for name in files:
+        if name == "050_kHz-meanfeatures.csv":
+            read = np.array(pd.read_csv(os.path.join(root, name)))
+            features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
 
-train_data = []
 learning_rate = 0.1
 weight_decay = 0.1
 n_epochs = 1000
 lr_milestones = [500]
+semi_targets = []
+gamma = 1
+eta = 1
+eps = 1
+reg = 0.2
 
+def batch_data(data, batch_size):
+    num_samples = len(data)
+    num_batches = num_samples // batch_size
+    batches = []
+
+    for i in range(num_batches):
+        batch = data[i * batch_size: (i + 1) * batch_size]
+        batches.append(batch)
+
+    # Handling the last batch which may have a different size
+    if num_samples % batch_size != 0:
+        batches.append(data[num_batches * batch_size:])
+
+    return batches
+
+train_data = batch_data(train_data, 4)
 model = FashionMNIST_LeNet()
 model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+model = train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
