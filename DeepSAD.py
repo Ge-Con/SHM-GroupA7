@@ -1,6 +1,9 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+import os
 
 class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
@@ -12,7 +15,6 @@ class FashionMNIST_LeNet(nn.Module):
         self.rep_dim = rep_dim  #Number of dimensions
 
         #CNN
-        self.pool = nn.MaxPool2d(2, 2)
         self.conv1 = nn.Conv2d(1, 8, 5, bias=False, padding=2)
         self.bn1 = nn.BatchNorm2d(8, eps=1e-04, affine=False)
         self.conv2 = nn.Conv2d(8, 4, 5, bias=False, padding=2)
@@ -20,7 +22,8 @@ class FashionMNIST_LeNet(nn.Module):
         self.fc1 = nn.Linear(4 * 7 * 7, self.rep_dim, bias=False)
 
     def forward(self, x):
-        x = x.view(-1, 1, 28, 28)
+        #34 rows, 71 columns
+        x = torch.flatten(x)
         x = self.conv1(x)
         x = self.pool(F.leaky_relu(self.bn1(x)))
         x = self.conv2(x)
@@ -167,16 +170,17 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
             n_batches += 1
 
         print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss/n_batches))
+    return model
 
 def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
     # Set loss
     criterion = nn.MSELoss(reduction='none')
 
     # Set optimizer (Adam optimizer for now)
-    optimizer = nn.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     # Set learning rate scheduler
-    scheduler = nn.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
 
     model.train()
     for epoch in range(n_epochs):
@@ -241,12 +245,47 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
 
-
-train_data = []
 learning_rate = 0.1
 weight_decay = 0.1
 n_epochs = 1000
 lr_milestones = [500]
+semi_targets = []
+gamma = 1
+eta = 1
+eps = 1
+reg = 0.2
 
+def batch_data(data, batch_size):
+    num_samples = len(data)
+    num_batches = num_samples // batch_size
+    batches = []
+
+    for i in range(num_batches):
+        batch = data[i * batch_size: (i + 1) * batch_size]
+        batches.append(batch)
+
+    # Handling the last batch which may have a different size
+    if num_samples % batch_size != 0:
+        batches.append(data[num_batches * batch_size:])
+
+    return batches
+
+def load_data(dir):
+    data = np.empty((1), dtype=object)
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name == '050_kHz-allfeatures.csv':
+                read_data = np.array(pd.read_csv(os.path.join(root, name)))
+                if str(type(data[0])) == "<class 'NoneType'>":
+                    data = np.array(read_data)
+                else:
+                    print(read_data)
+                    data= np.vstack([data, read_data])
+    return data
+
+dir = input("CSV file location: ")
+train_data = load_data(dir)
+train_data = batch_data(train_data, 4)
 model = FashionMNIST_LeNet()
 model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+model = train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
