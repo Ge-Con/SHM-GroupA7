@@ -15,7 +15,6 @@ class FashionMNIST_LeNet(nn.Module):
         self.rep_dim = rep_dim  #Number of dimensions
 
         #CNN
-        self.pool = nn.MaxPool2d(2, 2)
         self.conv1 = nn.Conv2d(1, 8, 5, bias=False, padding=2)
         self.bn1 = nn.BatchNorm2d(8, eps=1e-04, affine=False)
         self.conv2 = nn.Conv2d(8, 4, 5, bias=False, padding=2)
@@ -23,7 +22,8 @@ class FashionMNIST_LeNet(nn.Module):
         self.fc1 = nn.Linear(4 * 7 * 7, self.rep_dim, bias=False)
 
     def forward(self, x):
-        x = x.view(-1, 1, 28, 28)
+        #34 rows, 71 columns
+        x = torch.flatten(x)
         x = self.conv1(x)
         x = self.pool(F.leaky_relu(self.bn1(x)))
         x = self.conv2(x)
@@ -177,10 +177,10 @@ def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milest
     criterion = nn.MSELoss(reduction='none')
 
     # Set optimizer (Adam optimizer for now)
-    optimizer = nn.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     # Set learning rate scheduler
-    scheduler = nn.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=0.1)
 
     model.train()
     for epoch in range(n_epochs):
@@ -277,14 +277,14 @@ def load_data(dir):
             if name == '050_kHz-allfeatures.csv':
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
                 if str(type(data[0])) == "<class 'NoneType'>":
-                    data = np.array([read_data])
+                    data = np.array(read_data)
                 else:
+                    print(read_data)
                     data= np.vstack([data, read_data])
     return data
 
 dir = input("CSV file location: ")
 train_data = load_data(dir)
-print(train_data)
 train_data = batch_data(train_data, 4)
 model = FashionMNIST_LeNet()
 model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
