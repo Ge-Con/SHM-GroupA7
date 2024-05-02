@@ -104,13 +104,13 @@ def saveFeatures(dir):
                 data = pd.read_csv(os.path.join(root, name))
                 #Unflattening happens here
                 # Populate the unflattened_list with values from flat
-                index = 0
-                data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
-                for i in range(56):
-                    for j in range(17):
-                            data3d[i][j] = data[index]
-                            index += 1
-                features = extract_features.CORNELIE(data3d)
+                # index = 0
+                #data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+                #for i in range(56):
+                    #for j in range(17):
+                            #data3d[i][j] = data[index]
+                            #index += 1
+                features = extract_features.STFT_to_feature(data3d)
                 new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
@@ -119,7 +119,7 @@ def correlateFeatures(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
     print("Combining Features:...")
     for root, dirs, files in os.walk(dir):
-        allfeatures = np.empty((6, 4), dtype=object)
+        allfeatures = np.empty((6, 5), dtype=object)
         flag = False
         for name in files:
             for freq in frequencies:
@@ -132,6 +132,8 @@ def correlateFeatures(dir):
                         allfeatures[frequencies.index(freq)][2] = data
                     elif 'EMD' in name:
                         allfeatures[frequencies.index(freq)][3] = data
+                    elif 'STFT_Amp' in name:
+                        allfeatures[frequencies.index(freq)][4] = data
                     else: #Time domain
                         allfeatures[frequencies.index(freq)][0] = data
 
