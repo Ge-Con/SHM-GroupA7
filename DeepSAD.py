@@ -4,68 +4,56 @@ import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 import os
+import copy
 
 class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
     #mnist_LeNet implementation - this is phi in the equations
 
-    def __init__(self, rep_dim=64):
+    def __init__(self):
         super().__init__()
         self.c = None           #Hypersphere centre
-        self.rep_dim = rep_dim  #Number of dimensions
 
         #CNN
-        self.conv1 = nn.Conv2d(1, 8, 5, bias=False, padding=2)
-        self.bn1 = nn.BatchNorm2d(8, eps=1e-04, affine=False)
-        self.conv2 = nn.Conv2d(8, 4, 5, bias=False, padding=2)
-        self.bn2 = nn.BatchNorm2d(4, eps=1e-04, affine=False)
-        self.fc1 = nn.Linear(4 * 7 * 7, self.rep_dim, bias=False)
+        self.fc1 = nn.Linear(56*71, 512)
+        self.fc2 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 1)
 
     def forward(self, x):
         #34 rows, 71 columns
         x = torch.flatten(x)
-        x = self.conv1(x)
-        x = self.pool(F.leaky_relu(self.bn1(x)))
-        x = self.conv2(x)
-        x = self.pool(F.leaky_relu(self.bn2(x)))
-        x = x.view(int(x.size(0)), -1)
-        x = self.fc1(x)
+        x = x.to(next(self.parameters()).dtype)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = torch.relu(self.fc3(x))
+        x = torch.sigmoid(self.fc4(x))
         return x
 
 class FashionMNIST_LeNet_Decoder(nn.Module):
-    def __init__(self, rep_dim=64):
+    def __init__(self):
         super().__init__()
 
-        self.rep_dim = rep_dim
-
-        self.fc3 = nn.Linear(self.rep_dim, 128, bias=False)
-        self.bn1d2 = nn.BatchNorm1d(128, eps=1e-04, affine=False)
-        self.deconv1 = nn.ConvTranspose2d(8, 32, 5, bias=False, padding=2)
-        self.bn2d3 = nn.BatchNorm2d(32, eps=1e-04, affine=False)
-        self.deconv2 = nn.ConvTranspose2d(32, 16, 5, bias=False, padding=3)
-        self.bn2d4 = nn.BatchNorm2d(16, eps=1e-04, affine=False)
-        self.deconv3 = nn.ConvTranspose2d(16, 1, 5, bias=False, padding=2)
+        self.fc1 = nn.Linear(512, 56*71)
+        self.fc2 = nn.Linear(128, 512)
+        self.fc3 = nn.Linear(64, 128)
+        self.fc4 = nn.Linear(1, 64)
 
     def forward(self, x):
-        x = self.bn1d2(self.fc3(x))
-        x = x.view(int(x.size(0)), int(128 / 16), 4, 4)
-        x = F.interpolate(F.leaky_relu(x), scale_factor=2)
-        x = self.deconv1(x)
-        x = F.interpolate(F.leaky_relu(self.bn2d3(x)), scale_factor=2)
-        x = self.deconv2(x)
-        x = F.interpolate(F.leaky_relu(self.bn2d4(x)), scale_factor=2)
-        x = self.deconv3(x)
-        x = torch.sigmoid(x)
+        x = torch.relu(self.fc4(x))
+        x = torch.relu(self.fc3(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc1(x)
+        decoded = x.view(-1, 56, 71)
         return x
 
 class FashionMNIST_LeNet_Autoencoder(nn.Module):
 
-    def __init__(self, rep_dim=64):
+    def __init__(self):
         super().__init__()
 
-        self.rep_dim = rep_dim
-        self.encoder = FashionMNIST_LeNet(rep_dim=rep_dim)
-        self.decoder = FashionMNIST_LeNet_Decoder(rep_dim=rep_dim)
+        self.encoder = FashionMNIST_LeNet()
+        self.decoder = FashionMNIST_LeNet_Decoder()
 
     def forward(self, x):
         x = self.encoder(x)
@@ -184,14 +172,15 @@ def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milest
 
     model.train()
     for epoch in range(n_epochs):
-
         scheduler.step()
         if epoch in lr_milestones:
             print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
             epoch_loss = 0.0
             n_batches = 0
-            for data in train_data:
+            for batch in train_data:
+                data = batch
+
                 # Zero the network parameter gradients
                 optimizer.zero_grad()
 
@@ -205,7 +194,7 @@ def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milest
                 epoch_loss += loss.item()
                 n_batches += 1
 
-        return model
+    return model
 
 def pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
     ae_model = FashionMNIST_LeNet_Autoencoder()
@@ -249,7 +238,6 @@ learning_rate = 0.1
 weight_decay = 0.1
 n_epochs = 1000
 lr_milestones = [500]
-semi_targets = []
 gamma = 1
 eta = 1
 eps = 1
@@ -270,22 +258,46 @@ def batch_data(data, batch_size):
 
     return batches
 
-def load_data(dir):
-    data = np.empty((1), dtype=object)
+def load_data(dir, margin):
+    first = True
+    count = 0
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == '050_kHz-allfeatures.csv':
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
-                if str(type(data[0])) == "<class 'NoneType'>":
-                    data = np.array(read_data)
+                if first:
+                    data = np.array([read_data])
+                    labels = np.array([np.array([1])])  #Healthy
+                    first = False
                 else:
-                    print(read_data)
-                    data= np.vstack([data, read_data])
-    return data
+                    data = np.concatenate((data, [read_data]))
+                    labels = np.concatenate((labels, [np.array([0])]))    #Unlabelled
+                count += 1
+    labels[-1*margin::] = np.array([-1])    #Unhealthy
+    return data, labels
+
+batches = 4 #Batch ->size<-!!
+margin = 5 #Number of samples labelled on each end
+
+samples = ["PZT-CSV L1-03", "PZT-CSV L1-05", "PZT-CSV L1-09"]
 
 dir = input("CSV file location: ")
-train_data = load_data(dir)
-train_data = batch_data(train_data, 4)
+
+first = True
+for sample in samples:
+    temp_data, temp_targets = load_data(dir + "\\" + sample, margin)
+    if first:
+        train_data = copy.deepcopy(temp_data)
+        semi_targets = copy.deepcopy(temp_targets)
+        first = False
+    else:
+        train_data = np.concatenate((train_data, temp_data))
+        semi_targets = np.concatenate((semi_targets, temp_targets))
+
+#train_data = batch_data(train_data, batches)
+batched_data = []
+for batch in range(len(train_data)):
+    batched_data.append(torch.from_numpy(train_data[batch]))   #x = x.detach().numpy()
 model = FashionMNIST_LeNet()
-model = pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
-model = train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+model = pretrain(model, batched_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+model = train(model, batched_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
