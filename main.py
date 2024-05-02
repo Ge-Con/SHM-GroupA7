@@ -110,7 +110,7 @@ def saveFeatures(dir):
                     #for j in range(17):
                             #data3d[i][j] = data[index]
                             #index += 1
-                features = extract_features.STFT_to_feature(data3d)
+                features = extract_features.STFT_to_feature(data)
                 new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
