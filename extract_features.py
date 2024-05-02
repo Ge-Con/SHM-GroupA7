@@ -249,3 +249,20 @@ def freq_to_feature(data):
 # data = np.array(data)
 # print(freq_to_feature(data))
 # print("last")
+
+def STFT_to_feature(data):
+    """
+        Converts time domain for STFT to feature data.
+
+        Parameters:
+        - Data (3D array): Time domain sensor data
+
+        Returns:
+        - features (2D array): feature data extracted from STFT data
+    """
+
+    data = np.array(data).transpose()
+    features = np.empty((len(data), 4))
+    for i in range(len(data)):
+        features[i] = Time_domain_features(data[i])
+    return pd.DataFrame(features).transpose()

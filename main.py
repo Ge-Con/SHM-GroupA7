@@ -5,7 +5,7 @@ from sklearn.decomposition import PCA
 
 import extract_features
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
-from prognosticcriteria import fitness
+from prognosticcriteria import fitness, Mo, Tr, Pr
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -33,11 +33,10 @@ def saveSTFT(dir):
             if name.endswith('kHz.csv'):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2 = stft.Short_Fourier(data)
-                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Freq.csv'}")
-                csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
-                #arrayfile1.to_csv(csv_file_path1, index=False)
-                arrayfile2.to_csv(csv_file_path2, index=False)
+                arrayfile1 = stft.Short_Fourier(data)
+                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
+
+                arrayfile1.to_csv(csv_file_path1, index=False)
 
 def saveEMD(dir):
     print("Executing EMD on data:...")
@@ -101,11 +100,26 @@ def saveFeatures(dir):
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
+            elif name.endswith('STFT_Amp.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                #Unflattening happens here
+                # Populate the unflattened_list with values from flat
+                # index = 0
+                #data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+                #for i in range(56):
+                    #for j in range(17):
+                            #data3d[i][j] = data[index]
+                            #index += 1
+                features = extract_features.STFT_to_feature(data3d)
+                new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
 def correlateFeatures(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
     print("Combining Features:...")
     for root, dirs, files in os.walk(dir):
-        allfeatures = np.empty((6, 4), dtype=object)
+        allfeatures = np.empty((6, 5), dtype=object)
         flag = False
         for name in files:
             for freq in frequencies:
@@ -118,6 +132,8 @@ def correlateFeatures(dir):
                         allfeatures[frequencies.index(freq)][2] = data
                     elif 'EMD' in name:
                         allfeatures[frequencies.index(freq)][3] = data
+                    elif 'STFT_Amp' in name:
+                        allfeatures[frequencies.index(freq)][4] = data
                     else: #Time domain
                         allfeatures[frequencies.index(freq)][0] = data
 
@@ -192,12 +208,19 @@ def evaluate():
                         features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
 
     results = np.empty((6, 71))
+    criteria = np.empty((3, 6, 71))
     for freq in range(6):
         #print(components)
         print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
         for feat in range(71):
             results[freq][feat] = float(fitness(features[freq][feat])[0])
-    pd.DataFrame(results).to_csv(dir + "\Results.csv", index=False)
+            criteria[0][freq][feat] = float(Mo(features[freq][feat]))
+            criteria[1][freq][feat] = float(Tr(features[freq][feat]))
+            criteria[2][freq][feat] = float(Pr(features[freq][feat]))
+    pd.DataFrame(results).to_csv(dir + "\Fitness.csv", index=False)
+    pd.DataFrame(criteria[0]).to_csv(dir + "\Mo.csv", index=False)
+    pd.DataFrame(criteria[1]).to_csv(dir + "\Tr.csv", index=False)
+    pd.DataFrame(criteria[2]).to_csv(dir + "\Pr.csv", index=False)
 
 def giveTime():
     time = []
@@ -270,3 +293,5 @@ while True:
 #C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
 
 #C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files
+
+#C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5
