@@ -33,11 +33,10 @@ def saveSTFT(dir):
             if name.endswith('kHz.csv'):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2 = stft.Short_Fourier(data)
-                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Freq.csv'}")
-                csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
-                #arrayfile1.to_csv(csv_file_path1, index=False)
-                arrayfile2.to_csv(csv_file_path2, index=False)
+                arrayfile1 = stft.Short_Fourier(data)
+                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
+
+                arrayfile1.to_csv(csv_file_path1, index=False)
 
 def saveEMD(dir):
     print("Executing EMD on data:...")
@@ -98,6 +97,21 @@ def saveFeatures(dir):
                 data = pd.read_csv(os.path.join(root, name))
                 features = extract_features.time_to_feature(data)
                 new_filename = fixname(name).replace('EMD.csv', 'EMD-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
+            elif name.endswith('STFT_Amp.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                #Unflattening happens here
+                # Populate the unflattened_list with values from flat
+                index = 0
+                data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+                for i in range(56):
+                    for j in range(17):
+                            data3d[i][j] = data[index]
+                            index += 1
+                features = extract_features.CORNELIE(data3d)
+                new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
@@ -278,3 +292,4 @@ while True:
 
 #C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files
 
+#C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5
