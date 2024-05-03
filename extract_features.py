@@ -262,7 +262,7 @@ def STFT_domain_features(sensor):
 
     return FT_features
 
- def STFT_to_feature(data):
+def STFT_to_feature(data):
     """
         Converts STFT to feature data.
 
