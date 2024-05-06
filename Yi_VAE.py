@@ -4,6 +4,7 @@ Created on Wed Apr 15 14:46:11 2020
 
 @author: Administrator
 """
+import pandas as pd
 
 # -*- coding: utf-8 -*-
 """
@@ -20,13 +21,13 @@ from time import *
 
 tf.compat.v1.reset_default_graph()
 
-path = r'E:\IEEEPHM2012\feature\norm_bearing1_2.mat'
-matdata = scio.loadmat(path)
-data2 = matdata['n']
-data2 = np.transpose(data2)
+#path = r'E:\IEEEPHM2012\feature\norm_bearing1_2.mat'
+#matdata = scio.loadmat(path)
+#data2 = matdata['n']
+#data2 = np.transpose(data2)
 
-path = r'E:\IEEEPHM2012\feature\norm_bearing1.mat'
-matdata = scio.loadmat(path)
+#path = r'E:\IEEEPHM2012\feature\norm_bearing1.mat'
+matdata = pd.read_csv('resultVAEtest.csv')
 data6 = matdata['n']
 data6 = np.transpose(data6)
 
