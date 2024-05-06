@@ -61,16 +61,16 @@ def loss_function(output, x, mu, logvar, z, z_i1, batch_size):
     recon_loss = F.mse_loss(output, x, reduction='sum') / batch_size
     kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    #DTC = torch.sqrt(z - z_i1 - 9)
+    #DTC = torch.pow((z - 9), 2)
         
-    return recon_loss + 0.002 * kl_loss + #DTC
+    return recon_loss + 0.002 * kl_loss
 
 def train_model(
     X, 
     learning_rate=0.001, 
     batch_size=128, 
-    num_epochs=50,
-    hidden_dim=8,
+    num_epochs=1000,
+    hidden_dim=15,
     latent_dim=1
   ):
   # Define the VAE model
@@ -115,17 +115,19 @@ def train_model(
       print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss/len(X)}")
       
   return model
-X = pd.read_csv('50_kHz_FEATURES.csv')
+X = pd.read_csv('100_kHz-meanfeatures.csv')
+print(X.shape)
+X = np.transpose(X)
+print(X.shape)
 scaler = StandardScaler()
 scaler.fit(X)
 X = scaler.transform(X).transpose()
-pca = PCA(n_components = 15)
-pca.fit(X)
-x_pca = pca.transform(X)
+x_pca = X
 model = train_model(x_pca)
 z_arr = []
 for i in range(x_pca.shape[0]):
-    z_arr.append(model(torch.from_numpy(x_pca[i, :]).to(torch.float32))[1].detach().numpy())
+    mu, logvar = model.encoder(torch.from_numpy(np.float32(x_pca[i, :])))
+    z_arr.append(model.reparameterize(mu, logvar).detach().numpy())
 
 print(z_arr)
 

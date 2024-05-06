@@ -33,11 +33,10 @@ def saveSTFT(dir):
             if name.endswith('kHz.csv'):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
-                arrayfile1, arrayfile2 = stft.Short_Fourier(data)
-                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Freq.csv'}")
-                csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
-                #arrayfile1.to_csv(csv_file_path1, index=False)
-                arrayfile2.to_csv(csv_file_path2, index=False)
+                arrayfile1 = stft.Short_Fourier(data)
+                csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_STFT_Amp.csv'}")
+
+                arrayfile1.to_csv(csv_file_path1, index=False)
 
 def saveEMD(dir):
     print("Executing EMD on data:...")
@@ -69,6 +68,7 @@ def fixname(name):
     return name
 
 def saveFeatures(dir):
+    #Extract and save features for each frequency
     print("Extracting Features:...")
     for root, dirs, files in os.walk(dir):
         for name in files:
@@ -101,14 +101,31 @@ def saveFeatures(dir):
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
+            elif name.endswith('STFT_Amp.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                #Unflattening happens here
+                # Populate the unflattened_list with values from flat
+                # index = 0
+                #data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+                #for i in range(56):
+                    #for j in range(17):
+                            #data3d[i][j] = data[index]
+                            #index += 1
+                features = extract_features.STFT_to_feature(data)
+                new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
 def correlateFeatures(dir):
+    #Correlate extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
     print("Combining Features:...")
-    for root, dirs, files in os.walk(dir):
-        allfeatures = np.empty((6, 4), dtype=object)
+    for root, dirs, files in os.walk(dir):  #For each folder location (state)
+        allfeatures = np.empty((6, 5), dtype=object)
         flag = False
-        for name in files:
-            for freq in frequencies:
+        for name in files:              #For each file
+            for freq in frequencies:    #For each frequency
+                #Read and add to correct position in allfeatures array
                 if freq in name and name.endswith('-Features.csv'):
                     flag = True
                     data = np.array(pd.read_csv(os.path.join(root, name)))
@@ -118,15 +135,18 @@ def correlateFeatures(dir):
                         allfeatures[frequencies.index(freq)][2] = data
                     elif 'EMD' in name:
                         allfeatures[frequencies.index(freq)][3] = data
+                    elif 'STFT_Amp' in name:
+                        allfeatures[frequencies.index(freq)][4] = data
                     else: #Time domain
                         allfeatures[frequencies.index(freq)][0] = data
 
-        if flag:
+        if flag:    #If at least one file was the correct type
             for freq in ["050", "100", "125", "150", "200", "250"]:
                 combinedfeatures = np.concatenate([allfeatures[frequencies.index(freq), i] for i in range(allfeatures[0].shape[0])], axis=0)
                 csv_file_path = os.path.join(root, freq +"_kHz-allfeatures.csv")
                 pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
 
+    #Average features at each state
     print("Averaging features...")
     meanfeatures = np.empty((6), dtype=object)
     for root, dirs, files in os.walk(dir):
@@ -139,49 +159,55 @@ def correlateFeatures(dir):
                 else:
                     meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
 
+    #Correlate features
     alldelete = np.empty((6), dtype=object)
-    for freq in frequencies:
+    for freq in frequencies:    #For each feature
         csv_file_path = os.path.join(dir, freq + "_kHz-meanfeatures.csv")
-        pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)
+        pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
 
+        #Use feature_correlation to return the correlation matrix, reduced matrix and features deleted
         correlation_matrix, features, to_delete = extract_features.feature_correlation(meanfeatures[frequencies.index(freq)])
+        #Save all to files
         alldelete[frequencies.index(freq)] = to_delete
         csv_file_path = os.path.join(dir, freq + "_kHz-cmatrix.csv")
         pd.DataFrame(correlation_matrix).to_csv(csv_file_path, index=False)
         csv_file_path = os.path.join(dir, freq + "_kHz-rfeatures.csv")
         pd.DataFrame(features).to_csv(csv_file_path, index=False)
+    # Save lists of deleted features for inspection
     csv_file_path = os.path.join(dir, "deleted_features.csv")
     pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
 def savePCA(dir):
+    #Calculates and saves 1 principle component PCA
     frequencies = ["050", "100", "125", "150", "200", "250"]
     components = np.empty((6), dtype=object)
     print("VAF:")
     for freq in frequencies:
         data = pd.read_csv(os.path.join(dir, freq + "_kHz-meanfeatures.csv"))
-        pca = PCA(n_components=1)
+        pca = PCA(n_components=1)   #PCA to 1 principle component - this hasn't been trained properly and needs to be fixed
         components[frequencies.index(freq)] = pca.fit_transform(data).flatten()
-        print(pca.explained_variance_ratio_)
+        print(pca.explained_variance_ratio_)    #Print explained variance
+    #Save all to one CSV file
     csv_file_path = os.path.join(dir, "1compPCA.csv")
     pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
 def evaluate():
+    #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
     dir = input("Enter the folder path of the CSV folders: ")
-    components = np.empty((6), dtype=object)
-    features = np.empty((6, 71), dtype=object)
+    components = np.empty((6), dtype=object)    #Each position contains 2D PCA matrix
+    features = np.empty((6, 71), dtype=object)  #6 frequencies, 71 features and a list of values at each location
+
+    # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == "1compPCA.csv":
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 for freq in range(6):
-                    if str(type(components[freq])) == "<class 'NoneType'>":
+                    if str(type(components[freq])) == "<class 'NoneType'>": #If first to be added
                         components[freq] = np.array([data[freq][-30::]])
                     else:
-                        #print(components[freq])
-                        #print(data[freq])
                         components[freq] = np.vstack([components[freq], data[freq][-30::]])
-                        #print(components[freq])
             elif name.endswith("meanfeatures.csv"):
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
@@ -191,8 +217,10 @@ def evaluate():
                     else:
                         features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
 
+    #Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
     results = np.empty((6, 71))
     criteria = np.empty((3, 6, 71))
+    #Iterate through each frequency and calculate features
     for freq in range(6):
         #print(components)
         print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
@@ -201,10 +229,11 @@ def evaluate():
             criteria[0][freq][feat] = float(Mo(features[freq][feat]))
             criteria[1][freq][feat] = float(Tr(features[freq][feat]))
             criteria[2][freq][feat] = float(Pr(features[freq][feat]))
-    pd.DataFrame(results).to_csv(dir + "\Fitness.csv", index=False)
-    pd.DataFrame(criteria[0]).to_csv(dir + "\Mo.csv", index=False)
-    pd.DataFrame(criteria[1]).to_csv(dir + "\Tr.csv", index=False)
-    pd.DataFrame(criteria[2]).to_csv(dir + "\Pr.csv", index=False)
+    #Save all to files
+    pd.DataFrame(results).to_csv(dir + "\\Fitness.csv", index=False)
+    pd.DataFrame(criteria[0]).to_csv(dir + "\\Mo.csv", index=False)
+    pd.DataFrame(criteria[1]).to_csv(dir + "\\Tr.csv", index=False)
+    pd.DataFrame(criteria[2]).to_csv(dir + "\\Pr.csv", index=False)
 
 def giveTime():
     time = []
@@ -241,6 +270,7 @@ if extract:
     #csv_dir = folder_path.replace('PZT','PZT-CSV')
 else:
     csv_dir = input("Enter the folder path of the CSV files: ")
+
 # Main program loop
 while True:
     main_menu()
@@ -278,3 +308,4 @@ while True:
 
 #C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files
 
+#C:\Users\Martin\Downloads\PZT-CSV\PZT-CSV-L01-5
