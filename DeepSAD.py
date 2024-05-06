@@ -1,51 +1,78 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
 import os
 import copy
 
+
+learning_rate_AE = 0.01
+learning_rate = 0.1
+weight_decay = 0.1
+n_epochs_AE = 8
+n_epochs = 40
+lr_milestones = [8, 20, 30, 40]
+gamma = 0.1
+eta = 1.0
+eps = 1
+reg = 0.2
+
+batch_size = 6
+margin = 5 #Number of samples labelled on each end
+
+samples = ["PZT-CSV L1-03", "PZT-CSV L1-05", "PZT-CSV L1-09"]
+
+
 class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
     #mnist_LeNet implementation - this is phi in the equations
 
-    def __init__(self):
+    def __init__(self, rep_dim = 32):
         super().__init__()
         self.c = None           #Hypersphere centre
 
         #CNN
-        self.fc1 = nn.Linear(56*71, 512)
-        self.fc2 = nn.Linear(512, 128)
-        self.fc3 = nn.Linear(128, 64)
-        self.fc4 = nn.Linear(64, 1)
+        self.fc1 = nn.Linear(56*71, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 128)
+        self.fc4 = nn.Linear(128, 64)
+        self.fc5 = nn.Linear(64, rep_dim)
+        self.m = torch.nn.ReLU(0.001)
 
     def forward(self, x):
         #34 rows, 71 columns
         x = torch.flatten(x)
         x = x.to(next(self.parameters()).dtype)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.relu(self.fc3(x))
-        x = torch.sigmoid(self.fc4(x))
-        return x
+        x = self.m(self.fc1(x))
+        x = self.m(self.fc2(x))
+        x = self.m(self.fc3(x))
+        x = self.m(self.fc4(x))
+        x = self.m(self.fc5(x))
+        encoded = x.view(4, 4, 2)
+        return encoded
 
 class FashionMNIST_LeNet_Decoder(nn.Module):
-    def __init__(self):
+    def __init__(self, rep_dim=32):
         super().__init__()
 
-        self.fc1 = nn.Linear(512, 56*71)
-        self.fc2 = nn.Linear(128, 512)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(1, 64)
+        self.fc1 = nn.Linear(1024, 56*71)
+        self.fc2 = nn.Linear(512, 1024)
+        self.fc3 = nn.Linear(128, 512)
+        self.fc4 = nn.Linear(64, 128)
+        self.fc5 = nn.Linear(rep_dim, 64)
+        self.m = torch.nn.ReLU(0.001)
 
     def forward(self, x):
-        x = torch.relu(self.fc4(x))
-        x = torch.relu(self.fc3(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc1(x)
-        decoded = x.view(-1, 56, 71)
-        return x
+        x = torch.flatten(x)
+        x = self.m(self.fc5(x))
+        x = self.m(self.fc4(x))
+        x = self.m(self.fc3(x))
+        x = self.m(self.fc2(x))
+        x = self.m(self.fc1(x))
+        decoded = x.view(-1, 71, 56)
+        return decoded
 
 class FashionMNIST_LeNet_Autoencoder(nn.Module):
 
@@ -75,7 +102,7 @@ def init_c(model, train_data, eps=0.1):
     """
 
     n_samples = 0
-    c = torch.zeros(model.rep_dim)
+    c = torch.zeros((4, 4, 2))
 
     #Forward pass
     model.eval()
@@ -89,11 +116,11 @@ def init_c(model, train_data, eps=0.1):
     # If c_i is too close to 0, set to +-eps. Reason: a zero unit can be trivially matched with zero weights.
     c[(abs(c) < eps) & (c < 0)] = -eps
     c[(abs(c) < eps) & (c > 0)] = eps
-
+    print(c)
     return c
 
 
-def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg=0):
+def train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg=0):
     """
         Train the DeepSAD model from a semi-labelled dataset.
 
@@ -125,42 +152,50 @@ def train(model, train_data, semi_targets, learning_rate, weight_decay, n_epochs
     #Iterate epochs to train model
     model.train()
     for epoch in range(n_epochs):
+        epoch_loss = 0.0
         scheduler.step()
 
         if epoch in lr_milestones:  #Report new learning rate on milestones
             print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
-        epoch_loss = 0.0
-        n_batches = 0
 
-        for data in train_data:  #Batches training data?
+        for index, (train_data, train_target) in enumerate(train_loader):
+            loss = 0.0
+            for index in range(len(train_data)):
+                data = train_data[index]
+                target = train_target[index]
 
-            #Forward and backward pass
-            optimizer.zero_grad()
-            outputs = model(data)
+                #Forward and backward pass
+                optimizer.zero_grad()
+                outputs = model(data)
+                print(outputs)
 
-            #Calculating loss function
-            Y = outputs - model.c
-            dist = torch.sum(Y ** 2, dim=1)
-            if reg != 0:  # If we want to diversify
-                C = torch.matmul(Y, Y.T)  # Gram Matrix
-                loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
-            else:
-                loss_d = 0
-            losses = torch.where(semi_targets == 0, dist, eta * ((dist + eps) ** semi_targets.float()))
-            losses += reg * loss_d
+                #Calculating loss function
+                Y = outputs - model.c
+                dist = torch.sum(Y ** 2)
+                if reg != 0:  # If we want to diversify
+                    C = torch.matmul(Y, Y.T)  # Gram Matrix
+                    loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
+                else:
+                    loss_d = 0
+                if target == 0:#semi_targets[index] == 0:
+                    losses = dist
+                else:
+                    losses = eta * ((dist + eps) ** target)#semi_targets[index])
+                #losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
+                losses += reg * loss_d
 
-            # Finish off training the network
-            loss = torch.mean(losses)
+                # Finish off training the network
+                loss += torch.mean(losses)
+
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
-            n_batches += 1
 
-        print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss/n_batches))
+        print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss))
     return model
 
-def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
+def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones):
     # Set loss
     criterion = nn.MSELoss(reduction='none')
 
@@ -172,34 +207,41 @@ def AE_train(model, train_data, learning_rate, weight_decay, n_epochs, lr_milest
 
     model.train()
     for epoch in range(n_epochs):
+        print(epoch)
         scheduler.step()
         if epoch in lr_milestones:
             print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
-            epoch_loss = 0.0
-            n_batches = 0
-            for batch in train_data:
-                data = batch
-
+        epoch_loss = 0.0
+        n_batches = 0
+        for index, (train_data, target) in enumerate(train_loader):
+            batch_loss = 0.0
+            for data in train_data:
+                data = data.float()
                 # Zero the network parameter gradients
                 optimizer.zero_grad()
 
                 # Update network parameters via backpropagation: forward + backward + optimize
-                rec = model(data)
+                rec = model(data).float()
                 rec_loss = criterion(rec, data) #Not so sure about this
-                loss = torch.mean(rec_loss)
-                loss.backward()
-                optimizer.step()
+                loss = torch.mean(rec_loss.float())
+                #print(loss)
+                batch_loss += loss.item()
 
-                epoch_loss += loss.item()
-                n_batches += 1
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss.item()
+
+            #print("Batch loss: " + str(batch_loss))
+        print(epoch_loss)
 
     return model
 
-def pretrain(model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones):
+def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones):
     ae_model = FashionMNIST_LeNet_Autoencoder()
 
-    ae_model = AE_train(ae_model, train_data, learning_rate, weight_decay, n_epochs, lr_milestones)
+    ae_model = AE_train(ae_model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones)
 
     model_dict = model.state_dict()
     ae_model_dict = ae_model.state_dict()
@@ -234,29 +276,24 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
 
-learning_rate = 0.1
-weight_decay = 0.1
-n_epochs = 1000
-lr_milestones = [500]
-gamma = 1
-eta = 1
-eps = 1
-reg = 0.2
-
-def batch_data(data, batch_size):
+def batch_data(data, targets, batch_size):
     num_samples = len(data)
     num_batches = num_samples // batch_size
     batches = []
+    labels = []
 
     for i in range(num_batches):
         batch = data[i * batch_size: (i + 1) * batch_size]
+        label = targets[i * batch_size: (i + 1) * batch_size]
         batches.append(batch)
+        labels.append(label)
 
     # Handling the last batch which may have a different size
     if num_samples % batch_size != 0:
         batches.append(data[num_batches * batch_size:])
+        labels.append(targets[num_batches * batch_size:])
 
-    return batches
+    return batches, labels
 
 def load_data(dir, margin):
     first = True
@@ -267,19 +304,16 @@ def load_data(dir, margin):
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
                 if first:
                     data = np.array([read_data])
-                    labels = np.array([np.array([1])])  #Healthy
+                    #labels = np.array([np.array([1])])  #Healthy
+                    labels = np.array([1])
                     first = False
                 else:
                     data = np.concatenate((data, [read_data]))
-                    labels = np.concatenate((labels, [np.array([0])]))    #Unlabelled
+                    #labels = np.concatenate((labels, [np.array([0])]))    #Unlabelled
+                    labels = np.append(labels, 0)
                 count += 1
-    labels[-1*margin::] = np.array([-1])    #Unhealthy
+    labels[-1*margin::] = -1 #np.array([-1])    #Unhealthy
     return data, labels
-
-batches = 4 #Batch ->size<-!!
-margin = 5 #Number of samples labelled on each end
-
-samples = ["PZT-CSV L1-03", "PZT-CSV L1-05", "PZT-CSV L1-09"]
 
 dir = input("CSV file location: ")
 
@@ -287,17 +321,25 @@ first = True
 for sample in samples:
     temp_data, temp_targets = load_data(dir + "\\" + sample, margin)
     if first:
-        train_data = copy.deepcopy(temp_data)
-        semi_targets = copy.deepcopy(temp_targets)
+        arr_data = copy.deepcopy(temp_data)
+        arr_targets = copy.deepcopy(temp_targets)
         first = False
     else:
-        train_data = np.concatenate((train_data, temp_data))
-        semi_targets = np.concatenate((semi_targets, temp_targets))
+        arr_data = np.concatenate((arr_data, temp_data))
+        arr_targets = np.concatenate((arr_targets, temp_targets))
 
-#train_data = batch_data(train_data, batches)
-batched_data = []
-for batch in range(len(train_data)):
-    batched_data.append(torch.from_numpy(train_data[batch]))   #x = x.detach().numpy()
+#train_data = []
+#semi_targets = []
+#for i in range(len(arr_data)):
+#    train_data.append(torch.from_numpy(arr_data[i]))   #x = x.detach().numpy()
+#    semi_targets.append(torch.from_numpy(np.array(arr_targets[i])))
+
+train_data = torch.tensor(arr_data)
+semi_targets = torch.tensor(arr_targets)
+
+train_dataset = TensorDataset(train_data, semi_targets)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
 model = FashionMNIST_LeNet()
-model = pretrain(model, batched_data, learning_rate, weight_decay, n_epochs, lr_milestones)
-model = train(model, batched_data, semi_targets, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones)
+model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
