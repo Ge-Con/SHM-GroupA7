@@ -9,7 +9,7 @@ tf.compat.v1.reset_default_graph()
 tf.random.set_seed(42)
 
 # Load data from CSV and transpose to have timesteps as rows and features as columns
-csv_path = 'resultVAEtest.csv'  # Change to your CSV file path
+csv_path = 'resultalltimesteps.csv'  # Change to your CSV file path
 data = pd.read_csv(csv_path, header=None).values  # Read and transpose the data
 
 # You can create additional datasets if needed
