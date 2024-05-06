@@ -9,7 +9,7 @@ samples = ["050_kHz-allfeatures", "060_kHz-allfeatures", "070_kHz-allfeatures"]
 # sample file (to obatain amount of features - necessary to create full_matrix dimension)
 dir0 = os.path.join(dir_folder, samples[0] + ".csv")
 df0 = pd.read_csv(dir0)
-# creates empty matrix with shape (no. of features x no. of timesteps)
+# creates empty matrix with shape (no. of features x no. of paths, no. of timesteps)
 full_matrix = np.zeros((np.shape(df0)[0]*np.shape(df0)[1], len(samples)))
 
 for i, sample in enumerate(samples):
