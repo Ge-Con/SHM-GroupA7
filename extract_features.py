@@ -262,19 +262,25 @@ def STFT_domain_features(sensor):
 
     return FT_features
 
-def STFT_to_feature(data):
+def STFT_to_feature(data3d):
     """
         Converts STFT to feature data.
 
         Parameters:
-        - Data (2D array): STFT domain sensor data
+        - Data (3D array): STFT domain sensor data
 
         Returns:
         - features (2D array): feature data extracted from STFT data
     """
+    out_list = []
+    for path in range(len(data3d)):
+        print(data3d)
+        current_path = data3d[path] #current data is a 17x126 matrix
 
-    data = np.array(data).transpose()
-    features = np.empty((len(data), 4))
-    for i in range(len(data)):
-        features[i] = STFT_domain_features(data[i])
-    return pd.DataFrame(features).transpose()
+        print(current_path)
+        features = np.empty((len(current_path), 4))
+        for i in range(len(current_path)):
+            features[i] = STFT_domain_features(current_path[i])
+        out_list.append(features)
+    print(out_list)
+    #return pd.DataFrame(features).transpose()

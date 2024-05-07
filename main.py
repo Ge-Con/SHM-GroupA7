@@ -103,18 +103,21 @@ def saveFeatures(dir):
 
             elif name.endswith('STFT_Amp.csv'):
                 data = pd.read_csv(os.path.join(root, name))
-                #Unflattening happens here
-                # Populate the unflattened_list with values from flat
-                # index = 0
-                #data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
-                #for i in range(56):
-                    #for j in range(17):
-                            #data3d[i][j] = data[index]
-                            #index += 1
-                features = extract_features.STFT_to_feature(data)
+                data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+
+                for k in range(56):
+                    for i in range(126):
+                        for j in range(17):
+                            data3d[k][i][j] = data.iloc[i, j]
+                print(len(data3d))
+                print(len(data3d[0]))
+                print(len(data3d[0][0]))
+
+                features = extract_features.STFT_to_feature(data3d)
                 new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
+
 
 def correlateFeatures(dir):
     #Correlate extracted features
@@ -266,7 +269,8 @@ if extract:
     folder_path = input("Enter the folder path of the Matlab files: ")
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
-    quit()
+    csv_dir = input("Enter the folder path of the CSV files: ")
+    #quit()
     #csv_dir = folder_path.replace('PZT','PZT-CSV')
 else:
     csv_dir = input("Enter the folder path of the CSV files: ")
