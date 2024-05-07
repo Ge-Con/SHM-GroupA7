@@ -9,18 +9,19 @@ import copy
 
 
 learning_rate_AE = 0.01
-learning_rate = 0.1
+learning_rate = 0.001
 weight_decay = 0.1
-n_epochs_AE = 8
-n_epochs = 40
-lr_milestones = [8, 20, 30, 40]
-gamma = 0.1
-eta = 1.0
-eps = 1
-reg = 0.2
+n_epochs_AE = 25
+n_epochs = 25
+lr_milestones_AE = [8, 20, 30, 40]
+lr_milestones = [10, 20, 30]
+gamma = 0.4
+eta = 1.5
+eps = 1*10**(-8)
+reg = 0
 
 batch_size = 6
-margin = 5 #Number of samples labelled on each end
+margin = 10 #Number of samples labelled on each end
 
 samples = ["PZT-CSV L1-03", "PZT-CSV L1-05", "PZT-CSV L1-09"]
 
@@ -39,7 +40,7 @@ class FashionMNIST_LeNet(nn.Module):
         self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(128, 64)
         self.fc5 = nn.Linear(64, rep_dim)
-        self.m = torch.nn.ReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
         #34 rows, 71 columns
@@ -50,7 +51,7 @@ class FashionMNIST_LeNet(nn.Module):
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
-        encoded = x.view(4, 4, 2)
+        encoded = x.view(4, 8)
         return encoded
 
 class FashionMNIST_LeNet_Decoder(nn.Module):
@@ -62,7 +63,7 @@ class FashionMNIST_LeNet_Decoder(nn.Module):
         self.fc3 = nn.Linear(128, 512)
         self.fc4 = nn.Linear(64, 128)
         self.fc5 = nn.Linear(rep_dim, 64)
-        self.m = torch.nn.ReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
         x = torch.flatten(x)
@@ -102,7 +103,7 @@ def init_c(model, train_data, eps=0.1):
     """
 
     n_samples = 0
-    c = torch.zeros((4, 4, 2))
+    c = torch.zeros((4, 8))
 
     #Forward pass
     model.eval()
@@ -116,7 +117,6 @@ def init_c(model, train_data, eps=0.1):
     # If c_i is too close to 0, set to +-eps. Reason: a zero unit can be trivially matched with zero weights.
     c[(abs(c) < eps) & (c < 0)] = -eps
     c[(abs(c) < eps) & (c > 0)] = eps
-    print(c)
     return c
 
 
@@ -160,6 +160,7 @@ def train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs
 
         for index, (train_data, train_target) in enumerate(train_loader):
             loss = 0.0
+            n_batches = 0
             for index in range(len(train_data)):
                 data = train_data[index]
                 target = train_target[index]
@@ -167,7 +168,6 @@ def train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs
                 #Forward and backward pass
                 optimizer.zero_grad()
                 outputs = model(data)
-                print(outputs)
 
                 #Calculating loss function
                 Y = outputs - model.c
@@ -184,13 +184,17 @@ def train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs
                 #losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
 
-                # Finish off training the network
-                loss += torch.mean(losses)
+                loss += losses
+                n_batches += 1
 
+            # Finish off training the network
+            loss = loss/n_batches
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
+
+            #print("Batch loss: " + str(loss))
 
         print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss))
     return model
@@ -207,7 +211,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
     model.train()
     for epoch in range(n_epochs):
-        print(epoch)
+        print("Epoch " + str(epoch))
         scheduler.step()
         if epoch in lr_milestones:
             print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
@@ -273,27 +277,10 @@ def embed(X, model):
     """
 
     model.eval()
+    #print(model(X))
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector = anomaly score
     return y
 
-def batch_data(data, targets, batch_size):
-    num_samples = len(data)
-    num_batches = num_samples // batch_size
-    batches = []
-    labels = []
-
-    for i in range(num_batches):
-        batch = data[i * batch_size: (i + 1) * batch_size]
-        label = targets[i * batch_size: (i + 1) * batch_size]
-        batches.append(batch)
-        labels.append(label)
-
-    # Handling the last batch which may have a different size
-    if num_samples % batch_size != 0:
-        batches.append(data[num_batches * batch_size:])
-        labels.append(targets[num_batches * batch_size:])
-
-    return batches, labels
 
 def load_data(dir, margin):
     first = True
@@ -317,7 +304,9 @@ def load_data(dir, margin):
 
 dir = input("CSV file location: ")
 
+test_data = np.empty((3), dtype=object)
 first = True
+count = 0
 for sample in samples:
     temp_data, temp_targets = load_data(dir + "\\" + sample, margin)
     if first:
@@ -327,6 +316,8 @@ for sample in samples:
     else:
         arr_data = np.concatenate((arr_data, temp_data))
         arr_targets = np.concatenate((arr_targets, temp_targets))
+    test_data[count] = temp_data
+    count += 1
 
 #train_data = []
 #semi_targets = []
@@ -341,5 +332,14 @@ train_dataset = TensorDataset(train_data, semi_targets)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 model = FashionMNIST_LeNet()
-model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones)
+model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones_AE)
 model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+
+
+results = np.empty((len(train_dataset)))
+
+for sample in test_data:
+    for state in range(sample.shape[0]):
+        data = sample[state]
+        print(embed(torch.from_numpy(data), model))
+        print(state)
