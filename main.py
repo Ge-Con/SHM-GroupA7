@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 import os
-from sklearn.decomposition import PCA
 
 import extract_features
+import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
 
@@ -184,12 +184,14 @@ def savePCA(dir):
     #Calculates and saves 1 principle component PCA
     frequencies = ["050", "100", "125", "150", "200", "250"]
     components = np.empty((6), dtype=object)
+    data = np.empty((6), dtype=object)
     print("VAF:")
-    for freq in frequencies:
-        data = pd.read_csv(os.path.join(dir, freq + "_kHz-meanfeatures.csv"))
-        pca = PCA(n_components=1)   #PCA to 1 principle component - this hasn't been trained properly and needs to be fixed
-        components[frequencies.index(freq)] = pca.fit_transform(data).flatten()
-        print(pca.explained_variance_ratio_)    #Print explained variance
+    for freq in range(len(frequencies)):
+        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-meanfeatures.csv")))
+    pca = PCA.onePC(data)
+    for freq in range(len(frequencies)):
+        components[freq], EVR = PCA.apply(data[freq])
+        print(EVR)    #Print explained variance
     #Save all to one CSV file
     csv_file_path = os.path.join(dir, "1compPCA.csv")
     pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
