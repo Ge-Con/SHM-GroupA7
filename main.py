@@ -186,12 +186,14 @@ def savePCA(dir):
     components = np.empty((6), dtype=object)
     data = np.empty((6), dtype=object)
     print("VAF:")
+    for root, dirs, files in os.walk(dir):
     for freq in range(len(frequencies)):
-        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-meanfeatures.csv")))
-    pca = PCA.onePC(data)
+        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
+    pca, EVR = PCA.onePC(data)
+    print(EVR)
     for freq in range(len(frequencies)):
-        components[freq], EVR = PCA.apply(data[freq])
-        print(EVR)    #Print explained variance
+        components[freq] = PCA.apply(data[freq], pca)
+        #Print explained variance
     #Save all to one CSV file
     csv_file_path = os.path.join(dir, "1compPCA.csv")
     pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
