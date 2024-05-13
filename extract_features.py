@@ -265,13 +265,13 @@ def STFT_domain_features(sensor):
 def STFT_to_feature(data3d):
     out_list = []
     for path in range(len(data3d)):
-        current_path = data3d[path]  # current data is a 126x17 matrix
+        current_path = data3d[path]
 
-        features = np.empty((17, 4))  # Adjusted to match the correct dimensions
+        features = np.empty((17, 4))
         for i in range(len(current_path)):
             features[i] = STFT_domain_features(current_path[i])
 
-        out_list.append(features.flatten())  # Flattening to make it 1D array
+        out_list.append(features.flatten())
 
     return pd.DataFrame(out_list)
 
