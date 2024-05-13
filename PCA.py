@@ -31,7 +31,7 @@ def varPC(matrices):
 
 def apply(list, pca):
     transformed = pca.transform(list.reshape(1, -1))
-    return transformed.flatten()
+    return float(transformed.flatten())
 
 #pca, EVR = onePC([np.array([[1,2], [2,1], [2,2]]), np.array([[4,5], [5,4], [4,6]]), np.array([[6,5], [7,8], [5,12]])])
 #print(EVR)
