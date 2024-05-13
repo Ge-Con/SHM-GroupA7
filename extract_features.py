@@ -3,6 +3,7 @@ from scipy import stats
 import pandas as pd
 import test_data
 
+
                                  ## Frequency domain ##
 def Frequency_domain_features(sensor):
     """
@@ -252,8 +253,11 @@ def freq_to_feature(data):
 
 def STFT_domain_features(sensor):
     #np 1D array main features
+
     FT_features = np.empty(4)
     Y = sensor
+
+    #print(sensor[0])
 
     FT_features[0] = np.mean(Y)
     FT_features[1] = np.std(Y)
@@ -264,16 +268,33 @@ def STFT_domain_features(sensor):
 
 def STFT_to_feature(data3d):
     out_list = []
-    for path in range(len(data3d)):
+    features = 68*[0]
+    #print(data3d)
+    # Create the array using list comprehension
+    new_flat = np.array([[0 for _ in range(56)] for _ in range(2142)])
+
+    for path in range(56):
         current_path = data3d[path]
 
-        features = np.empty((17, 4))
-        for i in range(len(current_path)):
-            features[i] = STFT_domain_features(current_path[i])
+        for i in range(17):
+            for j in range(126):
+                #print(j+126*i)
+                new_flat[j+126*i][path] = current_path[j][i]
+    print(new_flat[1][1])
+    # new_flat2 = np.array([[0 for _ in range(56)] for _ in range(68)])
+    new_flat2= []
 
-        out_list.append(features.flatten())
+    for path2 in range(56):
+        for i in range(17):
+            segment = new_flat[i*126:(i+1)*126, path2]
+            for feat in range(4):
+                #print(segment[5])
+                features[i*4+feat] = STFT_domain_features(segment)[feat]
+        new_flat2.append(features)
+    #print(new_flat2)
+        #out_list.append(features)
 
-    return pd.DataFrame(out_list)
+    return pd.DataFrame(new_flat)
 
 
 

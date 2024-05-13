@@ -11,6 +11,8 @@ pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
 np.set_printoptions(linewidth=400)
 
+np.set_printoptions(precision=4, suppress=True)
+
 
 def saveFFT(dir):
     print("Executing FFT on data:...")
@@ -108,10 +110,11 @@ def saveFeatures(dir):
                 for k in range(56):
                     for i in range(126):
                         for j in range(17):
-                            data3d[k][i][j] = data.iloc[i, j]
-                print(len(data3d))
-                print(len(data3d[0]))
-                print(len(data3d[0][0]))
+                            data3d[k][i][j] = data.iloc[126*k + i, j]
+                #
+                # print(len(data3d))
+                # print(len(data3d[0]))
+                # print(len(data3d[0][0]))
 
                 features = extract_features.STFT_to_feature(data3d)
                 new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
