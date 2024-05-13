@@ -266,35 +266,35 @@ def STFT_domain_features(sensor):
 
     return FT_features
 
-def STFT_to_feature(data3d):
-    out_list = []
-    features = 68*[0]
-    #print(data3d)
-    # Create the array using list comprehension
-    new_flat = np.array([[0 for _ in range(56)] for _ in range(2142)])
-
-    for path in range(56):
-        current_path = data3d[path]
-
-        for i in range(17):
-            for j in range(126):
-                #print(j+126*i)
-                new_flat[j+126*i][path] = current_path[j][i]
-    print(new_flat[1][1])
-    # new_flat2 = np.array([[0 for _ in range(56)] for _ in range(68)])
-    new_flat2= []
-
-    for path2 in range(56):
-        for i in range(17):
-            segment = new_flat[i*126:(i+1)*126, path2]
-            for feat in range(4):
-                #print(segment[5])
-                features[i*4+feat] = STFT_domain_features(segment)[feat]
-        new_flat2.append(features)
-    #print(new_flat2)
-        #out_list.append(features)
-
-    return pd.DataFrame(new_flat)
+# def STFT_to_feature(data3d):
+#     out_list = []
+#     features = 68*[0]
+#     #print(data3d)
+#     # Create the array using list comprehension
+#     new_flat = np.array([[0 for _ in range(56)] for _ in range(2142)])
+#
+#     for path in range(56):
+#         current_path = data3d[path]
+#
+#         for i in range(17):
+#             for j in range(126):
+#                 #print(j+126*i)
+#                 new_flat[j+126*i][path] = current_path[j][i]
+#     print(new_flat[1][1])
+#     # new_flat2 = np.array([[0 for _ in range(56)] for _ in range(68)])
+#     new_flat2= []
+#
+#     for path2 in range(56):
+#         for i in range(17):
+#             segment = new_flat[i*126:(i+1)*126, path2]
+#             for feat in range(4):
+#                 #print(segment[5])
+#                 features[i*4+feat] = STFT_domain_features(segment)[feat]
+#         new_flat2.append(features)
+#     #print(new_flat2)
+#         #out_list.append(features)
+#
+#     return pd.DataFrame(new_flat)
 
 
 
@@ -314,4 +314,28 @@ def STFT_to_feature(data3d):
 #         out_list.append(features)
 #     print(out_list)
 #     return pd.DataFrame(features).transpose()
+
+
+def STFT_to_feature(data3d):
+    out_list = []
+    features = [0]*68
+
+    new_flat = np.zeros((2142, 56))
+
+    for path in range(56):
+        current_path = data3d[path]
+        for i in range(126):
+            for j in range(17):
+                new_flat[i + j * 126][path] = current_path[i][j]
+
+    for path2 in range(56):
+        for i in range(17):
+            segment = new_flat[i * 126:(i + 1) * 126, path2]
+            segment_features = STFT_domain_features(segment)
+            features[i * 4:(i + 1) * 4] = segment_features
+        out_list.append(features.copy())
+
+    features_df = pd.DataFrame(out_list).transpose()
+    return features_df
+
 
