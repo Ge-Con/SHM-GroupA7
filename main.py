@@ -180,19 +180,25 @@ def correlateFeatures(dir):
     csv_file_path = os.path.join(dir, "deleted_features.csv")
     pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
-def savePCA(dir):
-    #Calculates and saves 1 principle component PCA
+def savePCA(dir): #Calculates and saves 1 principle component PCA
     frequencies = ["050", "100", "125", "150", "200", "250"]
     components = np.empty((6), dtype=object)
     data = np.empty((6), dtype=object)
-    print("VAF:")
     for root, dirs, files in os.walk(dir):
-    for freq in range(len(frequencies)):
-        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
+        for dir in dirs:
+            if "State" in dir:
+                for freq in range(len(frequencies)):
+                    if str(type(data[freq])) == "<class 'NoneType'>":
+                        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
+                    else:
+                        data[freq] = np.append(data[freq], np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv"))))
     pca, EVR = PCA.onePC(data)
+
+    print("VAF:")
     print(EVR)
     for freq in range(len(frequencies)):
-        components[freq] = PCA.apply(data[freq], pca)
+        for state in range(len(frequencies[freq])):
+            components[freq] = PCA.apply(data[freq], pca)
         #Print explained variance
     #Save all to one CSV file
     csv_file_path = os.path.join(dir, "1compPCA.csv")
