@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from time import time
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from prognosticcriteria import fitness, Mo, Pr, Tr
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
@@ -11,6 +14,14 @@ tf.random.set_seed(42)
 # Load data from CSV and transpose to have timesteps as rows and features as columns
 csv_path = 'resultalltimesteps.csv'  # Change to your CSV file path
 data = pd.read_csv(csv_path, header=None).values  # Read and transpose the data
+data = data.transpose()
+#print(data.shape)
+scaler = StandardScaler()
+scaler.fit(data)
+data = scaler.transform(data)
+pca = PCA(n_components = 32)
+pca.fit(data)
+data = pca.transform(data)
 
 # You can create additional datasets if needed
 # Example: Using the first few columns as one dataset and the rest as another
@@ -21,8 +32,11 @@ data2 = data[:, 1:2]  # Second column as another dataset
 n_input = data.shape[1]  # Number of features
 hidden_1 = 10  # Number of neurons in the hidden layer
 hidden_2 = 1  # Number of neurons in the bottleneck layer
-batch_size = 100  # Batch size
+batch_size = 10  # Batch size
 
+# as input file, have horizontal line up all files for a freq, for every panel we
+# have 32 iterations, then the ones for the other panel, apply deg constraint to all panels,
+#avoid having it between panels
 
 # Xavier initialization for weights
 def xavier_init(fan_in, fan_out, constant=1):
@@ -56,7 +70,7 @@ l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
 mean = tf.matmul(l1, mean_w) + mean_b
 logvar = tf.matmul(l1, logvar_w) + logvar_b
 eps = tf.random.normal(tf.shape(logvar), 0, 1, dtype=tf.float32)
-z = tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean
+z = tf.nn.sigmoid(tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean)
 
 # Decoder and prediction
 l2 = tf.nn.sigmoid(tf.matmul(z, dw1) + db1)
@@ -71,7 +85,7 @@ klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
 def DCloss(feature, batch_size):
     s = 0
     for i in range(1, batch_size):
-        s += tf.pow(feature[i] - tf.constant(10, dtype=tf.float32) - tf.random.normal([1], 0, 1) - feature[i - 1], 2)
+        s += tf.pow(feature[i] - tf.constant(2, dtype=tf.float32) - feature[i - 1], 2)
     return s
 
 
@@ -80,10 +94,10 @@ fealoss = DCloss(z, batch_size)
 loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
 
 # Optimizer
-optm = tf.compat.v1.train.AdamOptimizer(0.0003).minimize(loss)
+optm = tf.compat.v1.train.AdamOptimizer(0.003).minimize(loss)
 
 # Training parameters
-epochs = 500
+epochs = 11000
 display = 50
 begin_time = time()
 
@@ -111,10 +125,8 @@ with tf.compat.v1.Session() as sess:
     plt.figure()
     fea1 = sess.run(z, feed_dict={x: data})
     # fea2 = sess.run(z, feed_dict={x: data2})
-
     plt.plot(fea1, 'c-', label='Feature 1')
     # plt.plot(fea2, 'k-', label='Feature 2')
-
     font1 = {'family': 'Times New Roman', 'weight': 'normal', 'size': 23}
     plt.legend(loc='upper left', prop=font1)
     plt.title("Health Index")
