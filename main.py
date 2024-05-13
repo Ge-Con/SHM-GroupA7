@@ -187,8 +187,8 @@ def savePCA(dir):
     data = np.empty((6), dtype=object)
     print("VAF:")
     for root, dirs, files in os.walk(dir):
-    for freq in range(len(frequencies)):
-        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
+        for freq in range(len(frequencies)):
+            data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
     pca, EVR = PCA.onePC(data)
     print(EVR)
     for freq in range(len(frequencies)):
