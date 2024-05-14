@@ -151,7 +151,13 @@ def correlateFeatures(dir):
         if flag:    #If at least one file was the correct type
             for freq in ["050", "100", "125", "150", "200", "250"]:
                 combinedfeatures = np.concatenate([allfeatures[frequencies.index(freq), i] for i in range(allfeatures[0].shape[0])], axis=0)
-                csv_file_path = os.path.join(root, freq +"_kHz-allfeatures.csv")
+                root2 = root
+                root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
+                if not os.path.exists(root_new):
+                    os.makedirs(root_new)
+                csv_file_path1 = os.path.join(root_new, freq +"_kHz-allfeatures.csv")
+                csv_file_path = os.path.join(root, freq + "_kHz-allfeatures.csv")
+                pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
                 pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
 
     #Average features at each state
