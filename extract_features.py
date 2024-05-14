@@ -338,5 +338,3 @@ def STFT_to_feature(data3d):
     features_df = pd.DataFrame(out_list).transpose()
     return features_df
 
-for i in range(1,5):
-    print(i)
