@@ -6,6 +6,7 @@ import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
+from DeepSAD import DeepSAD_train_run
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -256,6 +257,12 @@ def giveTime():
         time.append(i*(5e-7))
     return time
 
+def saveDeepSAD(dir):
+    HIs = DeepSAD_train_run(dir)
+    print(Mo(HIs))
+    print(Pr(HIs))
+    print(Tr(HIs))
+
 # Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 #print("ok")
 #saveFFT(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03")
@@ -273,6 +280,7 @@ def main_menu():
     print("7. Correlate features (Requires 6)")
     print("8. Apply PCA to all (Requires 7)")
     print("9. Evaluate all HIs (Requires 8)")
+    print("10. DeepSAD")
     print("0. Exit")
 
 # Prompt the user to input the folder path
@@ -313,6 +321,8 @@ while True:
         correlateFeatures(csv_dir)
     elif choice == '9':
         evaluate()
+    elif choice == '10':
+        saveDeepSAD(csv_dir)
     elif choice == '0':
         print("Exiting...")
         quit()
