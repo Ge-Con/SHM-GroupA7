@@ -1,15 +1,17 @@
 import pandas as pd
 import numpy as np
 import os
-from sklearn.decomposition import PCA
 
 import extract_features
+import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
 np.set_printoptions(linewidth=400)
+
+np.set_printoptions(precision=4, suppress=True)
 
 
 def saveFFT(dir):
@@ -103,18 +105,22 @@ def saveFeatures(dir):
 
             elif name.endswith('STFT_Amp.csv'):
                 data = pd.read_csv(os.path.join(root, name))
-                #Unflattening happens here
-                # Populate the unflattened_list with values from flat
-                # index = 0
-                #data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
-                #for i in range(56):
-                    #for j in range(17):
-                            #data3d[i][j] = data[index]
-                            #index += 1
-                features = extract_features.STFT_to_feature(data)
+                data3d = [[[0 for _ in range(17)] for _ in range(126)] for _ in range(56)]
+
+                for k in range(56):
+                    for i in range(126):
+                        for j in range(17):
+                            data3d[k][i][j] = data.iloc[126*k + i, j]
+                #
+                # print(len(data3d))
+                # print(len(data3d[0]))
+                # print(len(data3d[0][0]))
+
+                features = extract_features.STFT_to_feature(data3d)
                 new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
+
 
 def correlateFeatures(dir):
     #Correlate extracted features
@@ -177,16 +183,26 @@ def correlateFeatures(dir):
     csv_file_path = os.path.join(dir, "deleted_features.csv")
     pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
-def savePCA(dir):
-    #Calculates and saves 1 principle component PCA
+def savePCA(dir): #Calculates and saves 1 principle component PCA
     frequencies = ["050", "100", "125", "150", "200", "250"]
     components = np.empty((6), dtype=object)
+    data = np.empty((6), dtype=object)
+    for root, dirs, files in os.walk(dir):
+        for dir in dirs:
+            if "State" in dir:
+                for freq in range(len(frequencies)):
+                    if str(type(data[freq])) == "<class 'NoneType'>":
+                        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
+                    else:
+                        data[freq] = np.append(data[freq], np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv"))))
+    pca, EVR = PCA.onePC(data)
+
     print("VAF:")
-    for freq in frequencies:
-        data = pd.read_csv(os.path.join(dir, freq + "_kHz-meanfeatures.csv"))
-        pca = PCA(n_components=1)   #PCA to 1 principle component - this hasn't been trained properly and needs to be fixed
-        components[frequencies.index(freq)] = pca.fit_transform(data).flatten()
-        print(pca.explained_variance_ratio_)    #Print explained variance
+    print(EVR)
+    for freq in range(len(frequencies)):
+        for state in range(len(frequencies[freq])):
+            components[freq] = PCA.apply(data[freq], pca)
+        #Print explained variance
     #Save all to one CSV file
     csv_file_path = os.path.join(dir, "1compPCA.csv")
     pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
@@ -266,7 +282,8 @@ if extract:
     folder_path = input("Enter the folder path of the Matlab files: ")
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
-    quit()
+    csv_dir = input("Enter the folder path of the CSV files: ")
+    #quit()
     #csv_dir = folder_path.replace('PZT','PZT-CSV')
 else:
     csv_dir = input("Enter the folder path of the CSV files: ")

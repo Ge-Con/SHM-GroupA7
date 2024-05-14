@@ -6,22 +6,25 @@ import numpy as np
 import pandas as pd
 import os
 import copy
+import matplotlib.pyplot as plt
+
+from prognosticcriteria import Mo, Pr, Tr
 
 
-learning_rate_AE = 0.01
+learning_rate_AE = 0.001
 learning_rate = 0.001
-weight_decay = 0.1
-n_epochs_AE = 25
-n_epochs = 25
-lr_milestones_AE = [8, 20, 30, 40]
-lr_milestones = [10, 20, 30]
-gamma = 0.4
-eta = 1.5
+weight_decay = 0.0001
+n_epochs_AE = 30
+n_epochs = 100
+lr_milestones_AE = [10, 30]
+lr_milestones = [10, 30, 50, 70, 90]
+gamma = 0.8 #0.4
+eta = 1.5 #1.5
 eps = 1*10**(-8)
-reg = 0
+reg = 0.001 #0.1
 
-batch_size = 6
-margin = 10 #Number of samples labelled on each end
+batch_size = 10
+margin = 5 #Number of samples labelled on each end
 
 samples = ["PZT-CSV L1-03", "PZT-CSV L1-05", "PZT-CSV L1-09"]
 
@@ -155,8 +158,8 @@ def train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs
         epoch_loss = 0.0
         scheduler.step()
 
-        if epoch in lr_milestones:  #Report new learning rate on milestones
-            print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
+        #if epoch in lr_milestones:  #Report new learning rate on milestones
+        #    print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
 
         for index, (train_data, train_target) in enumerate(train_loader):
             loss = 0.0
@@ -213,8 +216,8 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
     for epoch in range(n_epochs):
         print("Epoch " + str(epoch))
         scheduler.step()
-        if epoch in lr_milestones:
-            print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
+        #if epoch in lr_milestones:
+        #    print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
         epoch_loss = 0.0
         n_batches = 0
@@ -300,6 +303,7 @@ def load_data(dir, margin):
                     labels = np.append(labels, 0)
                 count += 1
     labels[-1*margin::] = -1 #np.array([-1])    #Unhealthy
+    labels[::margin] = 1
     return data, labels
 
 dir = input("CSV file location: ")
@@ -335,11 +339,53 @@ model = FashionMNIST_LeNet()
 model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones_AE)
 model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
 
-
-results = np.empty((len(train_dataset)))
+all = np.empty((len(test_data), 30))
+count = 0
 
 for sample in test_data:
+    results = []
     for state in range(sample.shape[0]):
         data = sample[state]
-        print(embed(torch.from_numpy(data), model))
-        print(state)
+        results.append(embed(torch.from_numpy(data), model).item())
+    #print(results)
+    plt.plot(range(sample.shape[0]), results)
+    plt.show()
+    all[count] = results[-30::]
+    count += 1
+m = Mo(all)
+p = Pr(all)
+t = Tr(all)
+print(m, p, t)
+print(m+p+t)
+
+"""scores = []
+
+for reg10 in range(10):
+    eta = 1+reg10/10
+
+    model = FashionMNIST_LeNet()
+    model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones_AE)
+    model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+
+    all = np.empty((len(test_data), 30))
+    count = 0
+
+    for sample in test_data:
+        results = []
+        for state in range(sample.shape[0]):
+            data = sample[state]
+            results.append(embed(torch.from_numpy(data), model).item())
+        #print(results)
+        #plt.plot(range(sample.shape[0]), results)
+        #plt.show()
+        all[count] = results[-30::]
+        count += 1
+    m = Mo(all)
+    p = Pr(all)
+    t = Tr(all)
+    print(m, p, t)
+    print(m+p+t)
+
+    scores.append(m+p+t)
+plt.plot(range(10), scores)
+plt.show()"""
