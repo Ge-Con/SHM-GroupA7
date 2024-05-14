@@ -87,10 +87,11 @@ def doPCA_multiple_Campaigns(train1,train2,train3,train4,test):
                     df = pd.read_csv(os.path.join(root, name))
                     matrix = df.values
                     x = apply(matrix, pca)
-                    print(root)
                     list.append(x)
         output.append(list)
         print(list)
+
+    return output
 
 
 # Call the onePC function with the matrices
