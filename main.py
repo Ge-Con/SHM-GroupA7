@@ -188,25 +188,23 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     frequencies = ["050", "100", "125", "150", "200", "250"]
     components = np.empty((6), dtype=object)
     data = np.empty((6), dtype=object)
-    for root, dirs, files in os.walk(dir):
-        for dir in dirs:
-            if "State" in dir:
-                for freq in range(len(frequencies)):
-                    if str(type(data[freq])) == "<class 'NoneType'>":
-                        data[freq] = np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv")))
-                    else:
-                        data[freq] = np.append(data[freq], np.array(pd.read_csv(os.path.join(dir, frequencies[freq] + "_kHz-allfeatures.csv"))))
-    pca, EVR = PCA.onePC(data)
+    output = []
 
-    print("VAF:")
-    print(EVR)
-    for freq in range(len(frequencies)):
-        for state in range(len(frequencies[freq])):
-            components[freq] = PCA.apply(data[freq], pca)
-        #Print explained variance
-    #Save all to one CSV file
-    csv_file_path = os.path.join(dir, "1compPCA.csv")
-    pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
+    folders = []
+
+    # Get the locations of train folders
+    for i in range(5):
+        folder_location = input(f"Enter the location of your 5 folders {i}: ")
+        folders.append(folder_location)
+    for i in range(5):
+        output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
+
+    print(output)
+
+    #     #Print explained variance
+    # #Save all to one CSV file
+    # csv_file_path = os.path.join(dir, "1compPCA.csv")
+    # pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
 def evaluate():
     #Apply prognostic criteria to PCA and extracted features
