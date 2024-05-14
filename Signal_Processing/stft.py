@@ -25,9 +25,9 @@ def Short_Fourier(data):
     dim2 = 126  # Assuming this is the number of elements in the middle dimension
     dim3 = 17  # Assuming this is the number of elements in the innermost dimension
 
-    print("outer Dim", len(amp_arr))
-    print("Middle Dim", len(amp_arr[0]))
-    print("Inner Dim", len(amp_arr[0][0]))
+    #print("outer Dim", len(amp_arr))
+    #print("Middle Dim", len(amp_arr[0]))
+    #print("Inner Dim", len(amp_arr[0][0]))
     # Create an empty 3D list with the original dimensions
     unflattened_list = [[[0 for _ in range(dim3)] for _ in range(dim2)] for _ in range(dim1)]
 

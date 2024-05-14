@@ -21,6 +21,7 @@ def saveFFT(dir):
             if name.endswith('kHz.csv'):
                 # print("good")
                 data = pd.read_csv(os.path.join(root, name))
+                #print(root, name)
                 arrayfile1, arrayfile2 = fft.fast_fourier(data)
                 csv_file_path1 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_FFT_Freq.csv'}")
                 csv_file_path2 = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_FFT_Amp.csv'}")
