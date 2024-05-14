@@ -57,7 +57,7 @@ def read_matrices_from_folder(dir, freq):
 
 def doPCA_multiple_Campaigns(train1,train2,train3,train4,test):
     # Use the read_matrices_from_folder function to get the matrices from a folder
-
+    output = []
     for freq in range(6):
         if freq == 0:
             f = "050"
@@ -79,6 +79,7 @@ def doPCA_multiple_Campaigns(train1,train2,train3,train4,test):
 
         pca, EVR = onePC(matrices)
         list=[]
+
 
         for root, dirs, files in os.walk(test):
             for name in files:
