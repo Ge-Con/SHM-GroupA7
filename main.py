@@ -7,6 +7,8 @@ import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
 from DeepSAD import DeepSAD_train_run
+import matplotlib.pyplot as plt
+
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -206,7 +208,22 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     for i in range(5):
         output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
 
-    print(output)
+    print(len(output))
+    print(len(output[0]))
+    print(len(output[0][0]))
+    for k in range(5):
+        for i in range(6):
+            root_new = folder_location.replace("PZT", "PZT-ONLY-FEATURES")
+            if not os.path.exists(root_new):
+                os.makedirs(root_new)
+            csv_file_path = os.path.join(root_new + f" Test Specimen{k}, Frequency{i}-PCA-HI.csv")
+            pd.DataFrame(output[k][i]).to_csv(csv_file_path, index=False)
+            plt.plot(output[k][i])
+            plt.xlabel('Index')
+            plt.ylabel('PCA Value')
+            plt.title('PCA Values from CSV Files')
+            plt.show()
+
 
     #     #Print explained variance
     # #Save all to one CSV file
@@ -336,6 +353,7 @@ while True:
         print("Invalid choice. Please enter a number between 0 and 9.")
 
 #C:\Users\geort\Desktop\Universty\PZT-L1-03
+#C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03
 #C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
 
 #C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files

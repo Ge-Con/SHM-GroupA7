@@ -49,7 +49,9 @@ def read_matrices_from_folder(dir, freq):
 
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name.endswith(f"{freq}kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
+
+            if name.endswith(f"{freq}_kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
+
                 df = pd.read_csv(os.path.join(root, name))
                 matrix = df.values  # Convert DataFrame to numpy array
                 matrices.append(matrix)
@@ -74,22 +76,26 @@ def doPCA_multiple_Campaigns(train1,train2,train3,train4,test):
 
         matrices = []
 
-        for i in range(1,5):
-            matrices.append(read_matrices_from_folder(f"train{i}",f))
+        #print(f"{f}_kHz-allfeatures.csv")
 
+        for i in range(1,5):
+            #matrices.append(read_matrices_from_folder(f"train{i}",f))
+            matrices.extend(read_matrices_from_folder(locals()[f"train{i}"], f))
+        #print(matrices)
         pca, EVR = onePC(matrices)
         list=[]
 
 
         for root, dirs, files in os.walk(test):
             for name in files:
-                if name.endswith(f"{f}kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
+                if name.endswith(f"{f}_kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
                     df = pd.read_csv(os.path.join(root, name))
                     matrix = df.values
                     x = apply(matrix, pca)
                     list.append(x)
+                    #print(x)
         output.append(list)
-        print(list)
+        #print(output)
 
     return output
 
