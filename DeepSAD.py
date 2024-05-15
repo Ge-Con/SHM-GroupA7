@@ -12,9 +12,6 @@ from prognosticcriteria import Mo, Pr, Tr
 
 
 
-samples = ["PZT-CSV L1-03", "PZT-CSV L1-04", "PZT-CSV L1-05", "PZT-CSV L1-09", "PZT-CSV L1-23"]
-
-
 class FashionMNIST_LeNet(nn.Module):
     #Object for the neural network model for DeepSAD
     #mnist_LeNet implementation - this is phi in the equations
@@ -25,7 +22,7 @@ class FashionMNIST_LeNet(nn.Module):
         self.size = size
 
         #CNN
-        self.fc1 = nn.Linear(size, 1024)
+        self.fc1 = nn.Linear(size[0]*size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(128, 64)
@@ -47,8 +44,9 @@ class FashionMNIST_LeNet(nn.Module):
 class FashionMNIST_LeNet_Decoder(nn.Module):
     def __init__(self, size):
         super().__init__()
+        self.size = size
 
-        self.fc1 = nn.Linear(1024, size)
+        self.fc1 = nn.Linear(1024, size[0]*size[1])
         self.fc2 = nn.Linear(512, 1024)
         self.fc3 = nn.Linear(128, 512)
         self.fc4 = nn.Linear(64, 128)
@@ -62,7 +60,7 @@ class FashionMNIST_LeNet_Decoder(nn.Module):
         x = self.m(self.fc3(x))
         x = self.m(self.fc2(x))
         x = self.m(self.fc1(x))
-        decoded = x.view(-1, 19, 56)
+        decoded = x.view(-1, self.size[0], self.size[1])
         return decoded
 
 class FashionMNIST_LeNet_Autoencoder(nn.Module):
@@ -339,64 +337,70 @@ for reg10 in range(10):
 plt.plot(range(10), scores)
 plt.show()"""
 
-def DeepSAD_train_run(dir):
+def DeepSAD_train_run(dir, freq, filename):
 
     # Hyperparamters
-    learning_rate_AE = 0.00001
+    learning_rate_AE = 0.001
     learning_rate = 0.00001
     weight_decay = 0.1
     n_epochs_AE = 10
-    n_epochs = 50
-    lr_milestones_AE = [10, 20, 30, 40]  # Milestones when learning rate reduces
-    lr_milestones = [10, 30, 50, 70, 90]
+    n_epochs = 15
+    lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
+    lr_milestones = [5, 10, 50, 70, 90]
     gamma = 0.4  # L2 weighting to prevent large nodes
-    eta = 2  # Weighting of labelled datapoints
+    eta = 3  # Weighting of labelled datapoints
     eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
     reg = 0.001  # Lambda - diversity weighting
     batch_size = 10
     margin = 5  # Number of samples labelled on each end
 
-    filename = input("Please enter file name for training: ")#e.g. '050kHz-Features.csv'
+    samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
 
-    test_data = np.empty((len(samples)), dtype=object)
-    first = True
-    count = 0
-    for sample in samples:
-        temp_data, temp_targets = load_data(dir + "\\" + sample, margin, filename)
-        if first:
-            arr_data = copy.deepcopy(temp_data)
-            arr_targets = copy.deepcopy(temp_targets)
-            first = False
-        else:
-            arr_data = np.concatenate((arr_data, temp_data))
-            arr_targets = np.concatenate((arr_targets, temp_targets))
-        test_data[count] = temp_data
-        count += 1
+    filename = freq + filename + ".csv"
 
-    train_data = torch.tensor(arr_data)
-    semi_targets = torch.tensor(arr_targets)
+    results = np.empty((5, 30), dtype=object)
 
-    size = train_data.shape[1] * train_data.shape[2]
+    bigcount = 0
+    for test_sample in samples:
 
-    train_dataset = TensorDataset(train_data, semi_targets)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        first = True
+        count = 0
+        temp_samples = copy.deepcopy(samples)
+        temp_samples.remove(test_sample)
+        for sample in temp_samples:
+            temp_data, temp_targets = load_data(dir + "\\" + sample, margin, filename)
+            if first:
+                arr_data = copy.deepcopy(temp_data)
+                arr_targets = copy.deepcopy(temp_targets)
+                first = False
+            else:
+                arr_data = np.concatenate((arr_data, temp_data))
+                arr_targets = np.concatenate((arr_targets, temp_targets))
+            count += 1
 
-    model = FashionMNIST_LeNet(size)
-    model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones_AE)
-    model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+        train_data = torch.tensor(arr_data)
+        semi_targets = torch.tensor(arr_targets)
 
-    all = np.empty((len(test_data), 30))
-    count = 0
+        size = [train_data.shape[1], train_data.shape[2]]
 
-    for sample in test_data:
-        results = []
-        for state in range(sample.shape[0]):
-            data = sample[state]
-            results.append(embed(torch.from_numpy(data), model).item())
+        train_dataset = TensorDataset(train_data, semi_targets)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+        model = FashionMNIST_LeNet(size)
+        model = pretrain(model, train_loader, learning_rate_AE, weight_decay, n_epochs_AE, lr_milestones_AE)
+        model = train(model, train_data, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg)
+
+
+        test_data, temp_targets = load_data(dir + "\\" + test_sample, margin, filename)
+
+        current_result = []
+        for state in range(test_data.shape[0]):
+            data = test_data[state]
+            current_result.append(embed(torch.from_numpy(data), model).item())
         # print(results)
-        plt.plot(range(sample.shape[0]), results)
-        plt.show()
-        all[count] = results[-30::]
-        count += 1
+        #plt.plot(range(sample.shape[0]), results)
+        #plt.show()
+        results[bigcount] = np.array(current_result[-30::])
+        bigcount += 1
 
-    return all
+    return results
