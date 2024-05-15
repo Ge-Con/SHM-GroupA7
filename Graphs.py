@@ -25,7 +25,10 @@ def criteria_chart(features, Mo, Pr, Tr, dir="", name=""):
     plt.bar(features, Pr, bottom=Mo, label="Pr")
     plt.bar(features, Tr, bottom=Pr+Mo, label="Tr")
     plt.legend()
-    plt.xlabel('Feature')
+    if features[0] == "050":
+        plt.xlabel('Frequency (kHz)')
+    else:
+        plt.xlabel('Feature')
     plt.ylabel('Fitness')
     if dir != "" and name != "":
         plt.savefig(dir + "\\" + name + " PC")

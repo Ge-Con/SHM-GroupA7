@@ -340,15 +340,15 @@ plt.show()"""
 def DeepSAD_train_run(dir, freq, filename):
 
     # Hyperparamters
-    learning_rate_AE = 0.00001
+    learning_rate_AE = 0.001
     learning_rate = 0.00001
     weight_decay = 0.1
     n_epochs_AE = 10
-    n_epochs = 20
-    lr_milestones_AE = [10, 20, 30, 40]  # Milestones when learning rate reduces
-    lr_milestones = [10, 30, 50, 70, 90]
+    n_epochs = 15
+    lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
+    lr_milestones = [5, 10, 50, 70, 90]
     gamma = 0.4  # L2 weighting to prevent large nodes
-    eta = 2  # Weighting of labelled datapoints
+    eta = 3  # Weighting of labelled datapoints
     eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
     reg = 0.001  # Lambda - diversity weighting
     batch_size = 10

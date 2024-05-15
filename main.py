@@ -233,12 +233,12 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     # csv_file_path = os.path.join(dir, "1compPCA.csv")
     # pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
-def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq, features, then HIs along the states within each
+def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
     frequencies = ["050", "100", "125", "150", "200", "250"]
     # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
     criteria = np.empty((4, 6, len(features[0])))
     # Iterate through each frequency and calculate features
-    print(features.shape)
+    #print(features.shape)
     for freq in range(6):
         # print(components)
         for feat in range(len(features[0])):
@@ -248,7 +248,7 @@ def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq,
             criteria[3][freq][feat] = float(Pr(features[freq][feat]))
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
-        if files_used == "":
+        if files_used[0] == "":
             files_used = np.array([str(i) for i in range(len(criteria[1][freq]))])
         Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
     for feat in range(len(features[0])):
@@ -263,7 +263,7 @@ def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq,
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    features = np.empty((6, 71), dtype=object)  #6 frequencies, 71 features and a list of values at each location
+    features = np.empty((6, 139), dtype=object)  #6 frequencies, 71 features and a list of values at each location
 
     # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
@@ -271,7 +271,7 @@ def evaluate(dir):
             if name.endswith("meanfeatures.csv"):
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
-                for feat in range(71):
+                for feat in range(139):
                     if str(type(features[freq][feat])) == "<class 'NoneType'>":
                         features[freq][feat] = np.array([data[feat][-30::]])
                     else:
@@ -290,7 +290,7 @@ def giveTime():
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filenames = ["_kHz-allfeatures", "kHz", "_kHz_FFT_Amp", "_KHz_STFT_Amp"]    #No need for .csv
+    filenames = ["_kHz-allfeatures"]    #No need for .csv
     HIs = np.empty((6, len(filenames)), dtype=object)
     for freq in range(len(frequencies)):
         for name in range(len(filenames)):
