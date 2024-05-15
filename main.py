@@ -67,10 +67,10 @@ def saveHilbert(dir):
                 arrayfile1.to_csv(csv_file_path1, index=False)
                 # arrayfile2.to_csv(csv_file_path2, index=False)
 
-def fixname(name):
-    if "50" in name and "150" not in name and "250" not in name:
-        name = "0" + name
-    return name
+# def fixname(name):
+#     if "50" in name and "150" not in name and "250" not in name:
+#         name = "0" + name
+#     return name
 
 def saveFeatures(dir):
     #Extract and save features for each frequency
@@ -81,28 +81,28 @@ def saveFeatures(dir):
             if name.endswith('kHz.csv'):
                 data = pd.read_csv(os.path.join(root, name))    #Don't put this line outside if statement
                 features = extract_features.time_to_feature(data)
-                new_filename = fixname(name).replace('kHz.csv', 'kHz-Features.csv')
+                new_filename = name.replace('kHz.csv', 'kHz-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
             elif name.endswith('FFT_Amp.csv'):
                 data = pd.read_csv(os.path.join(root, name))
                 features = extract_features.freq_to_feature(data)
-                new_filename = fixname(name).replace('FFT_Amp.csv', 'FFT_Amp-Features.csv')
+                new_filename = name.replace('FFT_Amp.csv', 'FFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
             elif name.endswith('Hilbert.csv'):
                 data = pd.read_csv(os.path.join(root, name))
                 features = extract_features.time_to_feature(data)
-                new_filename = fixname(name).replace('Hilbert.csv', 'Hilbert-Features.csv')
+                new_filename = name.replace('Hilbert.csv', 'Hilbert-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
             elif name.endswith('EMD.csv'):
                 data = pd.read_csv(os.path.join(root, name))
                 features = extract_features.time_to_feature(data)
-                new_filename = fixname(name).replace('EMD.csv', 'EMD-Features.csv')
+                new_filename = name.replace('EMD.csv', 'EMD-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
@@ -120,7 +120,7 @@ def saveFeatures(dir):
                 # print(len(data3d[0][0]))
 
                 features = extract_features.STFT_to_feature(data3d)
-                new_filename = fixname(name).replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
+                new_filename = name.replace('STFT_Amp.csv', 'STFT_Amp-Features.csv')
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
@@ -193,9 +193,9 @@ def correlateFeatures(dir):
     pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
 def savePCA(dir): #Calculates and saves 1 principle component PCA
-    frequencies = ["050", "100", "125", "150", "200", "250"]
-    components = np.empty((6), dtype=object)
-    data = np.empty((6), dtype=object)
+    # frequencies = ["050", "100", "125", "150", "200", "250"]
+    # components = np.empty((6), dtype=object)
+    # data = np.empty((6), dtype=object)
     output = []
 
     folders = []
@@ -206,6 +206,22 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
         folders.append(folder_location)
     for i in range(5):
         output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
+
+    print(len(output))
+    print(len(output[0]))
+    print(len(output[0][0]))
+    for k in range(5):
+        for i in range(6):
+            root_new = folder_location.replace("PZT", "PZT-ONLY-FEATURES")
+            if not os.path.exists(root_new):
+                os.makedirs(root_new)
+            csv_file_path = os.path.join(root_new + f" Test Specimen{k}, Frequency{i}-PCA-HI.csv")
+            pd.DataFrame(output[k][i]).to_csv(csv_file_path, index=False)
+            plt.plot(output[k][i])
+            plt.xlabel('Index')
+            plt.ylabel('PCA Value')
+            plt.title('PCA Values from CSV Files')
+            plt.show()
 
     print(output)
 
@@ -269,6 +285,8 @@ def evaluate(dir):
         # print(components)
         print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
     save_evaluation(features, "Features", dir)
+
+
 
 
 def giveTime():
