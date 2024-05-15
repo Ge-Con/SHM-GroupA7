@@ -279,7 +279,7 @@ def giveTime():
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filenames = ["Features"]    #No need for .csv
+    filenames = ["-allfeatures", "", "_FFT_Amp", "_STFT_Amp"]    #No need for .csv
     HIs = np.empty((6, len(filenames)), dtype=object)
     for freq in range(len(frequencies)):
         for name in range(len(filenames)):

@@ -342,8 +342,8 @@ def DeepSAD_train_run(dir, freq, filename):
     learning_rate_AE = 0.00001
     learning_rate = 0.00001
     weight_decay = 0.1
-    n_epochs_AE = 5
-    n_epochs = 5
+    n_epochs_AE = 10
+    n_epochs = 20
     lr_milestones_AE = [10, 20, 30, 40]  # Milestones when learning rate reduces
     lr_milestones = [10, 30, 50, 70, 90]
     gamma = 0.4  # L2 weighting to prevent large nodes
@@ -353,9 +353,9 @@ def DeepSAD_train_run(dir, freq, filename):
     batch_size = 10
     margin = 5  # Number of samples labelled on each end
 
-    samples = ["PZT-CSV L1-03", "PZT-CSV L1-04", "PZT-CSV L1-05", "PZT-CSV L1-09", "PZT-CSV L1-23"]
+    samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
 
-    filename = freq + "kHz-" + filename + ".csv"
+    filename = freq + "kHz" + filename + ".csv"
 
     results = np.empty((5, 30), dtype=object)
 

@@ -28,7 +28,7 @@ def criteria_chart(features, Mo, Pr, Tr, dir="", name=""):
     plt.xlabel('Feature')
     plt.ylabel('Fitness')
     if dir != "" and name != "":
-        plt.savefig(dir + "\\" + name + " PCs")
+        plt.savefig(dir + "\\" + name + " PC")
     else:
         plt.show()
 
