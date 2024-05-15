@@ -7,6 +7,7 @@ import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
 from DeepSAD import DeepSAD_train_run
+import Graphs
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -207,10 +208,34 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     # csv_file_path = os.path.join(dir, "1compPCA.csv")
     # pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
 
-def evaluate():
+def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq, features, then HIs along the states within each
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
+    criteria = np.empty((4, 6, len(features[0])))
+    # Iterate through each frequency and calculate features
+    print(features.shape)
+    for freq in range(6):
+        # print(components)
+        for feat in range(len(features[0])):
+            criteria[0][freq][feat] = float(fitness(features[freq][feat])[0])
+            criteria[1][freq][feat] = float(Mo(features[freq][feat]))
+            criteria[2][freq][feat] = float(Tr(features[freq][feat]))
+            criteria[3][freq][feat] = float(Pr(features[freq][feat]))
+            #Save graphs
+            Graphs.HI_graph(features[freq][feat], dir=dir, name=label)
+        if files_used == "":
+            files_used = np.array([str(i) for i in range(len(criteria[1][freq]))])
+        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label)
+
+    # Save all to files
+    pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
+    pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mo.csv", index=False)
+    pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tr.csv", index=False)
+    pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pr.csv", index=False)
+
+def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    dir = input("Enter the folder path of the CSV folders: ")
     components = np.empty((6), dtype=object)    #Each position contains 2D PCA matrix
     features = np.empty((6, 71), dtype=object)  #6 frequencies, 71 features and a list of values at each location
 
@@ -232,24 +257,11 @@ def evaluate():
                         features[freq][feat] = np.array([data[feat][-30::]])
                     else:
                         features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
-
-    #Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
-    results = np.empty((6, 71))
-    criteria = np.empty((3, 6, 71))
-    #Iterate through each frequency and calculate features
     for freq in range(6):
-        #print(components)
+        # print(components)
         print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
-        for feat in range(71):
-            results[freq][feat] = float(fitness(features[freq][feat])[0])
-            criteria[0][freq][feat] = float(Mo(features[freq][feat]))
-            criteria[1][freq][feat] = float(Tr(features[freq][feat]))
-            criteria[2][freq][feat] = float(Pr(features[freq][feat]))
-    #Save all to files
-    pd.DataFrame(results).to_csv(dir + "\\Fitness.csv", index=False)
-    pd.DataFrame(criteria[0]).to_csv(dir + "\\Mo.csv", index=False)
-    pd.DataFrame(criteria[1]).to_csv(dir + "\\Tr.csv", index=False)
-    pd.DataFrame(criteria[2]).to_csv(dir + "\\Pr.csv", index=False)
+    save_evaluation(features, "Features", dir)
+
 
 def giveTime():
     time = []
@@ -258,10 +270,13 @@ def giveTime():
     return time
 
 def saveDeepSAD(dir):
-    HIs = DeepSAD_train_run(dir)
-    print(Mo(HIs))
-    print(Pr(HIs))
-    print(Tr(HIs))
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    filenames = ["Features"]    #No need for .csv
+    HIs = np.empty((6, len(filenames)), dtype=object)
+    for freq in range(len(frequencies)):
+        for name in range(len(filenames)):
+            HIs[freq][name] = DeepSAD_train_run(dir, frequencies[freq], filenames[name])
+    save_evaluation(HIs, "DeepSAD", dir, filenames)
 
 # Data_Preprocess.matToCsv(r"C:\Users\geort\Desktop\Universty\PZT-L1-03")
 #print("ok")
@@ -320,7 +335,7 @@ while True:
     elif choice == '7':
         correlateFeatures(csv_dir)
     elif choice == '9':
-        evaluate()
+        evaluate(csv_dir)
     elif choice == '10':
         saveDeepSAD(csv_dir)
     elif choice == '0':
