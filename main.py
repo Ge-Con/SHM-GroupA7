@@ -125,72 +125,75 @@ def saveFeatures(dir):
                 features.to_csv(csv_file_path, index=False)
 
 
-def correlateFeatures(dir):
+def correlateFeatures(rootdir):
     #Correlate extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
+    samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
     print("Combining Features:...")
-    for root, dirs, files in os.walk(dir):  #For each folder location (state)
-        allfeatures = np.empty((6, 5), dtype=object)
-        flag = False
-        for name in files:              #For each file
-            for freq in frequencies:    #For each frequency
-                #Read and add to correct position in allfeatures array
-                if freq in name and name.endswith('-Features.csv'):
-                    flag = True
+    for sample in samples:
+        dir = rootdir + "\\" + sample
+        for root, dirs, files in os.walk(dir):  #For each folder location (state)
+            allfeatures = np.empty((6, 5), dtype=object)
+            flag = False
+            for name in files:              #For each file
+                for freq in frequencies:    #For each frequency
+                    #Read and add to correct position in allfeatures array
+                    if freq in name and name.endswith('-Features.csv'):
+                        flag = True
+                        data = np.array(pd.read_csv(os.path.join(root, name)))
+                        if 'FFT_Amp' in name:
+                            allfeatures[frequencies.index(freq)][1] = data
+                        elif 'Hilbert' in name:
+                            allfeatures[frequencies.index(freq)][2] = data
+                        elif 'EMD' in name:
+                            allfeatures[frequencies.index(freq)][3] = data
+                        elif 'STFT_Amp' in name:
+                            allfeatures[frequencies.index(freq)][4] = data
+                        else: #Time domain
+                            allfeatures[frequencies.index(freq)][0] = data
+
+            if flag:    #If at least one file was the correct type
+                for freq in ["050", "100", "125", "150", "200", "250"]:
+                    combinedfeatures = np.concatenate([allfeatures[frequencies.index(freq), i] for i in range(allfeatures[0].shape[0])], axis=0)
+                    root2 = root
+                    root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
+                    if not os.path.exists(root_new):
+                        os.makedirs(root_new)
+                    csv_file_path1 = os.path.join(root_new, freq +"_kHz-allfeatures.csv")
+                    csv_file_path = os.path.join(root, freq + "_kHz-allfeatures.csv")
+                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
+                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
+
+        #Average features at each state
+        print("Averaging features...")
+        meanfeatures = np.empty((6), dtype=object)
+        for root, dirs, files in os.walk(dir):
+            for name in files:
+                if name.endswith("kHz-allfeatures.csv"):
                     data = np.array(pd.read_csv(os.path.join(root, name)))
-                    if 'FFT_Amp' in name:
-                        allfeatures[frequencies.index(freq)][1] = data
-                    elif 'Hilbert' in name:
-                        allfeatures[frequencies.index(freq)][2] = data
-                    elif 'EMD' in name:
-                        allfeatures[frequencies.index(freq)][3] = data
-                    elif 'STFT_Amp' in name:
-                        allfeatures[frequencies.index(freq)][4] = data
-                    else: #Time domain
-                        allfeatures[frequencies.index(freq)][0] = data
+                    data = np.mean(data, axis=1)
+                    if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":
+                        meanfeatures[frequencies.index(name[:3])] = np.array([data])
+                    else:
+                        meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
 
-        if flag:    #If at least one file was the correct type
-            for freq in ["050", "100", "125", "150", "200", "250"]:
-                combinedfeatures = np.concatenate([allfeatures[frequencies.index(freq), i] for i in range(allfeatures[0].shape[0])], axis=0)
-                root2 = root
-                root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
-                if not os.path.exists(root_new):
-                    os.makedirs(root_new)
-                csv_file_path1 = os.path.join(root_new, freq +"_kHz-allfeatures.csv")
-                csv_file_path = os.path.join(root, freq + "_kHz-allfeatures.csv")
-                pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
-                pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
+        #Correlate features
+        alldelete = np.empty((6), dtype=object)
+        for freq in frequencies:    #For each feature
+            csv_file_path = os.path.join(dir, freq + "_kHz-meanfeatures.csv")
+            pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
 
-    #Average features at each state
-    print("Averaging features...")
-    meanfeatures = np.empty((6), dtype=object)
-    for root, dirs, files in os.walk(dir):
-        for name in files:
-            if name.endswith("kHz-allfeatures.csv"):
-                data = np.array(pd.read_csv(os.path.join(root, name)))
-                data = np.mean(data, axis=1)
-                if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":
-                    meanfeatures[frequencies.index(name[:3])] = np.array([data])
-                else:
-                    meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
-
-    #Correlate features
-    alldelete = np.empty((6), dtype=object)
-    for freq in frequencies:    #For each feature
-        csv_file_path = os.path.join(dir, freq + "_kHz-meanfeatures.csv")
-        pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
-
-        #Use feature_correlation to return the correlation matrix, reduced matrix and features deleted
-        correlation_matrix, features, to_delete = extract_features.feature_correlation(meanfeatures[frequencies.index(freq)])
-        #Save all to files
-        alldelete[frequencies.index(freq)] = to_delete
-        csv_file_path = os.path.join(dir, freq + "_kHz-cmatrix.csv")
-        pd.DataFrame(correlation_matrix).to_csv(csv_file_path, index=False)
-        csv_file_path = os.path.join(dir, freq + "_kHz-rfeatures.csv")
-        pd.DataFrame(features).to_csv(csv_file_path, index=False)
-    # Save lists of deleted features for inspection
-    csv_file_path = os.path.join(dir, "deleted_features.csv")
-    pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
+            #Use feature_correlation to return the correlation matrix, reduced matrix and features deleted
+            correlation_matrix, features, to_delete = extract_features.feature_correlation(meanfeatures[frequencies.index(freq)])
+            #Save all to files
+            alldelete[frequencies.index(freq)] = to_delete
+            csv_file_path = os.path.join(dir, freq + "_kHz-cmatrix.csv")
+            pd.DataFrame(correlation_matrix).to_csv(csv_file_path, index=False)
+            csv_file_path = os.path.join(dir, freq + "_kHz-rfeatures.csv")
+            pd.DataFrame(features).to_csv(csv_file_path, index=False)
+        # Save lists of deleted features for inspection
+        csv_file_path = os.path.join(dir, "deleted_features.csv")
+        pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
 def savePCA(dir): #Calculates and saves 1 principle component PCA
     # frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -265,18 +268,14 @@ def evaluate(dir):
     # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
         for name in files:
-            #if name == "1compPCA.csv":
-            #    data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
-            #    for freq in range(6):
-            #        if str(type(components[freq])) == "<class 'NoneType'>": #If first to be added
-            #            components[freq] = np.array([data[freq][-30::]])
-            #        else:
-            #            components[freq] = np.vstack([components[freq], data[freq][-30::]])
             if name.endswith("meanfeatures.csv"):
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
                 for feat in range(71):
-                    features[freq][feat] = data[feat][-30::]
+                    if str(type(features[freq][feat])) == "<class 'NoneType'>":
+                        features[freq][feat] = np.array([data[feat][-30::]])
+                    else:
+                        features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
 
     save_evaluation(features, "Features", dir)
 
