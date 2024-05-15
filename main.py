@@ -260,7 +260,6 @@ def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq,
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    components = np.empty((6), dtype=object)    #Each position contains 2D PCA matrix
     features = np.empty((6, 71), dtype=object)  #6 frequencies, 71 features and a list of values at each location
 
     # Read all features to 'features', and all PCA to 'components' arrays
@@ -277,13 +276,8 @@ def evaluate(dir):
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
                 for feat in range(71):
-                    if str(type(features[freq][feat])) == "<class 'NoneType'>":
-                        features[freq][feat] = np.array([data[feat][-30::]])
-                    else:
-                        features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
-    for freq in range(6):
-        # print(components)
-        print(frequencies[freq] + "kHz:" + str(fitness(components[freq])))
+                    features[freq][feat] = data[feat][-30::]
+
     save_evaluation(features, "Features", dir)
 
 
