@@ -228,9 +228,9 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     for i in range(5):
         output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
 
-    # print(len(output))
-    # print(len(output[0]))
-    # print(len(output[0][0]))
+    print(len(output))
+    print(len(output[0]))
+    print(len(output[0][0]))
     for k in range(5):
         for i in range(6):
             root_new = folder_location.replace("PZT", "PZT-ONLY-FEATURES")
@@ -246,18 +246,12 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     # Example usage:
     #save_evaluation(switch_dimensions(output),"PCA", dir, ["_kHz-PCA"])
     switched_output = switch_dimensions(output)
-    features = np.empty((6, 139, 1, 30), dtype=float)  # 6 frequencies, 139 features, 1 value, 30 time steps
-
-    # Assign switched_output to features
-    for freq_index, pca_list in enumerate(switched_output):
-        for feature_index, pca_values in enumerate(pca_list):
-            last_30_values = pca_values[-30:]
-            features[freq_index][feature_index][0] = last_30_values
+    features = np.empty((6, 1, 5, 30), dtype=float)  # 6 frequencies, 139 features, 5 values, 30 time steps
 
     # Preprocess the features to handle NaN values
-    features_preprocessed = preprocess_data(features)
+    features_preprocessed = switched_output #preprocess_data(features)
 
-    save_evaluation(features, "PCA", dir, ["_kHz-PCA"])
+    save_evaluation(features_preprocessed, "PCA", dir, ["_kHz-PCA"])
     # return output
 
 def switch_dimensions(output):
@@ -266,12 +260,12 @@ def switch_dimensions(output):
     num_freqs = len(output[0])
 
     # Create a new list to store the switched dimensions
-    switched_output = [[[] for _ in range(num_folders)] for _ in range(num_freqs)]
+    switched_output = [[[[] for _ in range(num_folders)]] for _ in range(num_freqs)]
 
     # Switch the dimensions
     for folder_index in range(num_folders):
         for freq_index in range(num_freqs):
-            switched_output[freq_index][folder_index] = output[folder_index][freq_index]
+            switched_output[freq_index][0][folder_index] = output[folder_index][freq_index][-30:]
 
     return switched_output
 
@@ -292,7 +286,9 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
 
     for freq in range(6):
         # print(components)
-        for feat in range(len(features[0])):
+        for feat in range(1):
+            print(features[freq][feat])
+            features[freq][feat] = np.array(features[freq][feat])
             criteria[0][freq][feat] = float(fitness(features[freq][feat])[0])
             criteria[1][freq][feat] = float(Mo(features[freq][feat]))
             criteria[2][freq][feat] = float(Tr(features[freq][feat]))
