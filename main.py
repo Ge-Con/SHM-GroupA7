@@ -228,10 +228,12 @@ def save_evaluation(features, label, dir, files_used=""):  #Features is 6x freq,
             criteria[2][freq][feat] = float(Tr(features[freq][feat]))
             criteria[3][freq][feat] = float(Pr(features[freq][feat]))
             #Save graphs
-            Graphs.HI_graph(features[freq][feat], dir=dir, name=label)
+            Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
         if files_used == "":
             files_used = np.array([str(i) for i in range(len(criteria[1][freq]))])
-        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label)
+        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
+    for feat in range(len(features[0])):
+        Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
 
     # Save all to files
     pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
@@ -248,14 +250,14 @@ def evaluate(dir):
     # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name == "1compPCA.csv":
-                data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
-                for freq in range(6):
-                    if str(type(components[freq])) == "<class 'NoneType'>": #If first to be added
-                        components[freq] = np.array([data[freq][-30::]])
-                    else:
-                        components[freq] = np.vstack([components[freq], data[freq][-30::]])
-            elif name.endswith("meanfeatures.csv"):
+            #if name == "1compPCA.csv":
+            #    data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
+            #    for freq in range(6):
+            #        if str(type(components[freq])) == "<class 'NoneType'>": #If first to be added
+            #            components[freq] = np.array([data[freq][-30::]])
+            #        else:
+            #            components[freq] = np.vstack([components[freq], data[freq][-30::]])
+            if name.endswith("meanfeatures.csv"):
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
                 for feat in range(71):
