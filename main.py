@@ -8,6 +8,8 @@ from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria import fitness, Mo, Tr, Pr
 from DeepSAD import DeepSAD_train_run
 import Graphs
+import matplotlib.pyplot as plt
+from sklearn.impute import SimpleImputer
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -195,6 +197,22 @@ def correlateFeatures(rootdir):
         csv_file_path = os.path.join(dir, "deleted_features.csv")
         pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
+
+
+def preprocess_data(X):
+    # Step 1: Check for NaN values
+    has_nan = np.isnan(X).any()
+
+    if has_nan:
+        # Step 2: Handle NaN values
+        # For example, impute NaN values with the mean of each column
+        imputer = SimpleImputer(strategy='mean')
+        X_imputed = imputer.fit_transform(X)
+        return X_imputed
+    else:
+        return X
+
+
 def savePCA(dir): #Calculates and saves 1 principle component PCA
     # frequencies = ["050", "100", "125", "150", "200", "250"]
     # components = np.empty((6), dtype=object)
@@ -210,9 +228,9 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     for i in range(5):
         output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
 
-    print(len(output))
-    print(len(output[0]))
-    print(len(output[0][0]))
+    # print(len(output))
+    # print(len(output[0]))
+    # print(len(output[0][0]))
     for k in range(5):
         for i in range(6):
             root_new = folder_location.replace("PZT", "PZT-ONLY-FEATURES")
@@ -225,13 +243,40 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             plt.ylabel('PCA Value')
             plt.title('PCA Values from CSV Files')
             plt.show()
+    # Example usage:
+    #save_evaluation(switch_dimensions(output),"PCA", dir, ["_kHz-PCA"])
+    switched_output = switch_dimensions(output)
+    features = np.empty((6, 139, 1, 30), dtype=float)  # 6 frequencies, 139 features, 1 value, 30 time steps
 
-    print(output)
+    # Assign switched_output to features
+    for freq_index, pca_list in enumerate(switched_output):
+        for feature_index, pca_values in enumerate(pca_list):
+            last_30_values = pca_values[-30:]
+            features[freq_index][feature_index][0] = last_30_values
 
-    #     #Print explained variance
-    # #Save all to one CSV file
-    # csv_file_path = os.path.join(dir, "1compPCA.csv")
-    # pd.DataFrame(np.array(components.tolist()).transpose()).to_csv(csv_file_path, index=False)
+    # Preprocess the features to handle NaN values
+    features_preprocessed = preprocess_data(features)
+
+    save_evaluation(features, "PCA", dir, ["_kHz-PCA"])
+    # return output
+
+def switch_dimensions(output):
+    # Get the dimensions of the original output list
+    num_folders = len(output)
+    num_freqs = len(output[0])
+
+    # Create a new list to store the switched dimensions
+    switched_output = [[[] for _ in range(num_folders)] for _ in range(num_freqs)]
+
+    # Switch the dimensions
+    for folder_index in range(num_folders):
+        for freq_index in range(num_freqs):
+            switched_output[freq_index][folder_index] = output[folder_index][freq_index]
+
+    return switched_output
+
+
+
 
 def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -239,6 +284,12 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     criteria = np.empty((4, 6, len(features[0])))
     # Iterate through each frequency and calculate features
     #print(features.shape)
+    print(features)
+    print("First Dimension: ", len(features))
+    print("Second Dimension: ", len(features[0]))
+    print("Third dimension ", len(features[0][0]))
+    print("fourth dimension ", len(features[0][0][0]))
+
     for freq in range(6):
         # print(components)
         for feat in range(len(features[0])):
@@ -258,7 +309,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
     pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mo.csv", index=False)
     pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tr.csv", index=False)
-    pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pr.csv", index=False)
+    pd.DataFrame(criteria[3]).to_csv(dir + " \\" + label + " Pr.csv", index=False)
 
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
@@ -364,7 +415,7 @@ while True:
         print("Invalid choice. Please enter a number between 0 and 9.")
 
 #C:\Users\geort\Desktop\Universty\PZT-L1-03
-#C:\Users\geort\Desktop\Universty\PZT-CSV-L1-04\L104-AI_2019_12_11_12_59_25
+#C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03
 
 #C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\Files
 
