@@ -22,7 +22,7 @@ class FashionMNIST_LeNet(nn.Module):
         self.size = size
 
         #CNN
-        self.fc1 = nn.Linear(size, 1024)
+        self.fc1 = nn.Linear(size[0]*size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(128, 64)
@@ -44,8 +44,9 @@ class FashionMNIST_LeNet(nn.Module):
 class FashionMNIST_LeNet_Decoder(nn.Module):
     def __init__(self, size):
         super().__init__()
+        self.size = size
 
-        self.fc1 = nn.Linear(1024, size)
+        self.fc1 = nn.Linear(1024, size[0]*size[1])
         self.fc2 = nn.Linear(512, 1024)
         self.fc3 = nn.Linear(128, 512)
         self.fc4 = nn.Linear(64, 128)
@@ -59,7 +60,7 @@ class FashionMNIST_LeNet_Decoder(nn.Module):
         x = self.m(self.fc3(x))
         x = self.m(self.fc2(x))
         x = self.m(self.fc1(x))
-        decoded = x.view(-1, 19, 56)
+        decoded = x.view(-1, self.size[0], self.size[1])
         return decoded
 
 class FashionMNIST_LeNet_Autoencoder(nn.Module):
@@ -272,7 +273,6 @@ def embed(X, model):
 def load_data(dir, margin, filename):
     first = True
     count = 0
-    print(filename)
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == filename:
@@ -381,7 +381,7 @@ def DeepSAD_train_run(dir, freq, filename):
         train_data = torch.tensor(arr_data)
         semi_targets = torch.tensor(arr_targets)
 
-        size = train_data.shape[1] * train_data.shape[2]
+        size = [train_data.shape[1], train_data.shape[2]]
 
         train_dataset = TensorDataset(train_data, semi_targets)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
