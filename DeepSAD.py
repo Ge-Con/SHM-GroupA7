@@ -272,6 +272,7 @@ def embed(X, model):
 def load_data(dir, margin, filename):
     first = True
     count = 0
+    print(filename)
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == filename:
@@ -355,7 +356,7 @@ def DeepSAD_train_run(dir, freq, filename):
 
     samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
 
-    filename = freq + "kHz" + filename + ".csv"
+    filename = freq + filename + ".csv"
 
     results = np.empty((5, 30), dtype=object)
 
