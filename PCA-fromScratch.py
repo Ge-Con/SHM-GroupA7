@@ -12,6 +12,19 @@ from sklearn.datasets import load_breast_cancer
 #breast_dataset = pd.DataFrame(final_breast_data)
 #print(final_breast_data)
 
+"""
+    The function "PCA" calculates and returns the reduced dimension dataset, eigenvalues, eigenvectors
+    and the total variance of the original dataset. 
+    Input 'X':  matrix of all extracted HIs (m rows x n columns),
+    where one row represents one HI and columns represent timesteps
+    Input 'n' : number of principal components.
+    Output 'X_transf': dataset of reduced dimension.
+    Output 'eigenvalues_truncated': Eigenvalues of the original dataset.
+    Output 'V_truncated': Eigenvectors corresponding the eigenvalues
+    Output 'total_variance':  The total variance of the original dataset.
+    Output: explained_variance: The total explained variance in percent.
+    """
+
 def PCA(X, n): # n is the number of principal components
 
     #TODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
@@ -73,18 +86,11 @@ def PCA(X, n): # n is the number of principal components
     return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
 """
-    The function "PCA" calculates and returns the reduced dimension dataset, eigenvalues, eigenvectors
-    and the total variance of the original dataset. 
-    Input 'X':  matrix of all extracted HIs (m rows x n columns),
+    The function "truncator" 
+    Input 'X':  Matrix of all extracted HIs (m rows x n columns),
     where one row represents one HI and columns represent timesteps
-    Input 'n' : number of principal components.
-    Output 'X_transf': dataset of reduced dimension.
-    Output 'eigenvalues_truncated': Eigenvalues of the original dataset.
-    Output 'V_truncated': Eigenvectors corresponding the eigenvalues
-    Output 'total_variance':  The total variance of the original dataset.
-    Output: explained_variance: The total explained variance in percent.
+    Output 'r': Truncation value
     """
-
 
 def truncator(X):
     n, m = X.shape  # n = rows, m = columns
@@ -123,17 +129,6 @@ def truncator(X):
     print("Truncation Value (ie. # of components kept) = {}" .format(r))
 
     return r
-
-"""
-    The function "truncator" calculates the fitness value for a set of HIs.
-    Input 'X':  matrix of all extracted HIs (m rows x n columns),
-    where one row represents one HI and columns represent timesteps
-    Inputs 'Mo_a', 'Tr_b', 'Pr_c': weights of Mo, Tr and Pr in the
-    fitness formula (integers), with default value 1
-    Output 'ftn': scalar, fitness value for set of HIs,
-    ranges from 0 to 3 ()
-    Output 'error': 
-    """
 
 # if truncation function to be used: use n = truncator(final_breast_data)
 #X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
