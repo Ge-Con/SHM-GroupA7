@@ -24,7 +24,11 @@ def matToCsv(dir):
              #print(name)
              if name.endswith("cycles"):
                 #print("mat")
+
                 root_new = root.replace('PZT', 'PZT-CSV')
+                for i in range(10):
+                    root_new = root_new.replace(f'State_{i}_', f'State_0{i}_')
+
 
                 if not os.path.exists(root_new):
                     os.makedirs(root_new)
@@ -34,6 +38,7 @@ def matToCsv(dir):
                 arrayfile = arrayfile.drop(columns = 'Sensor_0', axis=1)
                 #print(arrayfile)
                 csv_file_path = os.path.join(root_new, f"{name.replace('_5cycles', '')}.csv")
+                csv_file_path = csv_file_path.replace(r'\50kHz', r'\050kHz')
                 #arrayfile = pd.concat([time_col, arrayfile], axis=1)
                 #arrayfile.rename(columns={'Sensor_0': 'Time'}, inplace= True)
                 # print(arrayfile)
