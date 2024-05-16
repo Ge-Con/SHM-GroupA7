@@ -30,7 +30,7 @@ def PCA(X, n): # n is the number of principal components
     covX = np.cov(X, rowvar=False)
     covX_scaled = np.cov(X_scaled, rowvar=False)
 
-    #3. Finding eigenvectors+values
+    #3. Finding eigenvectors + values
     eigenvalues,  eigenvectors = np.linalg.eig(covX_scaled)
 
     #4. Sort eigenvectors+values in descending order. Saving the total variance for later
@@ -72,6 +72,20 @@ def PCA(X, n): # n is the number of principal components
 
     return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
+"""
+    The function "PCA" calculates and returns the reduced dimension dataset, eigenvalues, eigenvectors
+    and the total variance of the original dataset. 
+    Input 'X':  matrix of all extracted HIs (m rows x n columns),
+    where one row represents one HI and columns represent timesteps
+    Input 'n' : number of principal components.
+    Output 'X_transf': dataset of reduced dimension.
+    Output 'eigenvalues_truncated': Eigenvalues of the original dataset.
+    Output 'V_truncated': Eigenvectors corresponding the eigenvalues
+    Output 'total_variance':  The total variance of the original dataset.
+    Output: explained_variance: The total explained variance in percent.
+    """
+
+
 def truncator(X):
     n, m = X.shape  # n = rows, m = columns
     scaler = StandardScaler()
@@ -108,8 +122,18 @@ def truncator(X):
     r = i-1
     print("Truncation Value (ie. # of components kept) = {}" .format(r))
 
-
     return r
+
+"""
+    The function "truncator" calculates the fitness value for a set of HIs.
+    Input 'X':  matrix of all extracted HIs (m rows x n columns),
+    where one row represents one HI and columns represent timesteps
+    Inputs 'Mo_a', 'Tr_b', 'Pr_c': weights of Mo, Tr and Pr in the
+    fitness formula (integers), with default value 1
+    Output 'ftn': scalar, fitness value for set of HIs,
+    ranges from 0 to 3 ()
+    Output 'error': 
+    """
 
 # if truncation function to be used: use n = truncator(final_breast_data)
 #X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
