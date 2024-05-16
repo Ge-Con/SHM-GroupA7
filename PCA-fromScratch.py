@@ -66,6 +66,10 @@ def PCA(X, n): # n is the number of principal components
     X_transf = scaler.inverse_transform(PC)
 
     #11. Return reduced dataset, the eigenvalues, the eigenvectors, and the original total variance
+
+    explained_variance = np.sum(eigenvalues / total_variance) * 100
+    print("Total explained variance:", explained_variance, "%")
+
     return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
 def truncator(X):
@@ -103,10 +107,11 @@ def truncator(X):
         i += 1
     r = i-1
     print("Truncation Value (ie. # of components kept) = {}" .format(r))
+
+
     return r
 
 # if truncation function to be used: use n = truncator(final_breast_data)
 #X_new, eigenvalues, eigenvectors, total_variance = PCA(final_breast_data, n=10)
 
-#explained_variance = np.sum(eigenvalues / total_variance)*100
-#print("Total explained variance:", explained_variance, "%")
+
