@@ -14,11 +14,6 @@ def Frequency_domain_features(sensor):
 
        Returns:
        - F_features (1D array): Array containing frequency domain features.
-
-       Example:
-
-        # Example usage of the function
-       result = Frequency_domain_features(sensor_data)
     """
 
     #np 1D array of fft
