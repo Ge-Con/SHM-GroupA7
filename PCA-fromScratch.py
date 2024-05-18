@@ -12,6 +12,19 @@ from sklearn.datasets import load_breast_cancer
 #breast_dataset = pd.DataFrame(final_breast_data)
 #print(final_breast_data)
 
+"""
+    The function "PCA" calculates and returns the reduced dimension dataset, eigenvalues, eigenvectors
+    and the total variance of the original dataset. 
+    Input 'X':  matrix of all extracted HIs (m rows x n columns),
+    where one row represents one HI and columns represent timesteps
+    Input 'n' : number of principal components.
+    Output 'X_transf': dataset of reduced dimension.
+    Output 'eigenvalues_truncated': Eigenvalues of the original dataset.
+    Output 'V_truncated': Eigenvectors corresponding the eigenvalues
+    Output 'total_variance':  The total variance of the original dataset.
+    Output: explained_variance: The total explained variance in percent.
+    """
+
 def PCA(X, n): # n is the number of principal components
 
     #TODO: Lines 17–19: For normalization, whether min-max or zero-mean, you should define an input
@@ -30,7 +43,7 @@ def PCA(X, n): # n is the number of principal components
     covX = np.cov(X, rowvar=False)
     covX_scaled = np.cov(X_scaled, rowvar=False)
 
-    #3. Finding eigenvectors+values
+    #3. Finding eigenvectors + values
     eigenvalues,  eigenvectors = np.linalg.eig(covX_scaled)
 
     #4. Sort eigenvectors+values in descending order. Saving the total variance for later
@@ -72,6 +85,13 @@ def PCA(X, n): # n is the number of principal components
 
     return X_transf, eigenvalues_truncated, V_truncated, total_variance
 
+"""
+    The function "truncator" 
+    Input 'X':  Matrix of all extracted HIs (m rows x n columns),
+    where one row represents one HI and columns represent timesteps
+    Output 'r': Truncation value
+    """
+
 def truncator(X):
     n, m = X.shape  # n = rows, m = columns
     scaler = StandardScaler()
@@ -107,7 +127,6 @@ def truncator(X):
         i += 1
     r = i-1
     print("Truncation Value (ie. # of components kept) = {}" .format(r))
-
 
     return r
 
