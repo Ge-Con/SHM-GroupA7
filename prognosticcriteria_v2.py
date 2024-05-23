@@ -1,3 +1,9 @@
+import numpy as np
+import math
+from sklearn.preprocessing import Normalizer
+from scipy.stats import pearsonr
+from scipy.signal import resample_poly
+
 def Pr(X):
     """
     This function calculates the prognosability value for a set of HIs.
@@ -88,7 +94,7 @@ def Mo_single(X_single) -> float:
             sum_samples += 0
         else:
             sum_samples += abs(sum_measurements / div_sum)
-        monotonicity_single = sum_samples / len(X_single)-1
+        monotonicity_single = sum_samples / (len(X_single)-1)
     return monotonicity_single
 
 
