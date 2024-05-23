@@ -88,7 +88,7 @@ def Mo_single(X_single) -> float:
             sum_samples += 0
         else:
             sum_samples += abs(sum_measurements / div_sum)
-        monotonicity_single = sum_samples / len(X_single)-1)
+        monotonicity_single = sum_samples / len(X_single)-1
     return monotonicity_single
 
 
