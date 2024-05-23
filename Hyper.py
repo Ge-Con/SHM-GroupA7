@@ -168,7 +168,21 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
 
 # Bayesian optimization
 
+space = [
+    Integer(10, 100, name='hidden_1'),
+    Integer(16, 128, name='batch_size'),
+    Real(0.0001, 0.01, name='learning_rate'),
+    Integer(500,10000, name='epochs')
+]
 
+@use_named_args(space)
+def objective(**params):
+    print(params)
+    return 3/fitness(train_vae(**params)[0])
+
+res_gp = gp_minimize(objective, space, n_calls=50, random_state=42)
+
+print("Best parameters found: ", res_gp.x)
 
 # You can create additional datasets if needed
 # Example: Using the first few columns as one dataset and the rest as another
@@ -183,7 +197,7 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append(i + freq + ".csv")
+            filenames.append(i  + freq + ".csv")
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1

@@ -3,6 +3,7 @@ import numpy as np
 import os
 
 def process_csv_files(base_dir):
+    panel = input("Enter your panel name in the format L1XX: ")
     # Define the sample filenames you're expecting in each folder
     for freq in ["050", "100", "125", "150", "200", "250"]:
     # Recursively traverse all directories and subdirectories
@@ -14,9 +15,8 @@ def process_csv_files(base_dir):
                     concatenated_column = pd.concat([df0[col] for col in df0.columns], ignore_index=True)
                     # Add concatenated column to respective index (with respect to timestep) in full_matrix
                     full_matrix.append(concatenated_column)
-
         result_df = pd.DataFrame(full_matrix).T
-        output_file_path = os.path.join(base_dir, f"result_{freq}_kHz.csv")
+        output_file_path = os.path.join(base_dir, f"concatenated_{freq}_kHz_{panel}.csv")
         result_df.to_csv(output_file_path, index=False)
         print(f"Result saved to {output_file_path}")
 
