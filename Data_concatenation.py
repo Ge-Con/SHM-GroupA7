@@ -16,9 +16,8 @@ def process_csv_files(base_dir):
                     full_matrix.append(concatenated_column)
 
         result_df = pd.DataFrame(full_matrix).T
-        output_file_path = os.path.join(root, f"result_{freq}.csv")
-        result_df.to_csv(output_file_path, index=False)
-        print(f"Result saved to {output_file_path}")
+        result_df.to_csv(base_dir, index=False)
+        print(f"Result saved to {base_dir}")
 
 # Prompt user for the base directory containing all subdirectories with CSV files
 base_dir = str(input("Base directory containing all timesteps folders: "))
