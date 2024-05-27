@@ -90,7 +90,6 @@ def Mo_single(X_single) -> float:
             sum_measurements += sub_sum
             div_sum += div_sub_sum
         if div_sum == 0:
-            print("for", i, "div_sum is zero")
             sum_samples += 0
         else:
             sum_samples += abs(sum_measurements / div_sum)
@@ -107,7 +106,6 @@ def Mo(X):
     ranges from 0 to 1
     """
     sum_monotonicities = 0
-    X = np.array(X)
     for i in range(len(X)):
         monotonicity_i = Mo_single(X[i, :])
         sum_monotonicities += monotonicity_i
@@ -133,5 +131,5 @@ def fitness(X, Mo_a=1, Tr_b=1, Pr_c=1):
 
     ftn = Mo_a * monotonicity + Tr_b * trendability + Pr_c * prognosability
     error = (Mo_a + Tr_b + Pr_c) / ftn
-
+    print(error)
     return [ftn, error]

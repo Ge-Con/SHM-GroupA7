@@ -187,7 +187,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
             arr_stretch = arr_interp(np.linspace(0, z_arr.size - 1, HI_arr.shape[1]))
             z_arr = arr_stretch
         full = np.append(HI_arr, z_arr, axis = 0)
-        return full, HI_arr, z_arr
+        return [full, HI_arr, z_arr]
 
 # Bayesian optimization
 
@@ -201,9 +201,9 @@ space = [
 @use_named_args(space)
 def objective(**params):
     print(params)
-    return fitness(train_vae(**params))[1]
+    return fitness(train_vae(**params)[1])[1]
 
-res_gp = gp_minimize(objective, space, n_calls=50, random_state=42)
+res_gp = gp_minimize(objective, space, n_calls=100, random_state=42)
 
 print("Best parameters found: ", res_gp.x)
 
