@@ -107,6 +107,7 @@ def Mo(X):
     ranges from 0 to 1
     """
     sum_monotonicities = 0
+    X = np.array(X)
     for i in range(len(X)):
         monotonicity_i = Mo_single(X[i, :])
         sum_monotonicities += monotonicity_i
