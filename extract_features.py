@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import stats
 import pandas as pd
-import test_data
 
 
                                  ## Frequency domain ##
@@ -14,11 +13,6 @@ def Frequency_domain_features(sensor):
 
        Returns:
        - F_features (1D array): Array containing frequency domain features.
-
-       Example:
-
-        # Example usage of the function
-       result = Frequency_domain_features(sensor_data)
     """
 
     #np 1D array of fft
@@ -77,8 +71,6 @@ def Frequency_domain_features(sensor):
 
     return F_features
 
-#print(Frequency_domain_features(test_data.get_data(), 2000))
-
 
                                    ## Time domain ##
 def Time_domain_features(sensor):
@@ -90,11 +82,6 @@ def Time_domain_features(sensor):
 
         Returns:
         - T_features (1D array): Array containing time domain features.
-
-        Example:
-
-        # Example usage of the function
-        result = Time_domain_features(sensor_data)
     """
 
     # np 1D array of time domain data
@@ -153,6 +140,36 @@ def Time_domain_features(sensor):
 
     return T_features
 
+                                        ## STFT domain ##
+def STFT_domain_features(sensor):
+    """
+        Extract features for STFT domain from sensor data.
+
+        Parameters:
+        - sensor (1D array): Array containing sensor data.
+
+        Returns:
+        - FT_features (1D array): Array containing features for STFT domain.
+    """
+    #np 1D array main features
+    FT_features = np.empty(4)
+    Y = sensor
+
+    #Mean
+    FT_features[0] = np.mean(Y)
+
+    #Standard Deviation
+    FT_features[1] = np.std(Y)
+
+    #Skewness
+    FT_features[2] = stats.skew(Y)
+
+    #Kurtosis
+    FT_features[3] = stats.kurtosis(Y)
+
+    return FT_features
+
+                        ## Correlating features with 0.95 threshold ##
 def feature_correlation(features):
     """
        Filters features based on correlation coefficient threshold.
@@ -161,39 +178,36 @@ def feature_correlation(features):
        - features (2D array): Feature data for each trial.
 
        Returns:
+       - correlation_matrix (2D array): Correlation matrix of features.
        - features (2D array): Reduced statistically significant feature array.
-       - to_keep (list): Indices of features contained in returned array
-
-       Example:
-
-        # Example usage of the function
-       result, indices = feature_correlation(feature_data)
+       - to_delete (array): Indices of features removed from the returned array.
     """
-    #2D array
 
+    #Calculating the correlation matrix for the feature array
     correlation_matrix = np.corrcoef(features.T)
     correlation_threshold = 0.95
+
+    #Based on threshold create boolean matrix where True indicates a correlation above the threshold
     correlation_bool = correlation_matrix > correlation_threshold
 
     to_delete = []
 
+    #Iterate over upper triangle of correlation matrix
     for column in range(len(correlation_bool)):
         for row in range(column+1, len(correlation_bool)):
+
+            #Mark the feature for deletion if correlation is above the threshold
             if correlation_bool[column, row] == True and row not in to_delete:
                 to_delete.append(row)
 
     to_delete.sort()
-    #print("TODELETE: ", to_delete)
 
-    #print(features)
+    #Delete the features from the original array based on the indices in to_delete
     features = np.delete(features, to_delete, axis=1)
-    #features = features.transpose()
-
-    # indices = set(np.arange(len(features)))
-    # to_keep = np.array(list(indices - set(to_delete)))
 
     return correlation_matrix, features, np.array(to_delete)
 
+                                    ## Converting data into features ##
 def time_to_feature(data):
     """
         Converts time domain sensor data to feature data.
@@ -203,19 +217,15 @@ def time_to_feature(data):
 
         Returns:
         - features (2D array): Feature data extracted from time domain data.
-
-        Example:
-
-        # Example usage of the function
-        result = time_to_feature(sensor_data)
     """
+    # Set up array to save features
     data = np.array(data).transpose()
     features = np.empty((len(data), 19))
+
+    #Loop through each sensor and extract time domain features
     for i in range(len(data)):
         features[i] = Time_domain_features(data[i])
 
-    # print(pd.DataFrame(y))
-    # print(len(y))
     return pd.DataFrame(features).transpose()
 
 
@@ -228,110 +238,51 @@ def freq_to_feature(data):
 
         Returns:
         - features (2D array): Feature data extracted from frequency domain data.
-
-        Example:
-
-        # Example usage of the function
-        result = freq_to_feature(sensor_data)
     """
-
+    # Set up array to save features
     data = np.array(data).transpose()
-
     features = np.empty((len(data), 14))
 
+    #Loop through each sensor and extract frequency domain features
     for i in range(len(data)):
         features[i] = Frequency_domain_features(data[i])
 
     return pd.DataFrame(features).transpose()
 
-#print(freq_to_feature([[2, 3, 4, 5], [1, 2, 3, 5], [4, 5, 7, 4], [1, 3, 5, 7]]))
-#
-# data = pd.read_csv(r"C:\Users\geort\Desktop\Universty\PZT-CSV-L1-03\L103_2019_12_06_14_02_38\State_1_2019_12_06_14_02_38\50_kHz_FFT_Freq.csv")
-# data = np.array(data)
-# print(freq_to_feature(data))
-# print("last")
-
-def STFT_domain_features(sensor):
-    #np 1D array main features
-
-    FT_features = np.empty(4)
-    Y = sensor
-
-    #print(sensor[0])
-
-    FT_features[0] = np.mean(Y)
-    FT_features[1] = np.std(Y)
-    FT_features[2] = stats.skew(Y)
-    FT_features[3] = stats.kurtosis(Y)
-
-    return FT_features
-
-# def STFT_to_feature(data3d):
-#     out_list = []
-#     features = 68*[0]
-#     #print(data3d)
-#     # Create the array using list comprehension
-#     new_flat = np.array([[0 for _ in range(56)] for _ in range(2142)])
-#
-#     for path in range(56):
-#         current_path = data3d[path]
-#
-#         for i in range(17):
-#             for j in range(126):
-#                 #print(j+126*i)
-#                 new_flat[j+126*i][path] = current_path[j][i]
-#     print(new_flat[1][1])
-#     # new_flat2 = np.array([[0 for _ in range(56)] for _ in range(68)])
-#     new_flat2= []
-#
-#     for path2 in range(56):
-#         for i in range(17):
-#             segment = new_flat[i*126:(i+1)*126, path2]
-#             for feat in range(4):
-#                 #print(segment[5])
-#                 features[i*4+feat] = STFT_domain_features(segment)[feat]
-#         new_flat2.append(features)
-#     #print(new_flat2)
-#         #out_list.append(features)
-#
-#     return pd.DataFrame(new_flat)
-
-
-
-
-
-
-# def STFT_to_feature(data3d):
-#    out_list = []
-#    for path in range(len(data3d)):
-#        print(data3d)
-#        current_path = data3d[path] #current data is a 17x126 matrix
-#
-#        print(current_path)
-#        features = np.empty((len(current_path), 4))
-#        for i in range(len(current_path)):
-#            features[i] = STFT_domain_features(current_path[i])
-#         out_list.append(features)
-#     print(out_list)
-#     return pd.DataFrame(features).transpose()
-
-
 def STFT_to_feature(data3d):
+    """
+            Converts STFT domain sensor data to feature data.
+
+            Parameters:
+            - data3d (3D array): STFT domain sensor data.
+
+            Returns:
+            - features_df (DataFrame): Feature data extracted from STFT domain data.
+    """
+    #Setting up an output list to store feature data for every path
     out_list = []
     features = [0]*68
 
+    #Initialize flattened version of 3D data from STFT
+    #Dimension 2142 (for 17 times steps * 126 frequencies) by 56 paths
     new_flat = np.zeros((2142, 56))
 
+    #Flatten 3D STFT data into 2D Array
     for path in range(56):
         current_path = data3d[path]
         for i in range(126):
             for j in range(17):
                 new_flat[i + j * 126][path] = current_path[i][j]
 
+    #Extracting features for each path
     for path2 in range(56):
         for i in range(17):
+
+            #Current time step extracting 126 frequencies and computing its features
             segment = new_flat[i * 126:(i + 1) * 126, path2]
             segment_features = STFT_domain_features(segment)
+
+            #Storing and appending features list for current path
             features[i * 4:(i + 1) * 4] = segment_features
         out_list.append(features.copy())
 

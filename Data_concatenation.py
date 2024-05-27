@@ -1,25 +1,29 @@
 import pandas as pd
 import numpy as np
 import os
-# dir_folder: name of folder location where all timesteps csv files are present
-dir_folder = str(input("CSV folder location of all timesteps: "))
-# change to timesteps (name of timesteps files inside dir_folder)
-samples = ["050_kHz-allfeatures", "060_kHz-allfeatures", "070_kHz-allfeatures"]
+output_dir = input("Enter directory of output folder: ")
+def process_csv_files(base_dir):
+    panel = input("Enter your panel name in the format L1XX: ")
+    # Define the sample filenames you're expecting in each folder
+    for freq in ["050", "100", "125", "150", "200", "250"]:
+    # Recursively traverse all directories and subdirectories
+        full_matrix = []
+        for root, dirs, files in os.walk(base_dir):
+            for name in files:
+                if name.endswith(f'{freq}_kHz-allfeatures.csv'):
+                    df0 = pd.read_csv(os.path.join(root, name))
+                    concatenated_column = pd.concat([df0[col] for col in df0.columns], ignore_index=True)
+                    # Add concatenated column to respective index (with respect to timestep) in full_matrix
+                    full_matrix.append(concatenated_column)
+        result_df = pd.DataFrame(full_matrix).T
+        output_file_path = os.path.join(output_dir, f"concatenated_{freq}_kHz_{panel}.csv")
+        result_df.to_csv(output_file_path, index=False)
+        print(f"Result saved to {output_file_path}")
 
-# sample file (to obatain amount of features - necessary to create full_matrix dimension)
-dir0 = os.path.join(dir_folder, samples[0] + ".csv")
-df0 = pd.read_csv(dir0)
-# creates empty matrix with shape (no. of features x no. of paths, no. of timesteps)
-full_matrix = np.zeros((np.shape(df0)[0]*np.shape(df0)[1], len(samples)))
+# Prompt user for the base directory containing all subdirectories with CSV files
+base_dir = str(input("Base directory containing all timesteps folders: "))
+process_csv_files(base_dir)
 
-for i, sample in enumerate(samples):
-    dir_file = os.path.join(dir_folder, sample + ".csv")
-    df = pd.read_csv(dir_file)
-    # Concatenate all columns into a single column
-    concatenated_column = pd.concat([df[col] for col in df.columns], ignore_index=True)
-    # Add concatenated column to respective index (with respect to timestep) in full_matrix
-    full_matrix[:, i] = concatenated_column
-result_df = pd.DataFrame(full_matrix)
-# Saves df as csv file with same name as folder
-output_file_path = os.path.join(dir_folder, "result.csv")
-result_df.to_csv(output_file_path, index=False)
+
+# C:\Users\pablo\Downloads\PZT-ONLY-FEATURES Main\PZT-ONLY-FEATURES-CSV-L1-23
+# C:\Users\pablo\Downloads\PZT Output folder

@@ -1,3 +1,9 @@
+import numpy as np
+import math
+from sklearn.preprocessing import Normalizer
+from scipy.stats import pearsonr
+from scipy.signal import resample_poly
+
 def Pr(X):
     """
     This function calculates the prognosability value for a set of HIs.
@@ -88,7 +94,7 @@ def Mo_single(X_single) -> float:
             sum_samples += 0
         else:
             sum_samples += abs(sum_measurements / div_sum)
-        monotonicity_single = sum_samples / len(X_single)-1)
+        monotonicity_single = sum_samples / (len(X_single)-1)
     return monotonicity_single
 
 
@@ -101,6 +107,7 @@ def Mo(X):
     ranges from 0 to 1
     """
     sum_monotonicities = 0
+    X = np.array(X)
     for i in range(len(X)):
         monotonicity_i = Mo_single(X[i, :])
         sum_monotonicities += monotonicity_i
@@ -127,4 +134,4 @@ def fitness(X, Mo_a=1, Tr_b=1, Pr_c=1):
     ftn = Mo_a * monotonicity + Tr_b * trendability + Pr_c * prognosability
     error = (Mo_a + Tr_b + Pr_c) / ftn
 
-    return ftn, error
+    return [ftn, error]
