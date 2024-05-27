@@ -20,7 +20,8 @@ from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
 tf.random.set_seed(42)
-dir_root =
+dir_root = input("Enter directory of folder with data: ")
+# C:\Users\pablo\Downloads\PZT Output folder
 def mergedata(filenames):
     flags = tuple([0])
     data = pd.read_csv(filenames[0], header=None)
@@ -39,12 +40,12 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append("concatenated_" + freq + "_" + i + ".csv")
+            filenames.append(dir_root + "\concatenated_" + freq + "_" + i + ".csv")
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test = pd.read_csv(panel + freq + ".csv", header=None).values.transpose()
+            test = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + panel + ".csv", header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
             scaler = StandardScaler()
@@ -132,9 +133,6 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
     reloss = tf.reduce_sum(tf.square(pred - x))
     klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
 
-
-
-
     # Total loss
     fealoss = DCloss(z, batch_size)
     loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
@@ -168,7 +166,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
         z_arr = z_arr.transpose()
         HI_arr = []
         for j in tuple(x for x in panels if x != panel):
-            graph_data = pd.read_csv(j + freq + ".csv", header=None).values.transpose()
+            graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + ".csv", header=None).values.transpose()
             graph_data = np.delete(graph_data, -1, axis=1)
             graph_data = scaler.transform(graph_data)
             graph_data = pca.transform(graph_data)
@@ -203,7 +201,7 @@ space = [
 @use_named_args(space)
 def objective(**params):
     print(params)
-    return 3/fitness(train_vae(**params)[0])
+    return fitness(train_vae(**params))[1]
 
 res_gp = gp_minimize(objective, space, n_calls=50, random_state=42)
 
@@ -222,12 +220,12 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append("concatenated_" + freq + "_" + i + ".csv")
+            filenames.append(dir_root + "\concatenated_" + freq + "_" + i + ".csv")
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test = pd.read_csv(panel + freq + ".csv", header=None).values.transpose()
+            test = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + panel + ".csv", header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
             scaler = StandardScaler()
