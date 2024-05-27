@@ -83,6 +83,7 @@ def doPCA_multiple_Campaigns(train1,train2,train3,train4,test):
             matrices.extend(read_matrices_from_folder(locals()[f"train{i}"], f))
         #print(matrices)
         pca, EVR = onePC(matrices)
+        print(EVR)
         list=[]
 
 
