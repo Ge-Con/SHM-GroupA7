@@ -20,7 +20,7 @@ from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
 tf.random.set_seed(42)
-
+dir_root =
 def mergedata(filenames):
     flags = tuple([0])
     data = pd.read_csv(filenames[0], header=None)
@@ -30,6 +30,31 @@ def mergedata(filenames):
             data = pd.concat([data, pd.read_csv(filenames[i+1])], axis = 1)
     data = data.transpose()
     return data, flags
+
+panels = ("L103", "L105", "L109", "L104", "L123")
+freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+resdict = {}
+counter = 0
+for panel in panels:
+    for freq in freqs:
+        filenames = []
+        for i in tuple(x for x in panels if x != panel):
+            filenames.append("concatenated_" + freq + "_" + i + ".csv")
+        resdict[f"{panel}{freq}"] = []
+        for j in range(2):
+            counter += 1
+            data, flags = mergedata(filenames)
+            test = pd.read_csv(panel + freq + ".csv", header=None).values.transpose()
+            data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
+            test = np.delete(test, -1, axis=1)
+            scaler = StandardScaler()
+            scaler.fit(data)
+            data = scaler.transform(data)
+            test = scaler.transform(test)
+            pca = PCA(n_components=30)
+            pca.fit(data)
+            data = pca.transform(data)
+            test = pca.transform(test)
 
 def DCloss(feature, batch_size):
     s = 0
@@ -197,7 +222,7 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append(i  + freq + ".csv")
+            filenames.append("concatenated_" + freq + "_" + i + ".csv")
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
