@@ -198,12 +198,16 @@ space = [
     Integer(500,10000, name='epochs')
 ]
 
+def print_progress(res):
+    n_calls = len(res.x_iters)
+    print(f"Call number: {n_calls}")
+
 @use_named_args(space)
 def objective(**params):
     print(params)
     return fitness(train_vae(**params)[1])[1]
 
-res_gp = gp_minimize(objective, space, n_calls=100, random_state=42)
+res_gp = gp_minimize(objective, space, n_calls=100, random_state=42, callback=[print_progress])
 
 print("Best parameters found: ", res_gp.x)
 
