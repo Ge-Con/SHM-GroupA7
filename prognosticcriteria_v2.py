@@ -25,6 +25,21 @@ def Pr(X):
 
     return prognosability
 
+def Pr_single(test_HIs, HIs):
+    x_t = test_HIs[-1]
+    deviation_basis = 0
+    for i in range(HIs.shape[0]):
+        deviation_basis += HIs[i, -1]
+    deviation_basis = abs(deviation_basis/HIs.shape[0])
+    scaling_factor = 0
+    for i in range(HIs.shape[0]):
+        scaling_factor += abs(HIs[i, 0] - HIs[i, -1])
+    scaling_factor += abs(test_HIs[0] - test_HIs[-1])
+    scaling_factor = scaling_factor/(HIs.shape[0]+1)
+
+    prognosability = np.exp(-abs((x_t-deviation_basis)) / scaling_factor)
+
+    return prognosability
 
 def Tr(X):
     """
@@ -90,7 +105,6 @@ def Mo_single(X_single) -> float:
             sum_measurements += sub_sum
             div_sum += div_sub_sum
         if div_sum == 0:
-            print("for", i, "div_sum is zero")
             sum_samples += 0
         else:
             sum_samples += abs(sum_measurements / div_sum)
@@ -107,7 +121,6 @@ def Mo(X):
     ranges from 0 to 1
     """
     sum_monotonicities = 0
-    X = np.array(X)
     for i in range(len(X)):
         monotonicity_i = Mo_single(X[i, :])
         sum_monotonicities += monotonicity_i
@@ -133,5 +146,5 @@ def fitness(X, Mo_a=1, Tr_b=1, Pr_c=1):
 
     ftn = Mo_a * monotonicity + Tr_b * trendability + Pr_c * prognosability
     error = (Mo_a + Tr_b + Pr_c) / ftn
-
+    print("Error: ", error)
     return [ftn, error]
