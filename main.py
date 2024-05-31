@@ -19,73 +19,14 @@ np.set_printoptions(linewidth=400)
 np.set_printoptions(precision=4, suppress=True)
 
 
-# """
-#     Signal Processing
-#
-#     Args:
-#         dir (str): The directory path containing .csv files to process.
-#
-#     Returns:
-#         return_type: Description of the return value.
-#
-#     Example:
-#         saveXXX('/path/to/directory')
-#      Notes:
-#         This function processes files with names ending in 'kHz.csv' and saves the
-#         FFT results in a new .csv file with '_XXX' appended before the extension.
-#         DELETE 'PZT-CSV\PZT-CSV-L1-23\PZT-CSV\L123_2019_12_02_11_33_43\State_30_2019_12_03_19_16_32'
-# """
-# def saveFFT(dir):
-#     print("Executing FFT on data:...")
-#     for root, dirs, files in os.walk(dir):
-#         for name in files:
-#             if name.endswith('kHz.csv'):
-#                 data = pd.read_csv(os.path.join(root, name))
-#                 array_file1, array_file2 = fft.fast_fourier(data)
-#                 csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', 'kHz_FFT.csv')}")
-#                 array_file2.to_csv(csv_file_path, index=False)
-#
-# def saveSTFT(dir):
-#     print("Executing STFT on data:...")
-#     for root, dirs, files in os.walk(dir):
-#         for name in files:
-#             if name.endswith('kHz.csv'):
-#                 data = pd.read_csv(os.path.join(root, name))
-#                 array_file = stft.Short_Fourier(data)
-#                 csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', 'kHz_SFT.csv')}")
-#                 array_file.to_csv(csv_file_path, index=False)
-#
-# def saveEMD(dir):
-#     print("Executing EMD on data:...")
-#     for root, dirs, files in os.walk(dir):
-#         for name in files:
-#             if name.endswith('kHz.csv'):
-#                 data = pd.read_csv(os.path.join(root, name))
-#                 array_file = emdfinal.runEMD(data, giveTime())
-#                 csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', 'kHz_EMD.csv')}")
-#                 # csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', '')}_{'kHz_EMD.csv'}")
-#                 array_file.to_csv(csv_file_path, index=False)
-#
-# def saveHilbert(dir):
-#     print("Executing Hilbert on data:...")
-#     for root, dirs, files in os.walk(dir):
-#         for name in files:
-#             if name.endswith('kHz.csv'):
-#                 data = pd.read_csv(os.path.join(root, name))
-#                 array_file = hilbert.Hilbert(data, giveTime())
-#                 csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', 'kHz_HLB.csv')}")
-#                 array_file.to_csv(csv_file_path, index=False)
-
 def saveFeatures(dir):
     """
         Feature Extraction
 
         Args:
             dir (str): The directory path containing .csv files to process.
-
         Returns:
             return_type: csv files in the directory of origin for different SPs
-
         Example:
             saveFeatures('/path/to/directory')
          Notes:
@@ -152,8 +93,8 @@ def correlateALLFeatures(rootdir): #changed name to ALL
         for root, dirs, files in os.walk(dir):  #For each folder location (state)
             all_feat = np.empty((6, 5), dtype=object)
             flag = False
-            for name in files:              #For each file
-                for freq in frequencies:    #For each frequency
+            for name in files:
+                for freq in frequencies:
                     #Read and add to correct position in all_feat array
                     if freq in name and name.endswith('_FT.csv'):
                         flag = True
@@ -212,8 +153,67 @@ def correlateALLFeatures(rootdir): #changed name to ALL
         csv_file_path = os.path.join(dir, "DF.csv") # DF = Deleted features
         pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
 
+def AverageFeatures(rootdir):
+    # average features of all frequencies
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
+    print("Combining Features:...")
+    for sample in samples:
+        dir = rootdir + "\\" + sample
+        for root, dirs, files in os.walk(dir):  # For each folder location (state)
+            all_feat = np.empty((6, 5), dtype=object)
+            flag = False
+            for name in files:  # For each file
+                for freq in frequencies:  # For each frequency
+                    # Read and add to correct position in all_feat array
+                    if freq in name and name.endswith('_FT.csv'):
+                        flag = True
+                        data = np.array(pd.read_csv(os.path.join(root, name)))
+                        if 'FFT' in name:
+                            all_feat[frequencies.index(freq)][1] = data
+                        elif 'HLB' in name:
+                            all_feat[frequencies.index(freq)][2] = data
+                        elif 'EMD' in name:
+                            all_feat[frequencies.index(freq)][3] = data
+                        elif 'SFT' in name:
+                            all_feat[frequencies.index(freq)][4] = data
+                        else:  # Time domain
+                            all_feat[frequencies.index(freq)][0] = data
+
+            if flag:  # If at least one file was the correct type
+                for freq in ["050", "100", "125", "150", "200", "250"]:
+                    combinedfeatures = np.concatenate(
+                        [all_feat[frequencies.index(freq), i] for i in range(all_feat[0].shape[0])], axis=0)
+                    root2 = root
+                    root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
+                    if not os.path.exists(root_new):
+                        os.makedirs(root_new)
+                    csv_file_path1 = os.path.join(root_new, freq + "kHz_AF.csv")  # AF = ALL FEATURES
+                    csv_file_path = os.path.join(root, freq + "kHz_AF.csv")
+                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
+                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
+        # Average features at each state
+        print("Averaging features...")
+        meanfeatures = np.empty((6), dtype=object)
+        for root, dirs, files in os.walk(dir):
+            for name in files:
+                if name.endswith("kHz_AF.csv"):
+                    data = np.array(pd.read_csv(os.path.join(root, name)))
+                    data = np.mean(data, axis=1)
+                    if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":
+                        meanfeatures[frequencies.index(name[:3])] = np.array([data])
+                    else:
+                        print(name[:3])
+                        print(np.array([data]))
+                        meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
+        for freq in frequencies:    #For each feature
+            csv_file_path = os.path.join(dir, freq + "kHz_MF.csv") # MF = Mean Features
+            pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
+
+
 def correlateSPFeatures(rootdir):
     # Correlate extracted features
+    # also not using this
     frequencies = ["050", "100", "125", "150", "200", "250"]
     samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
     print("Combining Features:...")
@@ -285,6 +285,19 @@ def correlateSPFeatures(rootdir):
 
 ''' PCA '''
 def savePCA(dir): #Calculates and saves 1 principle component PCA
+    """
+        PCA
+
+        Args:
+            dir (str): The directory path containing .csv files to process.
+        Returns:
+            return_type: .csv
+        Example:
+            savePCA('/path/to/directory')
+        Notes:
+            This function processes each campaign directory separately and saves the
+            files in a new directory PZT-ONLY-FEATURES for different SPs
+    """
     output = []
     folders = []
 
@@ -309,12 +322,21 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             plt.title('PCA Values from CSV Files')
 
     #save_evaluation(switch_dimensions(output),"PCA", dir, ["kHz-PCA"])
-    switched_output = switch_dimensions(output)
-    # Preprocess the features to handle NaN values
-    features_preprocessed = switched_output
-    save_evaluation(features_preprocessed, "PCA", dir, ["kHz_PCA"])
+    switched_output = switch_dimensions(output) #features_preprocessed
+
+    save_evaluation(switched_output, "PCA", dir, ["kHz_PCA"])
 
 def switch_dimensions(output):
+    """
+        Args:
+            output (arr): PCA output of all campaigns
+        Returns:
+            return_type: arr
+        Example:
+            switched_output = switch_dimensions(output)
+        Notes:
+            This function transposes the pca output for each campaign
+    """
     # Get the dimensions of the original output list
     num_folders = len(output)
     num_freqs = len(output[0])
@@ -331,23 +353,30 @@ def switch_dimensions(output):
 
 
 def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
+    """
+        Args:
+            features (arr): feature extraction output of all campaigns
+            label (str) : name of the new folder
+            dir (str) : directory of the original folder
+            files_used (str)
+        Returns:
+            return_type: arr
+        Example:
+            switched_output = switch_dimensions(output)
+        Notes:
+            This function saves the pca output for each campaign
+    """
     frequencies = ["050", "100", "125", "150", "200", "250"]
     # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
     criteria = np.empty((4, 6, len(features[0])))
     # Iterate through each frequency and calculate features
-    #print(features.shape)
-    print(features)
-    print("First dimension: ", len(features))
-    print("Second dimension: ", len(features[0]))
-    print("Third dimension ", len(features[0][0]))
-    print("fourth dimension ", len(features[0][0][0]))
 
     for freq in range(6):
         # print(components)
         for feat in range(1):
-            print(features[freq][feat])
+            # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])
-            criteria[0][freq][feat] = float(fitness(features[freq][feat])[0])
+            criteria[0][freq][feat] = float(fitness(features[freq][feat])[0])   # ftn
             criteria[1][freq][feat] = float(Mo(features[freq][feat]))
             criteria[2][freq][feat] = float(Tr(features[freq][feat]))
             criteria[3][freq][feat] = float(Pr(features[freq][feat]))
@@ -359,12 +388,17 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     for feat in range(len(features[0])):
         Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
 
+    average_freq1 = np.mean(criteria[0], axis= 0)
+    average_freq = np.expand_dims(average_freq1,axis=0)
+    stddev_freq = np.std(criteria[0], axis = 0)
+    std_arr = np.vstack((average_freq, stddev_freq))
+
     # Save all to files
     pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
-    pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mo.csv", index=False)
-    pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tr.csv", index=False)
-    pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pr.csv", index=False)
-
+    pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mon.csv", index=False)
+    pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tre.csv", index=False)
+    pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pro.csv", index=False)
+    pd.DataFrame(std_arr).to_csv(dir + "\\" + " Avf.csv", index=False)
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -373,7 +407,7 @@ def evaluate(dir):
     # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name.endswith("MF.csv"):
+            if name.endswith("MF.csv"): #MF
                 data = np.array(pd.read_csv(os.path.join(root, name))).transpose()
                 freq = frequencies.index(name[:3])
                 for feat in range(139):
@@ -384,7 +418,7 @@ def evaluate(dir):
 
     save_evaluation(features, "Features", dir)
 
-#
+
 # def giveTime():
 #     time = []
 #     for i in range(2000):
@@ -409,7 +443,7 @@ def main_menu():
     print("4. STFT")
     print("5. All of the above")
     print("6. Extract all features (Requires 5)")
-    print("7. Correlate features (Requires 6)")
+    print("7. AverageFeatures (Requires 6)")
     print("8. Apply PCA to all (Requires 7)")
     print("9. Evaluate all HIs (Requires 8)")
     print("10. Execute DeepSAD (Requires 7)")
@@ -450,7 +484,7 @@ while True:
     elif choice == '8':
         savePCA(csv_dir)
     elif choice == '7':
-        correlateALLFeatures(csv_dir)
+        AverageFeatures(csv_dir)
     elif choice == '9':
         evaluate(csv_dir)
     elif choice == '10':
