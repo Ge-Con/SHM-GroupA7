@@ -44,7 +44,7 @@ class NeuralNet(nn.Module):
         self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(128, 64)
         self.fc5 = nn.Linear(64, 16)
-        # Create activation function
+        #Create activation function
         self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
@@ -200,7 +200,7 @@ def init_c(model, train_loader, eps=0.1):
             c += torch.sum(outputs, dim=0)
     c /= n_samples
 
-    # If c_i is too close to 0, set to +-eps
+    #If c_i is too close to 0, set to +-eps
     c[(abs(c) < eps) & (c < 0)] = -eps
     c[(abs(c) < eps) & (c > 0)] = eps
 
@@ -229,18 +229,18 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     - loss_history (list): List of epoch losses for analysis
     """
 
-    # Setup optimizer and scheduler
+    #Setup optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
-    # Initialise c if necessary
+    #Initialise c if necessary
     if model.c is None:
         model.c = init_c(model, train_loader, eps)
 
-    # Track loss history for analysis
+    #Track loss history for analysis
     loss_history = []
 
-    # Iterate epochs to train model
+    #Iterate epochs to train model
     model.train()
     for epoch in range(n_epochs):
         epoch_loss = 0.0
@@ -253,15 +253,15 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 data = train_data[index]
                 target = train_target[index]
 
-                # Forward and backward pass
+                #Forward and backward pass
                 optimizer.zero_grad()
                 outputs = model(data)
 
-                # Calculating loss function
+                #Calculating loss function
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
-                if reg != 0:  # If we want to diversify
-                    C = torch.matmul(Y, Y.T)  # Gram Matrix
+                if reg != 0:  #If we want to diversify
+                    C = torch.matmul(Y, Y.T)  #Gram Matrix.
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
                 else:
                     loss_d = 0
@@ -274,7 +274,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 loss += losses
                 n_batches += 1
 
-            # Finish off training the network
+            #Finish off training the network
             loss = loss / n_batches
             loss.backward()
             optimizer.step()
@@ -304,13 +304,13 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         - model (NeuralNet object): Trained neural network
     """
 
-    # Set loss
+    #Set loss
     criterion = nn.MSELoss(reduction='none')
 
-    # Set optimizer (Adam optimizer for now)
+    #Set optimizer (Adam optimizer for now)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-    # Set learning rate scheduler
+    #Set learning rate scheduler
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
     model.train()
@@ -326,10 +326,10 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             batch_loss = 0.0
             for data in train_data:
                 data = data.float()
-                # Zero the network parameter gradients
+                #Zero the network parameter gradients
                 optimizer.zero_grad()
 
-                # Update network parameters via backpropagation: forward + backward + optimize
+                #Update network parameters via backpropagation: forward + backward + optimize
                 rec = model(data).float()
                 rec_loss = criterion(rec, data) #Not so sure about this
                 loss = torch.mean(rec_loss.float())
@@ -370,9 +370,9 @@ def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
     model_dict = model.state_dict()
     ae_model_dict = ae_model.state_dict()
 
-    # Remove decoder network keys
+    #Remove decoder network keys
     ae_model_dict = {k: v for k, v in ae_model_dict.items() if k in model_dict}
-    # Update and reload network states
+    #Update and reload network states
     model_dict.update(ae_model_dict)
     model.load_state_dict(model_dict)
 
@@ -444,43 +444,43 @@ def DeepSAD_train_run(dir, freq, filename):
     - results (2D numpy array): 5x30 Array of health indicators with state for each panel
     """
 
-    # Hyperparameters
+    #Hyperparameters
     learning_rate_AE = 0.001
     learning_rate = 0.00001
     weight_decay = 0.1
     n_epochs_AE = 10
     n_epochs = 15
-    lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
+    lr_milestones_AE = [20, 30, 40]  #Milestones when learning rate reduces
     lr_milestones = [5, 10, 50, 70, 90]
-    gamma = 0.1  # Factor to reduce LR by at milestones
-    gamma_AE = 0.1  # "
-    eta = 3  # Weighting of labelled datapoints
-    eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
-    reg = 0.001  # Lambda - diversity weighting
+    gamma = 0.1  #Factor to reduce LR by at milestones
+    gamma_AE = 0.1  #"
+    eta = 3  #Weighting of labelled datapoints
+    eps = 1 * 10 ** (-8)  #Very small number to prevent zero errors
+    reg = 0.001  #Lambda - diversity weighting
     batch_size = 10
-    margin = 5  # Number of samples labelled on each end
-    n_iterations = 5  # Number of self-training iterations
-    healthy_range = (1, 5)  # Healthy range
-    unhealthy_range = (1, 3)  # Unhealthy range
+    margin = 5  #Number of samples labelled on each end
+    n_iterations = 5  #Number of self-training iterations
+    healthy_range = (1, 5)  #Healthy range
+    unhealthy_range = (1, 3)  #Unhealthy range
 
     samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
 
-    # Make string of filename for train/test data
+    #Make string of filename for train/test data.
     filename = freq + "kHz_" + filename + ".csv"
 
-    # Initialise results matrix
+    #Initialise results matrix.
     results = np.empty((5, 30), dtype=object)
 
-    # Loop for each sample as test data
+    #Loop for each sample as test data
     for sample_count in range(len(samples)):
         test_sample = samples[sample_count]
 
-        # Make new list of samples excluding test data
+        #Make new list of samples excluding test data.
         temp_samples = copy.deepcopy(samples)
         temp_samples.remove(test_sample)
 
-        first = True  # Flag to set up final training set
-        # Initialise training data lists
+        first = True  #Flag to set up final training set
+        #Initialise training data lists
         for current_sample in temp_samples:
             current_data = np.loadtxt(dir + current_sample + "/" + filename, delimiter=',')
             if first:
@@ -489,14 +489,14 @@ def DeepSAD_train_run(dir, freq, filename):
             else:
                 train_data = np.append(train_data, current_data, axis=0)
 
-        # Load test data
+        #Load test data
         test_data = np.loadtxt(dir + test_sample + "/" + filename, delimiter=',')
 
-        # Add columns to results matrix
+        #Add columns to results matrix
         for j in range(30):
             results[sample_count, j] = [freq + "kHz", int(j + 1)]
 
-        # Loop for each frequency band
+        #Loop for each frequency band
         for i in range(30):
             train_array = copy.deepcopy(train_data)
             test_array = copy.deepcopy(test_data)
@@ -505,27 +505,27 @@ def DeepSAD_train_run(dir, freq, filename):
             test_array = np.delete(test_array, np.s_[0:i * 160:1], axis=1)
             test_array = np.delete(test_array, np.s_[160:30 * 160 - i * 160:1], axis=1)
 
-            # Initialize the DeepSAD model and create DataLoader
+            #Initialize the DeepSAD model and create DataLoader
             model = NeuralNet(train_array.shape[1])
             train_loader = DataLoader(TensorDataset(torch.tensor(train_array, dtype=torch.float32),
                                                     torch.tensor(test_array, dtype=torch.float32)),
                                       batch_size=batch_size, shuffle=True)
 
-            # Self-training the DeepSAD model
+            #Self-training the DeepSAD model
             model, label_history = self_train(model, train_loader, n_iterations, healthy_range, unhealthy_range,
                                               learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps,
                                               reg)
 
-            # Print the final best-fit labels
+            #Print the final best-fit labels
             print(f"Final best-fit labels for frequency band {i + 1}: {label_history[-1]}")
 
-            # Evaluate the model
+            #Evaluate the model
             test_loader = DataLoader(torch.tensor(test_array, dtype=torch.float32), batch_size=batch_size,
                                      shuffle=False)
             model.eval()
             for index, test_sample in enumerate(test_loader):
                 output = embed(test_sample, model)
-                # Save the output results (predictions) in the results array
+                #Save the output results (predictions) in the results array
                 results[sample_count, i].append(output.detach().numpy())
 
     return results
@@ -551,11 +551,11 @@ def update_labels(model, train_loader, healthy_range, unhealthy_range):
             for x in data:
                 score = embed(x, model).item()
                 if healthy_range[0] <= score <= healthy_range[1]:
-                    updated_labels.append(1)  # Healthy
+                    updated_labels.append(1)  #Healthy
                 elif unhealthy_range[0] <= score <= unhealthy_range[1]:
-                    updated_labels.append(-1)  # Unhealthy
+                    updated_labels.append(-1)  #Unhealthy
                 else:
-                    updated_labels.append(0)  # Uncertain / Unlabeled
+                    updated_labels.append(0)  #Uncertain / Unlabeled
     return np.array(updated_labels)
 
 
@@ -586,17 +586,17 @@ def self_train(model, train_loader, n_iterations, healthy_range, unhealthy_range
     for iteration in range(n_iterations):
         print(f"Self-training iteration {iteration + 1}/{n_iterations}")
 
-        # Train the model
+        #Train the model
         model, _ = train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps,
                          reg)
 
-        # Update labels
+        #Update labels
         updated_labels = update_labels(model, train_loader, healthy_range, unhealthy_range)
 
-        # Print the updated labels
+        #Print the updated labels
         print(f"Updated labels after iteration {iteration + 1}: {updated_labels}")
 
-        # Update train_loader with new labels
+        #Update train_loader with new labels
         train_data, _ = next(iter(train_loader))
         train_loader = DataLoader(TensorDataset(train_data, torch.tensor(updated_labels)),
                                   batch_size=train_loader.batch_size, shuffle=True)
