@@ -376,7 +376,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         print("Saving: " + frequencies[freq] + "kHz")
         # print(components)
         for feat in range(139):
-            if feat % 10 == 0:
+            if feat % 50 == 0:
                 print(feat)
             # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])
@@ -388,7 +388,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
         if files_used[0] == "":     #Using features as HIs
-            files_used = np.array([str(i) for i in range(len(criteria[1][freq]))])
+            files_used = np.array([[i] for i in range(len(criteria[1][freq]))])
         Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
     #Bar charts against frequency
     #for feat in range(len(features[0])):
@@ -396,9 +396,10 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
 
     avs = np.empty((4, 2), dtype=object)
     for crit in range(4):
-        avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)
+        avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
         avs[crit, 1] = np.std(criteria[crit], axis = 0)
-    Graphs.criteria_chart(files_used, avs[1][freq], avs[2][freq], avs[3][freq], dir=dir, name=label + "-" + frequencies[freq])
+    print(avs)
+    Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=label + "- Av")
     av_arr = np.vstack((avs[0, 0], avs[0, 1]))
 
     # Save all to files
