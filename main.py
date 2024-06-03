@@ -7,7 +7,7 @@ from sklearn.impute import SimpleImputer
 import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
-from prognosticcriteria import fitness, Mo, Tr, Pr
+from prognosticcriteria_V2 import fitness
 from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
@@ -373,13 +373,14 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
 
     for freq in range(6):
         # print(components)
-        for feat in range(1):
+        for feat in range(139):
             # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])
-            criteria[0][freq][feat] = float(fitness(features[freq][feat])[0])   # ftn
-            criteria[1][freq][feat] = float(Mo(features[freq][feat]))
-            criteria[2][freq][feat] = float(Tr(features[freq][feat]))
-            criteria[3][freq][feat] = float(Pr(features[freq][feat]))
+            ftn, mo, tr, pr, error = fitness(features[freq][feat])
+            criteria[0][freq][feat] = float(ftn)
+            criteria[1][freq][feat] = float(mo)
+            criteria[2][freq][feat] = float(tr)
+            criteria[3][freq][feat] = float(pr)
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
         if files_used[0] == "":
@@ -445,7 +446,7 @@ def main_menu():
     print("6. Extract all features (Requires 5)")
     print("7. AverageFeatures (Requires 6)")
     print("8. Apply PCA to all (Requires 7)")
-    print("9. Evaluate all HIs (Requires 8)")
+    print("9. Evaluate feature HIs (Requires 8)")
     print("10. Execute DeepSAD (Requires 7)")
     print("0. Exit")
 

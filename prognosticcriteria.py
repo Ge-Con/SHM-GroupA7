@@ -87,4 +87,4 @@ def fitness(X, Mo_a=1,Tr_b=1,Pr_c=1):
 
     error = Mo_a+Tr_b+Pr_c - ftn
 
-    return ftn, error
+    return ftn, monotonicity, trendability, prognosability, error
