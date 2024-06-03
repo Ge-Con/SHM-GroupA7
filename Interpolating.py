@@ -15,6 +15,20 @@ def find_smallest_array_size(array_list):
 
     return min_size  # Return the smallest size
 
+def scale_HIs(HI_arr):
+    minimum = find_smallest_array_size(HI_arr)  # Find the smallest array size
+    for i in range(len(HI_arr)):  # Loop through each health indicator array
+        if HI_arr[i].size > minimum:  # If the size is greater than the minimum
+            arr_interp = interp1d(np.arange(HI_arr[i].size), HI_arr[i])  # Create an interpolation function
+            arr_compress = arr_interp(np.linspace(0, HI_arr[i].size - 1, minimum))  # Compress to the minimum size
+            HI_arr[i] = arr_compress  # Update the array
+    HI_arr = np.vstack(HI_arr)  # Stack the arrays
+    return HI_arr
+
+
+'''''
+#WITH Z_ARRAY, NOT NEEDED WIH GENERAL USAGE
+
 # Function to scale arrays to the smallest size
 def scale_HIs(HI_arr, z_arr):
     minimum = find_smallest_array_size(HI_arr + [z_arr])  # Find the smallest array size
@@ -30,8 +44,10 @@ def scale_HIs(HI_arr, z_arr):
         z_arr = arr_compress
     full = np.append(HI_arr, [z_arr], axis=0)  # Append the z_arr into the vstacked HI array
     return full, HI_arr, z_arr
+    
+'''''
 
-
+'''''
 #------------------------Testing wth random shit----------------------
 # Number of lines
 num_lines = 50
@@ -85,6 +101,8 @@ plt.tight_layout()
 plt.show()
 
 #code to stretch all HI to the largets one(if we change our mind)
+'''''
+
 '''''
 def find_largest_array_size(array_list):
     max_size = 0
