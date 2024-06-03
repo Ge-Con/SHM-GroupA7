@@ -16,6 +16,7 @@ def HI_graph(X, dir="", name=""):
         plt.savefig(dir + "\\" + name + " HIs")
     else:
         plt.show()
+    plt.close()
 
 def criteria_chart(features, Mo, Pr, Tr, dir="", name=""):
     #Stacked bar chart of criteria against features
@@ -34,6 +35,7 @@ def criteria_chart(features, Mo, Pr, Tr, dir="", name=""):
         plt.savefig(dir + "\\" + name + " PC")
     else:
         plt.show()
+    plt.close()
 
 #criteria_chart(np.array(["f1", "f2", "f3"]), np.array([1, 2, 3]), np.array([2, 4, 6]), np.array([1, 2, 3]))
 #HI_graph(np.array([1, 2, 3, 4, 5]))

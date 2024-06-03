@@ -25,6 +25,14 @@ def scale_HIs(HI_arr):
     HI_arr = np.vstack(HI_arr)  # Stack the arrays
     return HI_arr
 
+def scale_exact(HI_list, minimum=30):
+    if HI_list.size > minimum:  # If the size is greater than the minimum
+        arr_interp = interp1d(np.arange(HI_list.size), HI_list)  # Create an interpolation function
+        arr_compress = arr_interp(np.linspace(0, HI_list.size - 1, minimum))  # Compress to the minimum size
+    else:
+        arr_compress = HI_list
+    return np.array(arr_compress)
+
 
 '''''
 #WITH Z_ARRAY, NOT NEEDED WIH GENERAL USAGE

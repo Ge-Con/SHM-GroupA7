@@ -7,10 +7,11 @@ from sklearn.impute import SimpleImputer
 import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
-from prognosticcriteria_V2 import fitness
+from prognosticcriteria_v2 import fitness
 from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
+from Interpolating import scale_exact
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -372,8 +373,11 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     # Iterate through each frequency and calculate features
 
     for freq in range(6):
+        print("Saving: " + frequencies[freq] + "kHz")
         # print(components)
         for feat in range(139):
+            if feat % 10 == 0:
+                print(feat)
             # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])
             ftn, mo, tr, pr, error = fitness(features[freq][feat])
@@ -383,27 +387,31 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             criteria[3][freq][feat] = float(pr)
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
-        if files_used[0] == "":
+        if files_used[0] == "":     #Using features as HIs
             files_used = np.array([str(i) for i in range(len(criteria[1][freq]))])
         Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
-    for feat in range(len(features[0])):
-        Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
+    #Bar charts against frequency
+    #for feat in range(len(features[0])):
+    #    Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
 
-    average_freq1 = np.mean(criteria[0], axis= 0)
-    average_freq = np.expand_dims(average_freq1,axis=0)
-    stddev_freq = np.std(criteria[0], axis = 0)
-    std_arr = np.vstack((average_freq, stddev_freq))
+    avs = np.empty((4, 2), dtype=object)
+    for crit in range(4):
+        avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)
+        avs[crit, 1] = np.std(criteria[crit], axis = 0)
+    Graphs.criteria_chart(files_used, avs[1][freq], avs[2][freq], avs[3][freq], dir=dir, name=label + "-" + frequencies[freq])
+    av_arr = np.vstack((avs[0, 0], avs[0, 1]))
 
     # Save all to files
     pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
     pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mon.csv", index=False)
     pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tre.csv", index=False)
     pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pro.csv", index=False)
-    pd.DataFrame(std_arr).to_csv(dir + "\\" + " Avf.csv", index=False)
+    pd.DataFrame(av_arr).to_csv(dir + "\\" + label + " Fit Av.csv", index=False)
+
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    features = np.empty((6, 139), dtype=object)  #6 frequencies, 71 features and a list of values at each location
+    features = np.empty((6, 139), dtype=object)  #6 frequencies, 139 features, 5 samples with a list of values at each location
 
     # Read all features to 'features', and all PCA to 'components' arrays
     for root, dirs, files in os.walk(dir):
@@ -413,11 +421,11 @@ def evaluate(dir):
                 freq = frequencies.index(name[:3])
                 for feat in range(139):
                     if str(type(features[freq][feat])) == "<class 'NoneType'>":
-                        features[freq][feat] = np.array([data[feat][-30::]])
+                        features[freq][feat] = np.array([scale_exact(data[feat])])
                     else:
-                        features[freq][feat] = np.vstack([features[freq][feat], data[feat][-30::]])
+                        features[freq][feat] = np.vstack([features[freq][feat], scale_exact(data[feat])])
 
-    save_evaluation(features, "Features", dir)
+    return features
 
 
 # def giveTime():
@@ -487,7 +495,8 @@ while True:
     elif choice == '7':
         AverageFeatures(csv_dir)
     elif choice == '9':
-        evaluate(csv_dir)
+        features = evaluate(csv_dir)
+        save_evaluation(features, "Features", csv_dir)
     elif choice == '10':
         saveDeepSAD(csv_dir)
     elif choice == '0':

@@ -146,5 +146,5 @@ def fitness(X, Mo_a=1, Tr_b=1, Pr_c=1):
 
     ftn = Mo_a * monotonicity + Tr_b * trendability + Pr_c * prognosability
     error = (Mo_a + Tr_b + Pr_c) / ftn
-    print("Error: ", error)
+    #print("Error: ", error)
     return ftn, monotonicity, trendability, prognosability, error
