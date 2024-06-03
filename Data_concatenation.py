@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-
+output_dir = input("Enter directory of output folder: ")
 def process_csv_files(base_dir):
     panel = input("Enter your panel name in the format L1XX: ")
     # Define the sample filenames you're expecting in each folder
@@ -16,7 +16,7 @@ def process_csv_files(base_dir):
                     # Add concatenated column to respective index (with respect to timestep) in full_matrix
                     full_matrix.append(concatenated_column)
         result_df = pd.DataFrame(full_matrix).T
-        output_file_path = os.path.join(base_dir, f"concatenated_{freq}_kHz_{panel}.csv")
+        output_file_path = os.path.join(output_dir, f"concatenated_{freq}_kHz_{panel}.csv")
         result_df.to_csv(output_file_path, index=False)
         print(f"Result saved to {output_file_path}")
 
@@ -25,4 +25,5 @@ base_dir = str(input("Base directory containing all timesteps folders: "))
 process_csv_files(base_dir)
 
 
-#"C:\Users\pablo\Downloads\PZT-ONLY-FEATURES Main\PZT-ONLY-FEATURES-CSV-L1-23"
+# C:\Users\pablo\Downloads\PZT-ONLY-FEATURES Main\PZT-ONLY-FEATURES-CSV-L1-23
+# C:\Users\pablo\Downloads\PZT Output folder

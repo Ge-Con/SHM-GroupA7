@@ -1,12 +1,32 @@
+#importing libraries
 import pandas as pd
 import numpy as np
 from numpy.fft import fft
+#Following libraries were used for plotting
 from scipy import stats
 from matplotlib import pyplot as plt
 
+
 def fast_fourier(data):
+    """
+        Extracts frequency domain features from sensor data using Fast Fourier Transform (FFT).
+
+        Parameters:
+        - data : A DataFrame where each column contains time-domain data.
+
+        Returns:
+        - tuple: A tuple containing two DataFrames:
+            - The first DataFrame contains the frequency values.
+            - The second DataFrame contains the amplitude values of the frequency components.
+
+        Example:
+        # Example usage of the function
+        freq_df, amp_df = fast_fourier(sensor_data)
+        """
+    #initialising arrays
     freq_arr = []
     amp_arr = []
+    # Iterate through sensors (Not 8 because of the actuator not being included)
     for i in range(7):
         x_values = []
         for j in range(8):
@@ -17,20 +37,19 @@ def fast_fourier(data):
             X = np.abs(fft(x))  #Magnitude only
             N = len(X)
             n = np.arange(N)
-            sr = 1 / 5e-7 # Sample rate calculation
+            sr = 1 / 5e-7 # Sampling rate
             T = N / sr                              # total time
-            freq = n / T
+            freq = n / T #frequency
 
             # Get the one-sided spectrum
-            n_oneside = N // 2
+            n_oneside = N // 2 #Due to symmetry
             # get the one side frequency
             f_oneside = freq[:n_oneside]
 
-            x_values.append(X[:n_oneside])  # why do we need this line?
+            x_values.append(X[:n_oneside])  #not needed
 
             freq_arr.insert(k,f_oneside)
             amp_arr.insert(k,X[:n_oneside])
-    #print(pd.DataFrame(amp_arr))
     return pd.DataFrame(freq_arr).transpose(), pd.DataFrame(amp_arr).transpose()
 
 #This is the original
