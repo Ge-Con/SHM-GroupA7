@@ -15,7 +15,8 @@ from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 import csv
-from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness
+from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness, Pr_single
+import os
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
@@ -40,12 +41,14 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append(dir_root + "\concatenated_" + freq + "_" + i + ".csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
+            filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + panel + ".csv", header=None).values.transpose()
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+            test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
             scaler = StandardScaler()
@@ -187,7 +190,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
             arr_stretch = arr_interp(np.linspace(0, z_arr.size - 1, HI_arr.shape[1]))
             z_arr = arr_stretch
         full = np.append(HI_arr, z_arr, axis = 0)
-        return full, HI_arr, z_arr
+        return [full, HI_arr, z_arr]
 
 # Bayesian optimization
 
@@ -198,12 +201,16 @@ space = [
     Integer(500,10000, name='epochs')
 ]
 
+def print_progress(res):
+    n_calls = len(res.x_iters)
+    print(f"Call number: {n_calls}")
+
 @use_named_args(space)
 def objective(**params):
     print(params)
-    return fitness(train_vae(**params))[1]
+    return fitness(train_vae(**params)[1])[1]
 
-res_gp = gp_minimize(objective, space, n_calls=50, random_state=42)
+res_gp = gp_minimize(objective, space, n_calls=10, random_state=42, callback=[print_progress])
 
 print("Best parameters found: ", res_gp.x)
 
@@ -212,7 +219,7 @@ print("Best parameters found: ", res_gp.x)
 #data1 = data[:, :1]  # First column as one dataset
 #data2 = data[:, 1:2]  # Second column as another dataset
 
-panels = ("L03", "L05", "L09", "L04", "L23")
+panels = ("L103", "L105", "L109", "L104", "L123")
 freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
 counter = 0
@@ -220,12 +227,14 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filenames.append(dir_root + "\concatenated_" + freq + "_" + i + ".csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
+            filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + panel + ".csv", header=None).values.transpose()
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+            test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
             scaler = StandardScaler()
