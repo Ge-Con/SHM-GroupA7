@@ -94,8 +94,20 @@ def read_matrices_from_folder(dir, filename, freq):
                 matrices.append(matrix)
     return np.array(matrices)
 
-def doPCA_multiple_Campaigns(dir, component=1):
+def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
     # Use the read_matrices_from_folder function to get the matrices from a folder
+
+    """
+    Creates and applies any PCA model
+
+    Parameters:
+        - dir (string): CSV directory for test and training data
+        - components: Principal component to keep, not specified if model to 95% variance
+
+    Returns:
+        - output (2 or 3D numpy array): PCA transform of data, for each frequency, sample and state
+    """
+
     output = []
     matrices = []
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -107,7 +119,10 @@ def doPCA_multiple_Campaigns(dir, component=1):
             matrices.append(read_matrices_from_folder(dir + "\\" + samples[sample], filename, frequencies[freq]))
         #Matrices is list for samples of lists of matrices
 
-        pca = onePC(matrices, component)
+        if component == 0:
+            pca = varPC(matrices)
+        else:
+            pca = onePC(matrices, component)
         list = []
 
         for sample in range(5):
@@ -116,7 +131,4 @@ def doPCA_multiple_Campaigns(dir, component=1):
 
         output.append(list)
 
-    for i in range(len(output)):
-        output[i] = output[i][0]
-
-    return output
+    return np.array(output)
