@@ -15,8 +15,8 @@ def my_get_next_imf(x, zoom=None, sd_thresh=0.1, max_iters = 10):
 
         Parameters:
         - x (1D array): The input time-domain signal.
-        - sd_thresh (float, optional): The threshold for standard deviation to decide when to stop the sifting process.
-        - max_iters (int, optional): The maximum number of iterations for the sifting process.
+        - sd_thresh (float): The threshold for standard deviation to decide when to stop the sifting process.
+        - max_iters (integer): The maximum number of iterations for the sifting process.
 
         Returns:
         - proto_imf (1D array): The extracted Intrinsic Mode Function (IMF).

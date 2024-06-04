@@ -4,21 +4,20 @@ from scipy import signal
 
 def Short_Fourier(data):
     """
-            Extracts the next Intrinsic Mode Function (IMF) from a time-domain signal (to be used in empirical mode decomposition(EMD)).
-            Simple explanation: EMD splits a signal into a multitude of signals(sifting). Important to be noted is that this.
-            also includes non-sinus functions(like polynomials). These functions are called intrinsic mode functions(IMF).
+        Performs Short-Time Fourier Transform (STFT) on segments of the input data and processes the amplitude spectra.
 
-            Parameters:
-            - x (1D array): The input time-domain signal.
-            - sd_thresh (float, optional): The threshold for standard deviation to decide when to stop the sifting process.
-            - max_iters (int, optional): The maximum number of iterations for the sifting process.
+        The STFT is used to analyze non-stationary signals by providing a time-frequency representation of the signal.
+        This function processes each segment of the input data, extracts the amplitude spectra, and returns the results in a flattened format.
 
-            Returns:
-            - proto_imf (1D array): The extracted Intrinsic Mode Function (IMF).
+        Parameters:
+        - data (1-D array): The input data where each column represents a different signal segment to be analyzed.
 
-            Example:
-            # Example usage of the function
-            result = my_get_next_imf(sensor_data)
+        Returns:
+        - DataFrame: A flattened DataFrame containing the amplitude spectra of the STFT for each segment.
+
+        Example:
+        # Example usage of the function
+        result = Short_Fourier(sensor_data)
     """
     amp_arr = [] #initialize array
 
