@@ -399,7 +399,6 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         for crit in range(4):
             avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
             avs[crit, 1] = np.std(criteria[crit], axis = 0)
-        print(avs)
         Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=label + "- Av")
         av_arr = np.vstack((avs[0, 0], avs[0, 1]))
         pd.DataFrame(av_arr).to_csv(dir + "\\" + label + " Fit Av.csv", index=False)
