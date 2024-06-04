@@ -375,7 +375,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     for freq in range(6):
         print("Saving: " + frequencies[freq] + "kHz")
         # print(components)
-        for feat in range(139):
+        for feat in range(len(features[0])):
             if feat % 50 == 0:
                 print(feat)
             # print(features[freq][feat])
