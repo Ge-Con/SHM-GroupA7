@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 import os
 import warnings
-import matplotlib.pyplot as plt
+from Interpolating import scale_exact
 
 warnings.filterwarnings('ignore')
 
-def onePC(matrices):
+def onePC(matrices, component):
     """
         Trains PCA for one principal component
 
@@ -19,7 +19,7 @@ def onePC(matrices):
     """
 
     #Create PCA object
-    pca = PCA()
+    pca = PCA(n_components=component)
 
     #Flatten training matrix to 2D to be able to fit to multiple samples
     flattened = np.vstack([matrix.flatten() for matrix in matrices])
@@ -72,61 +72,63 @@ def apply(list, pca, component=0):
 
     transformed = pca.transform(list.reshape(1, -1))    #Flatten 2D matrix
     if component != 0:
-        transformed = transformed[:, component]         #Select only required component
+        transformed = transformed[:, component-1]         #Select only required component
     return float(transformed.flatten())
 
 
-def read_matrices_from_folder(dir, freq):
+def read_matrices_from_folder(dir, filename, freq):
     matrices = []
+    matrix = np.zeros((139, 30))
 
     for root, dirs, files in os.walk(dir):
         for name in files:
 
-            if name.endswith(f"{freq}_kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
+            if name == freq + "kHz_" + filename + ".csv":  # Assuming files are stored in numpy format
 
                 df = pd.read_csv(os.path.join(root, name))
-                matrix = df.values  # Convert DataFrame to numpy array
+                tempmatrix = df.values  # Convert DataFrame to numpy array
+                # Interpolate
+                tempmatrix = tempmatrix.T
+                for row in range(len(tempmatrix)):
+                    matrix[row] = scale_exact(tempmatrix[row])
                 matrices.append(matrix)
-    return matrices
+    return np.array(matrices)
 
-def doPCA_multiple_Campaigns(train1,train2,train3,train4,test, component=1):
+def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
     # Use the read_matrices_from_folder function to get the matrices from a folder
+
+    """
+    Creates and applies any PCA model
+
+    Parameters:
+        - dir (string): CSV directory for test and training data
+        - components: Principal component to keep, not specified if model to 95% variance
+
+    Returns:
+        - output (2 or 3D numpy array): PCA transform of data, for each frequency, sample and state
+    """
+
     output = []
+    matrices = []
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    samples = ["L1-03", "L1-04", "L1-05", "L1-09", "L1-23"]
+    filename = "MF"
+
     for freq in range(6):
-        if freq == 0:
-            f = "050"
-        elif freq == 1:
-            f = "100"
-        elif freq == 2:
-            f = "125"
-        elif freq == 3:
-            f = "150"
-        elif freq == 4:
-            f = "200"
-        elif freq == 5:
-            f = "250"
+        for sample in range(5):
+            matrices.append(read_matrices_from_folder(dir + "\\" + samples[sample], filename, frequencies[freq]))
+        #Matrices is list for samples of lists of matrices
 
-        matrices = []
+        if component == 0:
+            pca = varPC(matrices)
+        else:
+            pca = onePC(matrices, component)
+        list = []
 
-        #print(f"{f}_kHz-allfeatures.csv")
+        for sample in range(5):
+            x = apply(matrices[sample], pca, component)
+            list.append(x)
 
-        for i in range(1,5):
-            #matrices.append(read_matrices_from_folder(f"train{i}",f))
-            matrices.extend(read_matrices_from_folder(locals()[f"train{i}"], f))
-        #print(matrices)
-
-        pca, EVR = onePC(matrices)
-        print(EVR)
-        list=[]
-
-
-        for root, dirs, files in os.walk(test):
-            for name in files:
-                if name.endswith(f"{f}_kHz-allfeatures.csv"):  # Assuming files are stored in numpy format
-                    df = pd.read_csv(os.path.join(root, name))
-                    matrix = df.values
-                    x = apply(matrix, pca, component)
-                    list.append(x)
         output.append(list)
 
-    return output
+    return np.array(output)
