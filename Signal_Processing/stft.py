@@ -21,9 +21,9 @@ def Short_Fourier(data):
     flat = [item for sublist in amp_arr for item in sublist]
 
     # Dimensions of the original 3D list
-    dim1 = 56  # Assuming this is the number of elements in the outermost dimension
-    dim2 = 126  # Assuming this is the number of elements in the middle dimension
-    dim3 = 17  # Assuming this is the number of elements in the innermost dimension
+    dim1 = 56  # Assuming this is the number of elements in the outermost dimension (amount of signals 8*7, we dont include the actuator(would be 8*8))
+    dim2 = 126  # Assuming this is the number of elements in the middle dimension (each segment has 17 frequencies)
+    dim3 = 17  # Assuming this is the number of elements in the innermost dimension (number of segments, on which FFT is applied on seperatly)
 
     #print("outer Dim", len(amp_arr))
     #print("Middle Dim", len(amp_arr[0]))
