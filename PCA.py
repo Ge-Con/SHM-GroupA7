@@ -94,7 +94,7 @@ def read_matrices_from_folder(dir, filename, freq):
                 matrices.append(matrix)
     return np.array(matrices)
 
-def doPCA_multiple_Campaigns(dir, component=2):
+def doPCA_multiple_Campaigns(dir, component=1):
     # Use the read_matrices_from_folder function to get the matrices from a folder
     output = []
     matrices = []
@@ -115,5 +115,8 @@ def doPCA_multiple_Campaigns(dir, component=2):
             list.append(x)
 
         output.append(list)
+
+    for i in range(len(output)):
+        output[i] = output[i][0]
 
     return output
