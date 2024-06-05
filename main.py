@@ -228,7 +228,7 @@ def AverageFeatures(rootdir):
                         meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
         for freq in frequencies:    #For each feature
             csv_file_path = os.path.join(dir, freq + "kHz_MF.csv") # MF = Mean Features
-            pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
+            pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from files
 
 
 def correlateSPFeatures(rootdir):
