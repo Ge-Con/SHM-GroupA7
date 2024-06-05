@@ -82,6 +82,25 @@ def saveFeatures(dir):
                 csv_file_path = os.path.join(root, new_filename)
                 features.to_csv(csv_file_path, index=False)
 
+def FFT_HLB_Reduced_Feat(dir):
+    print("Extracting Features:...")
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+
+            if name.endswith('FFT.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                features = extract_features.FFT_Feat_reduced(data)
+                new_filename = name.replace('FFT.csv', 'FFT_FT_Reduced.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
+            elif name.endswith('HLB.csv'):
+                data = pd.read_csv(os.path.join(root, name))
+                features = extract_features.HLB_Feat_reduced(data)
+                new_filename = name.replace('HLB.csv', 'HLB_FT_Reduced.csv')
+                csv_file_path = os.path.join(root, new_filename)
+                features.to_csv(csv_file_path, index=False)
+
 
 def correlateALLFeatures(rootdir): #changed name to ALL
     # i dont think we're using this anymore
@@ -371,6 +390,9 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
     criteria = np.empty((4, 6, len(features[0])))
     # Iterate through each frequency and calculate features
+    featuresonly = False
+    if files_used[0] == "":  # Using features as HIs
+        featuresonly = True
 
     for freq in range(6):
         print("Saving: " + frequencies[freq] + "kHz")
@@ -387,14 +409,14 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             criteria[3][freq][feat] = float(pr)
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
-        if files_used[0] == "":     #Using features as HIs
+        if featuresonly:
             files_used = np.array([str(i) for i in range(len(features[0]))])
         Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
     #Bar charts against frequency
     #for feat in range(len(features[0])):
     #    Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
 
-    if files_used[0] == "":
+    if featuresonly:
         avs = np.empty((4, 2), dtype=object)
         for crit in range(4):
             avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
@@ -457,6 +479,8 @@ def main_menu():
     print("8. Apply PCA to all (Requires 7)")
     print("9. Evaluate feature HIs (Requires 8)")
     print("10. Execute DeepSAD (Requires 7)")
+    print("11. Export FFT and Hilbert only (on a separate directory)")
+    print("12. Extract reduced Features for FFT & Hilbert")
     print("0. Exit")
 
 # Prompt the user to input the folder path
@@ -500,9 +524,13 @@ while True:
         save_evaluation(features, "Features", csv_dir)
     elif choice == '10':
         saveDeepSAD(csv_dir)
+    elif choice == '11':
+        SP.saveFFTHLB(csv_dir)
+    elif choice == '12':
+        FFT_HLB_Reduced_Feat(csv_dir)
     elif choice == '0':
         print("Exiting...")
         quit()
     else:
-        print("Invalid choice. Please enter a number between 0 and 9.")
+        print("Invalid choice. Please enter a number between 0 and 10.")
 
