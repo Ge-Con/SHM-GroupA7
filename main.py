@@ -311,23 +311,23 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
         Args:
             dir (str): The directory path containing .csv files to process.
         Returns:
-            return_type: .csv
+            None. Saves .csv
         Example:
             savePCA('/path/to/directory')
         Notes:
             This function processes each campaign directory separately and saves the
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
-    output = []
-    folders = []
 
-    # Get the locations of train folders
-    for i in range(5):
-        folder_location = input(f"Enter the location of your 5 folders {i}: ")
-        folders.append(folder_location)
-    for i in range(5):
-        output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
+    output = np.empty((6, 3), dtype=object)
+    for pc in range(1, 4):
+        tempout = PCA.doPCA_multiple_Campaigns(dir, component=0)
+        for freq in range(6):
+            output[freq][pc-1] = tempout[freq]
 
+    save_evaluation(np.array(output), "PCA", dir, ["1st PC", "2nd PC", "3rd PC"])
+
+    """
     for k,folder in enumerate(folders):
         for i,freq in enumerate(["050", "100", "125", "150", "200", "250"]):
             root_new = folder.replace("PZT", "PZT-ONLY-FEATURES")
@@ -340,11 +340,10 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             plt.xlabel('Index')
             plt.ylabel('PCA Value')
             plt.title('PCA Values from CSV Files')
+    """
 
     #save_evaluation(switch_dimensions(output),"PCA", dir, ["kHz-PCA"])
-    switched_output = switch_dimensions(output) #features_preprocessed
-
-    save_evaluation(switched_output, "PCA", dir, ["kHz_PCA"])
+    #switched_output = switch_dimensions(output) #features_preprocessed
 
 def switch_dimensions(output):
     """
