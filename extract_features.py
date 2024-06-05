@@ -289,3 +289,178 @@ def STFT_to_feature(data3d):
     features_df = pd.DataFrame(out_list).transpose()
     return features_df
 
+
+
+
+
+
+
+
+
+
+
+
+
+## Frequency domain - Removed Features below 1.65 Fitness score####
+def Frequency_domain_REDUCED_features(sensor):
+    """
+       Extracts frequency domain features from sensor data.
+
+       Parameters:
+       - sensor (1D array): Frequency domain transform of data.
+
+       Returns:
+       - F_features (1D array): Array containing frequency domain features.
+    """
+
+    #np 1D array of fft
+    F_features = np.empty(10)
+
+    #Power Spectral Density
+    #S = np.abs(sensor**2)/samples
+    S = sensor
+
+    #frequency value kth spectrum line (needs adjustment)
+    F = np.arange(1000, len(S)*1000+1, 1000)
+    F_small = F/1000
+
+    # #Mean
+    # F_features[0] = np.mean(S)
+    #
+    # #Variance
+    # F_features[1] = np.var(S)
+
+    #Skewness
+    F_features[0] = stats.skew(S)
+
+    #Kurtosis
+    F_features[1] = stats.kurtosis(S)
+
+    #P5 (Xfc)
+    F_features[2] = np.sum(F * S) / np.sum(S)
+
+    # P6
+    Not_used_now = np.sqrt(np.mean( S * (F - F_features[2]) ** 2))
+
+    #P7 (Xrmsf)
+    F_features[3] = np.sqrt((np.sum(S * F_small ** 2)) / np.sum(S))*1000
+
+    #P8
+    F_features[4] = np.sqrt(np.sum(S * F_small ** 4) / np.sum(S * F_small ** 2))*1000
+
+    #P9
+    F_features[5] = np.sum(S * F_small ** 2) / (np.sqrt( np.sum(S) * np.sum(S * F_small ** 4)))
+
+    #P10
+    F_features[6] = Not_used_now / F_features[2]
+
+    # #P11
+    F_features[7] = np.mean(S * (F - F_features[2]) ** 3)/(Not_used_now ** 3)
+
+    #P12
+    F_features[8] = np.mean(S * (F - F_features[2]) ** 4)/(Not_used_now ** 4)
+
+    # #P13
+    # #Including forced absolute in sqrt which wasn't meant to be there
+    # F_features[12] = np.mean(np.sqrt(np.abs(F - F_features[4]))*S)/np.sqrt(F_features[5])
+
+    #P14
+    F_features[9] = np.sqrt(np.sum((F - F_features[2])**2*S)/np.sum(S))
+
+    return F_features
+
+
+
+
+## Time domain - Removed Features below 1.65 Fitness score##
+def Time_domain_features_REDUCED(sensor):
+    """
+        Extracts time domain features from sensor data.
+
+        Parameters:
+        - sensor (1D array): Array containing sensor data.
+
+        Returns:
+        - T_features (1D array): Array containing time domain features.
+    """
+
+    # np 1D array of time domain data
+    T_features = np.empty(14)
+
+    X = sensor
+
+    # Mean
+    T_features[0] = np.mean(X)
+
+    # Standard deviation
+    T_features[1] = np.std(X)
+
+    #Root amplitude
+    T_features[2] = ((np.mean(np.sqrt(abs(X)))) ** 2)
+
+    #Root mean squared RMS
+    T_features[3] = np.sqrt(np.mean(X ** 2))
+
+    #Root standard squared RSS
+    T_features[4] = np.sqrt(np.sum(X ** 2))
+
+    #Peak (maximum)
+    T_features[5] = np.max(X)
+
+    #Skewness
+    T_features[6] = stats.skew(X)
+
+    #Kurtosis
+    T_features[7] = stats.kurtosis(X)
+
+    #Crest factor
+    T_features[8] = np.max(X) / np.sqrt(np.mean(X ** 2))
+
+    #Clearance factor
+    T_features[9] = np.max(X) / T_features[2]
+
+    #Shape factor
+    T_features[10] = np.sqrt(np.mean(X ** 2)) / np.mean(X)
+
+    #Impulse factor
+    T_features[11] = np.max(X) / np.mean(X)
+
+    #Max-Min difference
+    T_features[12] = np.max(X) - np.min(X)
+
+    # #Central moment kth order (not good enough)
+    # for k in range(3, 7):
+    #     T_features[10+k] = np.mean((X - T_features[0])**k)
+    temp_feat = np.mean((X - T_features[0])**4)
+
+    #FM4 (close to kurtosis) (need central moment)
+    T_features[13] = temp_feat/T_features[1]**4
+
+    # #Median
+    # T_features[18] = np.median(X)
+
+    return T_features
+
+def FFT_Feat_reduced(fftData):
+
+    # Set up array to save features
+    data_fft = np.array(fftData).transpose()
+    features_fft = np.empty((len(data_fft), 10))
+
+    # Loop through each sensor and extract frequency domain features
+    for i in range(len(data_fft)):
+        features_fft[i] = Frequency_domain_REDUCED_features(data_fft[i])
+
+    return pd.DataFrame(features_fft).transpose()
+
+def HLB_Feat_reduced(hlbData):
+    # Set up array to save features
+    data_hlb = np.array(hlbData).transpose()
+    features_hlb = np.empty((len(data_hlb), 14))
+
+    # Loop through each sensor and extract time domain features
+    for i in range(len(data_hlb)):
+        features_hlb[i] = Time_domain_features_REDUCED(data_hlb[i])
+
+    return pd.DataFrame(features_hlb).transpose()
+

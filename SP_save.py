@@ -60,6 +60,35 @@ def saveHilbert(dir):
                 csv_file_path = os.path.join(root, f"{name.replace('kHz.csv', 'kHz_HLB.csv')}")
                 array_file.to_csv(csv_file_path, index=False)
 
+def saveFFTHLB(dir):
+    print("Executing FFT on data:...")
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name.endswith('kHz.csv'):
+
+                root_new = root.replace('PZT-CSV', 'PZT-FFT-HLB')
+                if not os.path.exists(root_new):
+                    os.makedirs(root_new)
+
+                data = pd.read_csv(os.path.join(root, name))
+                array_file1, array_file2 = fft.fast_fourier(data)
+                csv_file_path = os.path.join(root_new, f"{name.replace('kHz.csv', 'kHz_FFT.csv')}")
+                array_file2.to_csv(csv_file_path, index=False)
+
+    print("Executing Hilbert on data:...")
+    for root, dirs, files in os.walk(dir):
+        for name in files:
+            if name.endswith('kHz.csv'):
+                root_new = root.replace('PZT-CSV', 'PZT-CSV-FFT-HLB')
+                if not os.path.exists(root_new):
+                    os.makedirs(root_new)
+
+                data = pd.read_csv(os.path.join(root, name))
+                array_file = hilbert.Hilbert(data, giveTime())
+                csv_file_path = os.path.join(root_new, f"{name.replace('kHz.csv', 'kHz_HLB.csv')}")
+                array_file.to_csv(csv_file_path, index=False)
+
+
 def giveTime():
     time = []
     for i in range(2000):
