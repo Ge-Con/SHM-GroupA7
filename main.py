@@ -344,8 +344,9 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     #save_evaluation(switch_dimensions(output),"PCA", dir, ["kHz-PCA"])
     #switched_output = switch_dimensions(output) #features_preprocessed
 
+"""
 def switch_dimensions(output):
-    """
+    ""
         Args:
             output (arr): PCA output of all campaigns
         Returns:
@@ -354,7 +355,7 @@ def switch_dimensions(output):
             switched_output = switch_dimensions(output)
         Notes:
             This function transposes the pca output for each campaign
-    """
+    ""
     # Get the dimensions of the original output list
     num_folders = len(output)
     num_freqs = len(output[0])
@@ -368,7 +369,7 @@ def switch_dimensions(output):
             switched_output[freq_index][0][folder_index] = output[folder_index][freq_index][-30:]
 
     return switched_output
-
+"""
 
 def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
     """
