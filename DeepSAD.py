@@ -436,25 +436,27 @@ def print_progress(res):
     n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
+space = [
+        Integer(10, 100, name='hidden_1'),
+        Integer(16, 128, name='batch_size'),
+        Real(0.0001, 0.01, name='learning_rate'),
+        Integer(500, 10000, name='epochs')
+    ] # you need to define this space with the parameters you want to optimise, their type and range
+@use_named_args(space)
 def objective(**params):
     print(params)
-    return fitness(train_vae(**params)[1])[1] # this line needs to be changed to the error on your HI
-    #note that prognostic criteria v_2 fitness outputs
+    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
+    return error # you need to change the line above to whatever you want to minimize,
+    # in this case the error output from the fitness function. We train vae with the current 
+    # parameters on the HI the code returns
 
-def hyperparameter_optimisation():
-    space = [
-    Integer(10, 100, name='hidden_1'),
-    Integer(16, 128, name='batch_size'),
-    Real(0.0001, 0.01, name='learning_rate'),
-    Integer(500,10000, name='epochs')
-    ]
-    @use_named_args(space)
-
-    res_gp = gp_minimize(objective, space, n_calls=10, random_state=42, callback=[print_progress])
+def hyperparameter_optimisation(n_calls, random_state=42):
+    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
+                         callback=[print_progress])
     opt_parameters = res_gp.x
     print("Best parameters found: ", res_gp.x)
-    
-    return opt_parameters
+    return opt_parameters # array with optimal parameters, for example for our case:
+    # [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
 '''
 
 def DeepSAD_train_run(dir, freq, filename):
