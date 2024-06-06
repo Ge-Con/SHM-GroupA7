@@ -17,6 +17,7 @@ from skopt.utils import use_named_args
 import csv
 from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness, Pr_single
 import os
+from tensorflow.keras import backend as K
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
@@ -41,13 +42,13 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_FFT_Features.csv")
             filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_FFT_Features.csv")
             test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
@@ -169,7 +170,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
         z_arr = z_arr.transpose()
         HI_arr = []
         for j in tuple(x for x in panels if x != panel):
-            graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + ".csv", header=None).values.transpose()
+            graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_FFT_Features.csv", header=None).values.transpose()
             graph_data = np.delete(graph_data, -1, axis=1)
             graph_data = scaler.transform(graph_data)
             graph_data = pca.transform(graph_data)
@@ -207,7 +208,8 @@ space = [
 @use_named_args(space)
 def objective(**params):
     print(params)
-    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
+    _, _, _, _, error = fitness(train_vae(**params)[1])
+    print("Error: ", error)
     return error
 
 def hyperparameter_optimisation(n_calls, random_state=42):
@@ -230,13 +232,13 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_FFT_Features.csv")
             filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(2):
             counter += 1
             data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_FFT_Features.csv")
             test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
@@ -249,7 +251,7 @@ for panel in panels:
             data = pca.transform(data)
             test = pca.transform(test)
             # Set hyperparameters and architecture details
-            hyperparameters = hyperparameter_optimisation(n_calls=15)
+            hyperparameters = hyperparameter_optimisation(n_calls=10)
             health_indicators = train_vae(hyperparameters[0], hyperparameters[1],
                                           hyperparameters[2], hyperparameters[3])
             hi_train = fitness(health_indicators[0])
@@ -257,6 +259,7 @@ for panel in panels:
             hi_test = test_fitness(health_indicators[2], health_indicators[1])
             resdict[f"{panel}{freq}"].append([hi_train, hi_test])
             print(counter)
+
 with open("results.csv", "w", newline="") as f:
     w = csv.DictWriter(f, resdict.keys())
     w.writeheader()
