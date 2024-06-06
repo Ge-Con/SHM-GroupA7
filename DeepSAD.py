@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 import os
 import copy
+from skopt import gp_minimize
+from skopt.space import Real, Integer
+from skopt.utils import use_named_args
 
 #original without labels
 
@@ -428,6 +431,32 @@ def load_data(dir, margin, filename):
     labels[::margin] = 1        #Healthy labels
     return data, labels
 
+'''
+def print_progress(res):
+    n_calls = len(res.x_iters)
+    print(f"Call number: {n_calls}")
+
+def objective(**params):
+    print(params)
+    return fitness(train_vae(**params)[1])[1] # this line needs to be changed to the error on your HI
+    #note that prognostic criteria v_2 fitness now returns [fitness, error] so you have
+    # to add a [1] to retrieve error as it is an array !!!!!!!
+
+def hyperparameter_optimisation():
+    space = [
+    Integer(10, 100, name='hidden_1'),
+    Integer(16, 128, name='batch_size'),
+    Real(0.0001, 0.01, name='learning_rate'),
+    Integer(500,10000, name='epochs')
+    ]
+    @use_named_args(space)
+
+    res_gp = gp_minimize(objective, space, n_calls=10, random_state=42, callback=[print_progress])
+    opt_parameters = res_gp.x
+    print("Best parameters found: ", res_gp.x)
+    
+    return opt_parameters
+'''
 
 def DeepSAD_train_run(dir, freq, filename):
     """
