@@ -8,7 +8,7 @@ import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria_v2 import fitness
-from DeepSAD import DeepSAD_train_run
+#from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
@@ -319,11 +319,14 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
 
-    output = np.empty((6, 3, 5, 30))
+    output = np.zeros((6, 3, 5, 30))
     for pc in range(1, 4):
         tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
+        print(tempout.shape)
         for freq in range(6):
             output[freq][pc-1] = tempout[freq]
+            #print(tempout)
+            #print(output[freq])
     save_evaluation(np.array(output), "PCA", dir, ["1st PC", "2nd PC", "3rd PC"])
 
     """

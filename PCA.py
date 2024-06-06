@@ -118,11 +118,16 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
     samples = ["L1-03", "L1-04", "L1-05", "L1-09", "L1-23"]
     filename = "MF"
 
+    if component == 0:
+        print("PCA to 95% variance")
+    else:
+        print("Component: " + str(component))
 
     for freq in range(6):
         print("Test sample: " + frequencies[freq], "kHz")
-        matrices = []
+        list = []
         for testsample in range(5):
+            matrices = []
             for trainsample in range(5):
                 if trainsample != testsample:
                     matrices.append(read_matrices_from_folder(dir + "\\" + samples[trainsample], filename, frequencies[freq]))
@@ -133,14 +138,12 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
             else:
                 pca = onePC(matrices, component)
 
-            list = []
-            x = apply(matrices[testsample], pca, component)
+            x = apply(read_matrices_from_folder(dir + "\\" + samples[testsample], filename, frequencies[freq]), pca, component)
             list.append(x)
-
         output.append(list)
 
     #Removing extra dimension
-    return np.array(output)[:, 0]
+    return np.array(output)
 
 #dir = "C:\\Users\Jamie\Documents\\Uni\Year 2\Q3+4\Project\MFs"
 #print(doPCA_multiple_Campaigns(dir, 1))
