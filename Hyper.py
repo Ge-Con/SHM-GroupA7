@@ -208,7 +208,8 @@ def print_progress(res):
 @use_named_args(space)
 def objective(**params):
     print(params)
-    return fitness(train_vae(**params)[1])[1]
+    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
+    return error
 
 res_gp = gp_minimize(objective, space, n_calls=10, random_state=42, callback=[print_progress])
 
