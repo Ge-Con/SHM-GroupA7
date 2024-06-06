@@ -79,7 +79,7 @@ def saveFFTHLB(dir):
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name.endswith('kHz.csv'):
-                root_new = root.replace('PZT-CSV', 'PZT-CSV-FFT-HLB')
+                root_new = root.replace('PZT-CSV', 'PZT-FFT-HLB')
                 if not os.path.exists(root_new):
                     os.makedirs(root_new)
 
