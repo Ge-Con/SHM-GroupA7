@@ -439,8 +439,7 @@ def print_progress(res):
 def objective(**params):
     print(params)
     return fitness(train_vae(**params)[1])[1] # this line needs to be changed to the error on your HI
-    #note that prognostic criteria v_2 fitness now returns [fitness, error] so you have
-    # to add a [1] to retrieve error as it is an array !!!!!!!
+    #note that prognostic criteria v_2 fitness outputs
 
 def hyperparameter_optimisation():
     space = [
