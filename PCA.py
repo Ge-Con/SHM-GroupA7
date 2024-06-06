@@ -120,6 +120,7 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
 
 
     for freq in range(6):
+        print("Test sample: " + frequencies[freq], "kHz")
         matrices = []
         for testsample in range(5):
             for trainsample in range(5):
