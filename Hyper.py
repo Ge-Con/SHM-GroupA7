@@ -194,26 +194,28 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
 
 # Bayesian optimization
 
-space = [
-    Integer(10, 100, name='hidden_1'),
-    Integer(16, 128, name='batch_size'),
-    Real(0.0001, 0.01, name='learning_rate'),
-    Integer(500,10000, name='epochs')
-]
-
 def print_progress(res):
     n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
+space = [
+        Integer(10, 100, name='hidden_1'),
+        Integer(16, 128, name='batch_size'),
+        Real(0.0001, 0.01, name='learning_rate'),
+        Integer(500, 10000, name='epochs')
+    ]
 @use_named_args(space)
 def objective(**params):
     print(params)
     ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
     return error
 
-res_gp = gp_minimize(objective, space, n_calls=10, random_state=42, callback=[print_progress])
-
-print("Best parameters found: ", res_gp.x)
+def hyperparameter_optimisation(n_calls, random_state=42):
+    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
+                         callback=[print_progress])
+    opt_parameters = res_gp.x
+    print("Best parameters found: ", res_gp.x)
+    return opt_parameters
 
 # You can create additional datasets if needed
 # Example: Using the first few columns as one dataset and the rest as another
@@ -247,7 +249,9 @@ for panel in panels:
             data = pca.transform(data)
             test = pca.transform(test)
             # Set hyperparameters and architecture details
-            health_indicators = train_vae(20, 32, 0.03, 1200)
+            hyperparameters = hyperparameter_optimisation(n_calls=15)
+            health_indicators = train_vae(hyperparameters[0], hyperparameters[1],
+                                          hyperparameters[2], hyperparameters[3])
             hi_train = fitness(health_indicators[0])
             print(hi_train)
             hi_test = test_fitness(health_indicators[2], health_indicators[1])
