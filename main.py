@@ -319,12 +319,11 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
 
-    output = np.empty((6, 3), dtype=object)
+    output = np.empty((6, 3, 5, 30))
     for pc in range(1, 4):
-        tempout = PCA.doPCA_multiple_Campaigns(dir, component=0)
+        tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
         for freq in range(6):
             output[freq][pc-1] = tempout[freq]
-
     save_evaluation(np.array(output), "PCA", dir, ["1st PC", "2nd PC", "3rd PC"])
 
     """
@@ -397,7 +396,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         print("Saving: " + frequencies[freq] + "kHz")
         # print(components)
         for feat in range(len(features[0])):
-            if feat % 50 == 0:
+            if feat % 50 == 0 and feat != 0:
                 print(feat)
             # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])

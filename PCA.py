@@ -114,13 +114,13 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
     """
 
     output = []
-    matrices = []
     frequencies = ["050", "100", "125", "150", "200", "250"]
     samples = ["L1-03", "L1-04", "L1-05", "L1-09", "L1-23"]
     filename = "MF"
 
 
     for freq in range(6):
+        matrices = []
         for testsample in range(5):
             for trainsample in range(5):
                 if trainsample != testsample:
@@ -142,4 +142,4 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
     return np.array(output)[:, 0]
 
 #dir = "C:\\Users\Jamie\Documents\\Uni\Year 2\Q3+4\Project\MFs"
-#print(doPCA_multiple_Campaigns(dir, 0))
+#print(doPCA_multiple_Campaigns(dir, 1))
