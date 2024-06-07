@@ -8,7 +8,7 @@ import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria_v2 import fitness
-from DeepSAD import DeepSAD_train_run
+#from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
@@ -328,12 +328,27 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
 
-    output = np.empty((6, 3, 5, 30))
-    for pc in range(1, 4):
+    pcs_upto = 10
+
+    output = np.zeros((6, pcs_upto, 5, 30))
+    for pc in range(1, pcs_upto+1):
         tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
         for freq in range(6):
             output[freq][pc-1] = tempout[freq]
-    save_evaluation(np.array(output), "PCA", dir, ["1st PC", "2nd PC", "3rd PC"])
+            #print(tempout)
+            #print(output[freq])
+    labels = []
+    for pc in range(1, pcs_upto+1):
+        if pc == 1:
+            add = "st"
+        elif pc == 2:
+            add = "nd"
+        elif pc == 3:
+            add = "rd"
+        else:
+            add = "th"
+        labels.append(str(pc) + add + " PC")
+    save_evaluation(np.array(output), "PCA", dir, labels)
 
     """
     for k,folder in enumerate(folders):
@@ -413,8 +428,8 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             ftn, mo, tr, pr, error = fitness(features[freq][feat])
             criteria[0][freq][feat] = float(ftn)
             criteria[1][freq][feat] = float(mo)
-            criteria[2][freq][feat] = float(tr)
-            criteria[3][freq][feat] = float(pr)
+            criteria[2][freq][feat] = float(pr)
+            criteria[3][freq][feat] = float(tr)
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
         if featuresonly:
