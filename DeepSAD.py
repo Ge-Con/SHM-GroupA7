@@ -417,6 +417,7 @@ def load_data(dir, margin, filename):
     data = None
     labels = None
     first = True    #First sample flag
+    filename = filename + ".csv"
 
     print(f"Loading data from directory: {dir}, with filename: {filename}")
 

@@ -8,7 +8,7 @@ import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria_v2 import fitness
-#from DeepSAD import DeepSAD_train_run
+from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
@@ -482,12 +482,11 @@ def evaluate(dir):
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filenames = ["kHz_HLB_FT_Reduced"]    #No need for .csv
-    HIs = np.empty((6, len(filenames)), dtype=object)
+    filename = "kHz_HLB_FT_Reduced"    #No need for .csv
+    HIs = np.empty((6), dtype=object)
     for freq in range(len(frequencies)):
-        for name in range(len(filenames)):
-            HIs[freq][name] = DeepSAD_train_run(dir, frequencies[freq], filenames[name])
-    save_evaluation(HIs, "DeepSAD", dir, filenames)
+        HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
+    save_evaluation(HIs, "DeepSAD", dir, filename)
 
 
 def main_menu():
