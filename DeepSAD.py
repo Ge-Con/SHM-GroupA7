@@ -417,7 +417,6 @@ def load_data(dir, margin, filename):
     data = None
     labels = None
     first = True    #First sample flag
-    filename = filename + ".csv"
 
     print(f"Loading data from directory: {dir}, with filename: {filename}")
 
@@ -533,7 +532,7 @@ def DeepSAD_train_run(dir, freq, file_name):
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
     print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
-    train_data, _ = load_data(dir, margin, file_name)
+    train_data, _ = load_data(dir, margin, file_name_with_freq)
 
     samples = ["PZT-CSV-FFT-HLB-L1-03", "PZT-CSV-FFT-HLB-L1-04", "PZT-CSV-FFT-HLB-L1-05", "PZT-CSV-FFT-HLB-L1-09", "PZT-CSV-FFT-HLB-L1-23"]
 
