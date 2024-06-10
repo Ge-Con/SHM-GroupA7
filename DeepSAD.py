@@ -60,7 +60,7 @@ class NeuralNet(nn.Module):
             - x (2D numpy array): Network output
         """
 
-        x = torch.flatten(x)    #Flatten matrix input
+        x = torch.flatten(x, start_dim=1)    #Flatten matrix input
         x = x.to(next(self.parameters()).dtype) #Ensure tensor is of correct datatype
         x = self.m(self.fc1(x)) #Forward pass through layers
         x = self.m(self.fc2(x))
@@ -68,7 +68,7 @@ class NeuralNet(nn.Module):
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
         # Reshape output to same as c
-        encoded = x.view(4, 4)
+        encoded = x.view(-1, 4, 4)
         return encoded
 
 class NeuralNet_Decoder(nn.Module):
@@ -98,11 +98,12 @@ class NeuralNet_Decoder(nn.Module):
         self.size = size        #Set size to an attribute
 
         #Create network layers
-        self.fc1 = nn.Linear(1024, size[0]*size[1])
-        self.fc2 = nn.Linear(512, 1024)
+        self.fc1 = nn.Linear(16, 64)
+        self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 512)
-        self.fc4 = nn.Linear(64, 128)
-        self.fc5 = nn.Linear(16, 64)
+        self.fc4 = nn.Linear(512, 1024)
+        self.fc5 = nn.Linear(1024, size[0]*size[1])
+
         #Create activation function
         self.m = torch.nn.LeakyReLU(0.001)
 
@@ -118,11 +119,11 @@ class NeuralNet_Decoder(nn.Module):
         """
 
         x = torch.flatten(x)    #Flatten matrix input
-        x = self.m(self.fc5(x)) #Run through network layers
-        x = self.m(self.fc4(x))
-        x = self.m(self.fc3(x))
+        x = self.m(self.fc1(x)) #Run through network layers
         x = self.m(self.fc2(x))
-        x = self.m(self.fc1(x))
+        x = self.m(self.fc3(x))
+        x = self.m(self.fc4(x))
+        x = self.m(self.fc5(x))
         x = x.view(-1, self.size[0], self.size[1])  #Reconstruct matrix of original data dimenions
         return x
 
@@ -235,8 +236,8 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
     #Initialise c if necessary
-    if model.c == None:
-        model.c = init_c(model, train_loader, eps)
+    if model.encoder.c is None:
+        model.encoder.c = init_c(model, train_loader, eps)
 
     #Iterate epochs to train model
     model.train()
@@ -248,7 +249,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
         #if epoch in lr_milestones:
         #    print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
 
-        for index, (train_data, train_target) in enumerate(train_loader):
+        for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
 
@@ -261,23 +262,19 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
                 #Forward and backward pass
                 optimizer.zero_grad()
-                outputs = model(data)
+                outputs = model.encoder(data)
 
                 #Calculating loss function
-                Y = outputs - model.c
+                Y = outputs - model.encoder.c
                 dist = torch.sum(Y ** 2)
+                loss_d = 0
                 if reg != 0:  # If we want to diversify
-                    C = torch.matmul(Y, Y.T)  # Gram Matrix
+                    C = torch.matmul(Y.T, Y)  # Gram Matrix
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
-                else:
-                    loss_d = 0
-                if target == 0:
-                    losses = dist
-                else:
-                    losses = eta * ((dist + eps) ** target)
+                losses = dist if target == 0 else eta * ((dist + eps) ** target)
+
                 #Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
-
                 loss += losses
                 n_batches += 1
 
@@ -290,7 +287,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
             #print("Batch loss: " + str(loss))
 
-        print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss))
+        print(f"Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -327,29 +324,25 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         #    print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
         epoch_loss = 0.0
-        n_batches = 0
-        for index, (train_data, target) in enumerate(train_loader):
-            batch_loss = 0.0
-            for data in train_data:
-                data = data.float()
-                # Zero the network parameter gradients
+        for train_data, train_target in train_loader:
+            loss = 0.0
+            n_batches = 0
+            for index in range(len(train_loader)):
+                data = train_data[index]
+                target = train_target[index]
+
+                #Zero the network parameter gradients
                 optimizer.zero_grad()
-
-                # Update network parameters via backpropagation: forward + backward + optimize
-                rec = model(data).float()
-                rec_loss = criterion(rec, data) #Not so sure about this
-                loss = torch.mean(rec_loss.float())
-                #print(loss)
-                batch_loss += loss.item()
-
+                outputs = model(data)
+                loss_f = nn.MSELoss()
+                losses = loss_f(outputs, data)
+                loss += losses
+                n_batches += 1
+            loss = loss / n_batches
             loss.backward()
             optimizer.step()
-
             epoch_loss += loss.item()
-
-            #print("Batch loss: " + str(batch_loss))
-        print(epoch_loss)
-
+        print(f"Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -400,7 +393,6 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector is anomaly score
     return y
 
-
 def load_data(dir, margin, filename):
     """
         Loads data from CSV files
@@ -443,6 +435,9 @@ def load_data(dir, margin, filename):
         """These are wrong. Change to follow equation."""
         labels[-1*margin::] = -1    #Unhealthy labels
         labels[0:margin] = 1        #Healthy labels
+
+        labels[labels == 1][:5] = 1  # First 5 healthy labels
+        labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
         print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
         print(labels)
