@@ -435,10 +435,15 @@ def load_data(dir, filename):
         #follow equation and flexible.
         for i in range(data.shape[0]):
             sample_length = data.shape[1]
+
+            segment_length = len(data[i])
+            x_values = np.arrange(1, segment_length +1)
+            health_indicators = (x_values ** 2 ) / (teol ** 2)
+
             if sample_length >= 5:
-                labels[i * sample_length:i * sample_length +5] = 1 #Healthy
+                labels[i * sample_length:i * sample_length +5] = health_indicators[:5] #Healthy
             if sample_length >= 3:
-                labels[i * sample_length + sample_length -3: i *sample_length + sample_length] = -1 #Unhealthy
+                labels[i * sample_length + sample_length -3: i *sample_length + sample_length] = health_indicators[-3:] #Unhealthy
         # labels[labels == 1][:5] = 1  # First 5 healthy labels
         # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
