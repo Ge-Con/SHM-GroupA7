@@ -426,7 +426,7 @@ def load_data(dir, margin, filename):
             if name == filename:    #If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
-                print(f"Found file: {name}, data shape: {read_data.shape}")
+                #print(f"Found file: {name}, data shape: {read_data.shape}")
 
                 #Set data and labels arrays to data from first sample
                 if first:
@@ -439,15 +439,13 @@ def load_data(dir, margin, filename):
                     data = np.concatenate((data, [read_data]))
                     labels = np.append(labels, 0)   #Default label is 0
     if labels is not None and len(labels) > 0:
-        labels[-1*margin::] = -1    #Unhealthy labels
-        labels[::margin] = 1        #Healthy labels
 
-        #Artificial labels
-        labels[labels == 1][:5] = 1      #First 5 healthy labels
-        labels[labels == -1][-3:] = -1 #Last 3 unhealthy labels
+        """These are wrong. Change to follow equation."""
+        labels[-1*margin::] = -1    #Unhealthy labels
+        labels[0:margin] = 1        #Healthy labels
 
         print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
-
+        print(labels)
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.int64)
     else:
         raise ValueError("No data loaded or empty dataset found.")
@@ -529,13 +527,12 @@ def DeepSAD_train_run(dir, freq, file_name):
     margin = 5  # Number of samples labelled on each end
 
     # Make string of filename for train/test data
-    file_name_with_freq = freq + "kHz_" + file_name + ".csv"
+    file_name_with_freq = freq + file_name + ".csv"
     print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
     train_data, _ = load_data(dir, margin, file_name_with_freq)
 
-    samples = ["PZT-CSV-FFT-HLB-L1-03", "PZT-CSV-FFT-HLB-L1-04", "PZT-CSV-FFT-HLB-L1-05", "PZT-CSV-FFT-HLB-L1-09", "PZT-CSV-FFT-HLB-L1-23"]
-
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     #Initialise results matrix
     results = np.empty((5, 30), dtype=object)
 
@@ -557,10 +554,13 @@ def DeepSAD_train_run(dir, freq, file_name):
 
             if temp_data is None:
                 print(f"No data loaded for sample as is None for {sample}")
-            elif temp_data ==0:
-                print(f"No data loaded for sample as is 0 for {sample}")
             else:
-                print(f"unknown for {sample}")
+                #print(temp_data)
+                pass
+            #elif temp_data ==0:
+            #    print(f"No data loaded for sample as is 0 for {sample}")
+            #else:
+            #    print(f"unknown for {sample}")
 
 
             #Create new arrays for training data and targets
