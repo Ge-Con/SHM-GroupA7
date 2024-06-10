@@ -432,9 +432,15 @@ def load_data(dir, filename):
                     labels = np.append(labels, 0)   #Default label is 0
     if labels is not None and len(labels) > 0:
 
-        """These are wrong. Change to follow equation."""
-        labels[labels == 1][:5] = 1  # First 5 healthy labels
-        labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
+        #follow equation and flexible.
+        for i in range(data.shape[0]):
+            sample_length = data.shape[1]
+            if sample_length >= 5:
+                labels[i * sample_length:i * sample_length +5] = 1 #Healthy
+            if sample_length >= 3:
+                labels[i * sample_length + sample_length -3: i *sample_length + sample_length] = -1 #Unhealthy
+        # labels[labels == 1][:5] = 1  # First 5 healthy labels
+        # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
         print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
         print(labels)
