@@ -455,7 +455,6 @@ def print_progress(res):
 
 #Define this space with the parameters to optimise, type + range
 space = [
-        Integer(10, 100, name='hidden_1'),
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
         Integer(500, 10000, name='epochs')
@@ -464,16 +463,9 @@ space = [
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
 #They Train VAE with the current parameters on the HI the code returns
 @use_named_args(space)
-def objective(train_data, semi_targets, **params):
-    print(params)
+def objective(train_data, semi_targets, batch_size, learning_rate, epochs):
 
-    hidden_1 = params['hidden_1']
-    batch_size = params['batch_size']
-    learning_rate = params['learning_rate']
-    epochs = params['epochs']
-
-    size = [hidden_1, 16]
-    model = NeuralNet(size)
+    model = NeuralNet([train_data.shape[1], train_data.shape[2]])
 
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -489,7 +481,13 @@ def objective(train_data, semi_targets, **params):
 def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=42):
     print("Shape of train_data in hyperparameter optimization:", train_data.shape)
     print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
-    res_gp = gp_minimize(lambda params: objective(train_data, semi_targets, **params), space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
+
+    def owp(params):
+        params_dict = {k.name: v for k, v in zip(space, params)}
+        print(params_dict)
+        return objective(train_data, semi_targets, **params_dict)
+
+    res_gp = gp_minimize(owp, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = res_gp.x
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
