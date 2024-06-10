@@ -393,7 +393,7 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector is anomaly score
     return y
 
-def load_data(dir, margin, filename):
+def load_data(dir, filename):
     """
         Loads data from CSV files
 
@@ -433,9 +433,6 @@ def load_data(dir, margin, filename):
     if labels is not None and len(labels) > 0:
 
         """These are wrong. Change to follow equation."""
-        labels[-1*margin::] = -1    #Unhealthy labels
-        labels[0:margin] = 1        #Healthy labels
-
         labels[labels == 1][:5] = 1  # First 5 healthy labels
         labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
@@ -522,10 +519,8 @@ def DeepSAD_train_run(dir, freq, file_name):
     margin = 5  # Number of samples labelled on each end
 
     # Make string of filename for train/test data
-    file_name_with_freq = freq + file_name + ".csv"
+    file_name_with_freq = freq + "kHz_" + file_name + ".csv"
     print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
-
-    train_data, _ = load_data(dir, margin, file_name_with_freq)
 
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     #Initialise results matrix
@@ -545,18 +540,7 @@ def DeepSAD_train_run(dir, freq, file_name):
             sample = temp_samples[count]
 
             #Load training sample
-            temp_data, temp_targets = load_data(os.path.join(dir, sample), margin, file_name_with_freq)
-
-            if temp_data is None:
-                print(f"No data loaded for sample as is None for {sample}")
-            else:
-                #print(temp_data)
-                pass
-            #elif temp_data ==0:
-            #    print(f"No data loaded for sample as is 0 for {sample}")
-            #else:
-            #    print(f"unknown for {sample}")
-
+            temp_data, temp_targets = load_data(os.path.join(dir, sample), file_name_with_freq)
 
             #Create new arrays for training data and targets
             if first:
@@ -568,36 +552,37 @@ def DeepSAD_train_run(dir, freq, file_name):
             else:
                 arr_data = np.concatenate((arr_data, temp_data))
                 arr_targets = np.concatenate((arr_targets, temp_targets))
-        if not first:
-            #Convert to pytorch tensors
-            train_data = arr_data
-            semi_targets = torch.tensor(arr_targets)
 
-            #Create list of data dimensions to set number of input nodes in neural network
-            size = [train_data.shape[1], train_data.shape[2]]
+        #Convert to pytorch tensors
+        train_data = torch.tensor(arr_data)
+        semi_targets = torch.tensor(arr_targets)
 
-            #Convert to dataset and create loader
-            train_dataset = TensorDataset(train_data, semi_targets)
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        #Create list of data dimensions to set number of input nodes in neural network
+        size = [train_data.shape[1], train_data.shape[2]]
+        print(train_data.shape)
+        print(semi_targets.shape)
+        #Convert to dataset and create loader
+        train_dataset = TensorDataset(train_data, semi_targets)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-            # Hyperparameter opt.
-            optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=20)
+        # Hyperparameter opt.
+        optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=20)
 
-            #Create, pretrain and train a model
-            model = NeuralNet(size)
-            model = pretrain(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30], gamma=0.1)
-            model = train(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
+        #Create, pretrain and train a model
+        model = NeuralNet(size)
+        model = pretrain(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30], gamma=0.1)
+        model = train(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
-            #Load test sample data (targets not used)
-            test_data, temp_targets = load_data(os.path.join(dir, test_sample), margin, file_name_with_freq)
+        #Load test sample data (targets not used)
+        test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
 
-            #Calculate HI at each state
-            current_result = []
-            for state in range(test_data.shape[0]):
-                data = test_data[state]
-                current_result.append(embed(torch.from_numpy(data), model).item())
+        #Calculate HI at each state
+        current_result = []
+        for state in range(test_data.shape[0]):
+            data = test_data[state]
+            current_result.append(embed(torch.from_numpy(data), model).item())
 
-            #Truncate (change to interpolation)
-            results[sample_count] = np.array(current_result[-30::])
+        #Truncate (change to interpolation)
+        results[sample_count] = np.array(current_result[-30::])
 
     return results
