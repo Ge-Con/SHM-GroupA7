@@ -179,10 +179,12 @@ def AverageFeatures(rootdir):
     samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
     print("Combining Features:...")
     for sample in samples:
-        dir = rootdir + "\\" + sample
+        dir = os.path.join(rootdir, sample)
         for root, dirs, files in os.walk(dir):  # For each folder location (state)
             all_feat = np.empty((6, 5), dtype=object)
+            all_feat[:]
             flag = False
+
             for name in files:  # For each file
                 for freq in frequencies:  # For each frequency
                     # Read and add to correct position in all_feat array
@@ -201,34 +203,41 @@ def AverageFeatures(rootdir):
                             all_feat[frequencies.index(freq)][0] = data
 
             if flag:  # If at least one file was the correct type
-                for freq in ["050", "100", "125", "150", "200", "250"]:
-                    combinedfeatures = np.concatenate(
-                        [all_feat[frequencies.index(freq), i] for i in range(all_feat[0].shape[0])], axis=0)
-                    root2 = root
-                    root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
-                    if not os.path.exists(root_new):
-                        os.makedirs(root_new)
-                    csv_file_path1 = os.path.join(root_new, freq + "kHz_AF.csv")  # AF = ALL FEATURES
-                    csv_file_path = os.path.join(root, freq + "kHz_AF.csv")
-                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
-                    pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
+                for freq in frequencies:
+                    feature_list = [all_feat[frequencies.index(freq), i] for i in range(all_feat.shape[1]) if
+                                    all_feat[frequencies.index(freq), i] is not None]
+                    if feature_list:
+                        combinedfeatures = np.concatenate(feature_list, axis=0)
+                        root2 = root
+                        root_new = root2.replace("PZT", "PZT-ONLY-FEATURES")
+                        if not os.path.exists(root_new):
+                            os.makedirs(root_new)
+                        csv_file_path1 = os.path.join(root_new, freq + "kHz_AF.csv")  # AF = ALL FEATURES
+                        csv_file_path = os.path.join(root, freq + "kHz_AF.csv")
+                        pd.DataFrame(combinedfeatures).to_csv(csv_file_path1, index=False)
+                        pd.DataFrame(combinedfeatures).to_csv(csv_file_path, index=False)
         # Average features at each state
         print("Averaging features...")
         meanfeatures = np.empty((6), dtype=object)
+        meanfeatures[:] = None
+
         for root, dirs, files in os.walk(dir):
             for name in files:
                 if name.endswith("kHz_AF.csv"):
                     data = np.array(pd.read_csv(os.path.join(root, name)))
-                    data = np.mean(data, axis=1)
-                    if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":
-                        meanfeatures[frequencies.index(name[:3])] = np.array([data])
+                    data_mean = np.mean(data, axis=0)  # Corrected to mean over the correct axis
+                    freq_index = frequencies.index(name[:3])
+                    if meanfeatures[freq_index] is None:
+                        meanfeatures[freq_index] = np.array([data_mean])
                     else:
-                        print(name[:3])
-                        print(np.array([data]))
-                        meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
-        for freq in frequencies:    #For each feature
-            csv_file_path = os.path.join(dir, freq + "kHz_MF.csv") # MF = Mean Features
-            pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)  #Read mean features from file
+                        meanfeatures[freq_index] = np.concatenate((meanfeatures[freq_index], np.array([data_mean])),
+                                                                  axis=0)
+
+        for freq in frequencies:  # For each feature
+            freq_index = frequencies.index(freq)
+            if meanfeatures[freq_index] is not None:
+                csv_file_path = os.path.join(dir, freq + "kHz_MF.csv")  # MF = Mean Features
+                pd.DataFrame(meanfeatures[freq_index]).to_csv(csv_file_path, index=False)  # Read mean features from files
 
 
 def correlateSPFeatures(rootdir):
@@ -311,23 +320,37 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
         Args:
             dir (str): The directory path containing .csv files to process.
         Returns:
-            return_type: .csv
+            None. Saves .csv
         Example:
             savePCA('/path/to/directory')
         Notes:
             This function processes each campaign directory separately and saves the
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
-    output = []
-    folders = []
 
-    # Get the locations of train folders
-    for i in range(5):
-        folder_location = input(f"Enter the location of your 5 folders {i}: ")
-        folders.append(folder_location)
-    for i in range(5):
-        output.append(PCA.doPCA_multiple_Campaigns(folders[i%5],folders[(i+1)%5],folders[(i+2)%5],folders[(i+3)%5],folders[(i+4)%5]))
+    pcs_upto = 10
 
+    output = np.zeros((6, pcs_upto, 5, 30))
+    for pc in range(1, pcs_upto+1):
+        tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
+        for freq in range(6):
+            output[freq][pc-1] = tempout[freq]
+            #print(tempout)
+            #print(output[freq])
+    labels = []
+    for pc in range(1, pcs_upto+1):
+        if pc == 1:
+            add = "st"
+        elif pc == 2:
+            add = "nd"
+        elif pc == 3:
+            add = "rd"
+        else:
+            add = "th"
+        labels.append(str(pc) + add + " PC")
+    save_evaluation(np.array(output), "PCA", dir, labels)
+
+    """
     for k,folder in enumerate(folders):
         for i,freq in enumerate(["050", "100", "125", "150", "200", "250"]):
             root_new = folder.replace("PZT", "PZT-ONLY-FEATURES")
@@ -340,14 +363,14 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             plt.xlabel('Index')
             plt.ylabel('PCA Value')
             plt.title('PCA Values from CSV Files')
+    """
 
     #save_evaluation(switch_dimensions(output),"PCA", dir, ["kHz-PCA"])
-    switched_output = switch_dimensions(output) #features_preprocessed
+    #switched_output = switch_dimensions(output) #features_preprocessed
 
-    save_evaluation(switched_output, "PCA", dir, ["kHz_PCA"])
-
+"""
 def switch_dimensions(output):
-    """
+    ""
         Args:
             output (arr): PCA output of all campaigns
         Returns:
@@ -356,7 +379,7 @@ def switch_dimensions(output):
             switched_output = switch_dimensions(output)
         Notes:
             This function transposes the pca output for each campaign
-    """
+    ""
     # Get the dimensions of the original output list
     num_folders = len(output)
     num_freqs = len(output[0])
@@ -370,7 +393,7 @@ def switch_dimensions(output):
             switched_output[freq_index][0][folder_index] = output[folder_index][freq_index][-30:]
 
     return switched_output
-
+"""
 
 def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
     """
@@ -398,15 +421,15 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         print("Saving: " + frequencies[freq] + "kHz")
         # print(components)
         for feat in range(len(features[0])):
-            if feat % 50 == 0:
+            if feat % 50 == 0 and feat != 0:
                 print(feat)
             # print(features[freq][feat])
             features[freq][feat] = np.array(features[freq][feat])
             ftn, mo, tr, pr, error = fitness(features[freq][feat])
             criteria[0][freq][feat] = float(ftn)
             criteria[1][freq][feat] = float(mo)
-            criteria[2][freq][feat] = float(tr)
-            criteria[3][freq][feat] = float(pr)
+            criteria[2][freq][feat] = float(pr)
+            criteria[3][freq][feat] = float(tr)
             #Save graphs
             Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
         if featuresonly:
@@ -423,13 +446,13 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             avs[crit, 1] = np.std(criteria[crit], axis = 0)
         Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=label + "- Av")
         av_arr = np.vstack((avs[0, 0], avs[0, 1]))
-        pd.DataFrame(av_arr).to_csv(dir + "\\" + label + " Fit Av.csv", index=False)
+        pd.DataFrame(av_arr).to_csv(os.path.join(dir, label + " Fit AF.csv"), index=False)
 
     # Save all to files
-    pd.DataFrame(criteria[0]).to_csv(dir + "\\" + label + " Fit.csv", index=False)    #Feature against frequency
-    pd.DataFrame(criteria[1]).to_csv(dir + "\\" + label + " Mon.csv", index=False)
-    pd.DataFrame(criteria[2]).to_csv(dir + "\\" + label + " Tre.csv", index=False)
-    pd.DataFrame(criteria[3]).to_csv(dir + "\\" + label + " Pro.csv", index=False)
+    pd.DataFrame(criteria[0]).to_csv(os.path.join(dir, label + " Fit.csv"), index=False)    #Feature against frequency
+    pd.DataFrame(criteria[1]).to_csv(os.path.join(dir, label + " Mon.csv"), index=False)
+    pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + " Tre.csv"), index=False)
+    pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + " Pro.csv"), index=False)
 
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
@@ -459,12 +482,11 @@ def evaluate(dir):
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filenames = ["kHz_AF"]    #No need for .csv
-    HIs = np.empty((6, len(filenames)), dtype=object)
+    filename = "kHz_HLB_FT_Reduced"    #No need for .csv
+    HIs = np.empty((6), dtype=object)
     for freq in range(len(frequencies)):
-        for name in range(len(filenames)):
-            HIs[freq][name] = DeepSAD_train_run(dir, frequencies[freq], filenames[name])
-    save_evaluation(HIs, "DeepSAD", dir, filenames)
+        HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
+    save_evaluation(HIs, "DeepSAD", dir, filename)
 
 
 def main_menu():

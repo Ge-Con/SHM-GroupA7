@@ -8,8 +8,6 @@ import pandas as pd
 import os
 import copy
 
-#original without labels
-
 class NeuralNet(nn.Module):
     """
         Encoder network
@@ -590,7 +588,7 @@ def self_train(model, train_loader, n_iterations, healthy_range, unhealthy_range
         model, _ = train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps,
                          reg)
 
-        #Update labels
+        #Update labels.
         updated_labels = update_labels(model, train_loader, healthy_range, unhealthy_range)
 
         #Print the updated labels
