@@ -11,7 +11,7 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from skopt.callbacks import CheckpointSaver
 from skopt import load
-from interpolating import scale_exact
+from Interpolating import scale_exact
 
 global pass_train_data
 global pass_semi_targets
