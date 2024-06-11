@@ -138,7 +138,9 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
             else:
                 pca = onePC(matrices, component)
 
-            x = apply(read_matrices_from_folder(dir + "\\" + samples[testsample], filename, frequencies[freq]), pca, component)
+            x = []
+            for testsample2 in samples:
+                x.append(apply(read_matrices_from_folder(dir + "\\" + testsample2, filename, frequencies[freq]), pca, component))
             list.append(x)
         output.append(list)
 

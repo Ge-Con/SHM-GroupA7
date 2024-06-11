@@ -322,7 +322,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
     model.train()
     for epoch in range(n_epochs):
-        print("Epoch " + str(epoch))
+        #print("Epoch " + str(epoch))
         scheduler.step()
         #if epoch in lr_milestones:
         #    print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
@@ -597,16 +597,21 @@ def DeepSAD_train_run(dir, freq, file_name):
         model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
         model = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
+
+        #Test for all panels
         #Load test sample data (targets not used)
-        test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+        list = []
+        for test_sample in samples:
+            test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
 
-        #Calculate HI at each state
-        current_result = []
-        for state in range(test_data.shape[0]):
-            data = test_data[state]
-            current_result.append(embed(torch.from_numpy(data), model).item())
+            #Calculate HI at each state
+            current_result = []
+            for state in range(test_data.shape[0]):
+                data = test_data[state]
+                current_result.append(embed(data, model).item())
 
-        #Truncate (change to interpolation)
-        results[sample_count] = np.array(scale_exact(current_result))
+            #Truncate (change to interpolation)
+            list.append(scale_exact(np.array(current_result)))
+        results[sample_count] = np.array(list)
 
-    return results
+    return np.array(results)
