@@ -11,6 +11,7 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from skopt.callbacks import CheckpointSaver
 from skopt import load
+from interpolating import scale_exact
 
 global pass_train_data
 global pass_semi_targets
@@ -589,12 +590,12 @@ def DeepSAD_train_run(dir, freq, file_name):
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         # Hyperparameter opt.
-        optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=20)
+        optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=10)
 
         #Create, pretrain and train a model
         model = NeuralNet(size)
-        model = pretrain(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30], gamma=0.1)
-        model = train(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
+        model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
+        model = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
         #Load test sample data (targets not used)
         test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
@@ -606,6 +607,6 @@ def DeepSAD_train_run(dir, freq, file_name):
             current_result.append(embed(torch.from_numpy(data), model).item())
 
         #Truncate (change to interpolation)
-        results[sample_count] = np.array(current_result[-30::])
+        results[sample_count] = np.array(scale_exact(current_result))
 
     return results
