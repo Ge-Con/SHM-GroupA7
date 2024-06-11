@@ -12,6 +12,9 @@ from skopt.utils import use_named_args
 from skopt.callbacks import CheckpointSaver
 from skopt import load
 
+global pass_train_data
+global pass_semi_targets
+
 class NeuralNet(nn.Module):
     """
         Encoder network
@@ -59,8 +62,7 @@ class NeuralNet(nn.Module):
             Returns:
             - x (2D numpy array): Network output
         """
-
-        x = torch.flatten(x, start_dim=1)    #Flatten matrix input
+        x = torch.flatten(x, start_dim=0)    #Flatten matrix input
         x = x.to(next(self.parameters()).dtype) #Ensure tensor is of correct datatype
         x = self.m(self.fc1(x)) #Forward pass through layers
         x = self.m(self.fc2(x))
@@ -68,7 +70,7 @@ class NeuralNet(nn.Module):
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
         # Reshape output to same as c
-        encoded = x.view(-1, 4, 4)
+        encoded = x.view(4, 4)
         return encoded
 
 class NeuralNet_Decoder(nn.Module):
@@ -191,17 +193,18 @@ def init_c(model, train_loader, eps=0.1):
     #Forward pass
     model.eval()
     with torch.no_grad():
-        #Load data
-        train_data, train_targets = enumerate(train_loader)
 
         #Calculate network outputs for all data
-        for data in train_data:
-            outputs = model(data)
-            n_samples += outputs.shape[0]
+        for train_data, train_target in train_loader:
+            for index in range(len(train_data)):
+                data = train_data[index]
+                target = train_target[index]
 
-            #Average outputs
-            c += torch.sum(outputs, dim=0)
-    c /= n_samples
+                outputs = model(data)
+                n_samples += 1
+
+                c += outputs
+    c /= n_samples  #Average outputs
 
     # If c_i is too close to 0, set to +-eps
     c[(abs(c) < eps) & (c < 0)] = -eps
@@ -236,8 +239,8 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
     #Initialise c if necessary
-    if model.encoder.c is None:
-        model.encoder.c = init_c(model, train_loader, eps)
+    if model.c is None:
+        model.c = init_c(model, train_loader, eps)
 
     #Iterate epochs to train model
     model.train()
@@ -253,8 +256,8 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
             loss = 0.0
             n_batches = 0
 
-            print("Shape of train_data:", train_data.shape)
-            print("Shape of train_target:", train_target.shape)
+            #print("Shape of train_data:", train_data.shape)
+            #print("Shape of train_target:", train_target.shape)
 
             for index in range(len(train_data)):
                 data = train_data[index]
@@ -262,10 +265,10 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
                 #Forward and backward pass
                 optimizer.zero_grad()
-                outputs = model.encoder(data)
+                outputs = model(data)
 
                 #Calculating loss function
-                Y = outputs - model.encoder.c
+                Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
                 loss_d = 0
                 if reg != 0:  # If we want to diversify
@@ -327,7 +330,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
-            for index in range(len(train_loader)):
+            for index in range(len(train_data)):
                 data = train_data[index]
                 target = train_target[index]
 
@@ -423,7 +426,7 @@ def load_data(dir, filename):
                 #Set data and labels arrays to data from first sample
                 if first:
                     data = np.array([read_data])
-                    labels = np.array([1])
+                    labels = np.array([1.0])
                     first = False
 
                 #Concatenate additional samples
@@ -432,42 +435,51 @@ def load_data(dir, filename):
                     labels = np.append(labels, 0)   #Default label is 0
     if labels is not None and len(labels) > 0:
 
-        """These are wrong. Change to follow equation."""
-        labels[labels == 1][:5] = 1  # First 5 healthy labels
-        labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
+        #follow equation and flexible.
+        teol = data.shape[0]
+
+        x_values = np.arange(1, teol +1)
+        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    #Scaled from -1 to 1
+
+        for i in range(5):
+            labels[i] = health_indicators[-i-1] #Healthy
+
+        for i in range(3):
+            labels[-i-1] = health_indicators[i] #Unhealthy
+        # labels[labels == 1][:5] = 1  # First 5 healthy labels
+        # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
         print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
-        print(labels)
-        return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.int64)
+        #print(labels)
+        return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
         raise ValueError("No data loaded or empty dataset found.")
 
 #Hyperparameter Bayesian optimization
 def print_progress(res):
     n_calls = len(res.x_iters)
+    n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
 #Define this space with the parameters to optimise, type + range
 space = [
-        Integer(10, 100, name='hidden_1'),
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
-        Integer(500, 10000, name='epochs')
+        Integer(10, 20, name='epochs')
     ]
 
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
 #They Train VAE with the current parameters on the HI the code returns
 @use_named_args(space)
-def objective(train_data, semi_targets, **params):
-    print(params)
 
-    hidden_1 = params['hidden_1']
-    batch_size = params['batch_size']
-    learning_rate = params['learning_rate']
-    epochs = params['epochs']
+def objective(batch_size, learning_rate, epochs):
 
-    size = [hidden_1, 16]
-    model = NeuralNet(size)
+    train_data = pass_train_data
+    semi_targets = pass_semi_targets
+
+    model = NeuralNet([train_data.shape[1], train_data.shape[2]])
+
+    batch_size = int(batch_size)
 
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -475,15 +487,26 @@ def objective(train_data, semi_targets, **params):
     pretrain(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1)
     trained_model = train(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1, eta=1.0, eps=1e-6)
 
-    loss = embed(dataset, trained_model)
+    loss = 0
+    for data in train_data:
+        loss += embed(data, trained_model)
 
     return loss.item()
 
+#print(objective([1, 2]))
+
 #Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
 def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=42):
-    print("Shape of train_data in hyperparameter optimization:", train_data.shape)
-    print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
-    res_gp = gp_minimize(lambda params: objective(train_data, semi_targets, **params), space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
+    #print("Shape of train_data in hyperparameter optimization:", train_data.shape)
+    #print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
+
+    global pass_train_data
+    global pass_semi_targets
+
+    pass_train_data = train_data
+    pass_semi_targets = semi_targets
+
+    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = res_gp.x
     print("Best parameters found: ", res_gp.x)
     return opt_parameters

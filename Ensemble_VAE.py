@@ -274,6 +274,11 @@ def objective(**params):
     ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
     return error
 
+def objective_ensemble(**params):
+    print(params)
+    ftn, monotonicity, trendability, prognosability, error = fitness(ensemble(**params))
+    return error
+
 def hyperparameter_optimisation(n_calls, random_state=42):
     res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
                          callback=[print_progress])
@@ -281,6 +286,33 @@ def hyperparameter_optimisation(n_calls, random_state=42):
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
 
+def ensemble(w0, w1, w2, w3, w4, w5):
+    global models
+    exists = False
+    for i in range(len(models)):
+        if not exists:
+            all_his = models[i][0].run(models[i][2], feed_dict={models[i][1]: data}).transpose()
+            exists = True
+        else:
+            all_his = np.vstack((all_his, models[i][0].run(models[i][2], feed_dict={models[i][1]:data}).transpose()))
+    avg_z = np.average(all_his, axis=0, weights= [w0, w1, w2, w3, w4, w5])
+    return avg_z
+
+w_arr = [
+        Real(0.0001, 1, name='w0'),
+        Real(0.0001, 1, name='w1'),
+        Real(0.0001, 1, name='w2'),
+        Real(0.0001, 1, name='w3'),
+        Real(0.0001, 1, name="w4"),
+        Real(0.0001, 1, name='w5')]
+@use_named_args(w_arr)
+
+def optim2(n_calls):
+    res_gp = gp_minimize(objective_ensemble, w_arr, n_calls=n_calls, random_state=42,
+                         callback=[print_progress])
+    opt_parameters = res_gp.x
+    print("Best parameters found: ", res_gp.x)
+    return opt_parameters
 # You can create additional datasets if needed
 # Example: Using the first few columns as one dataset and the rest as another
 #data1 = data[:, :1]  # First column as one dataset
@@ -291,37 +323,31 @@ freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
 counter = 0
 for panel in panels:
+    models = []
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
             filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
             filenames.append(filename)
-        resdict[f"{panel}{freq}"] = []
-        for j in range(1):
-            counter += 1
-            data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
-            test = pd.read_csv(test_filename, header=None).values.transpose()
-            data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
-            test = np.delete(test, -1, axis=1)
-            scaler = StandardScaler()
-            scaler.fit(data)
-            data = scaler.transform(data)
-            test = scaler.transform(test)
-            pca = PCA(n_components=30)
-            pca.fit(data)
-            data = pca.transform(data)
-            test = pca.transform(test)
-            # Set hyperparameters and architecture details
-            hyperparameters = hyperparameter_optimisation(n_calls=10)
-            store_hyperparameters(hyperparameters, panel, freq)
-            health_indicators = train_vae(hyperparameters[0], hyperparameters[1],
-                                          hyperparameters[2], hyperparameters[3])
-            hi_train = fitness(health_indicators[0])
-            print(hi_train)
-            hi_test = test_fitness(health_indicators[2], health_indicators[1])
-            resdict[f"{panel}{freq}"].append([hi_train, hi_test])
-            print(counter)
+        data, flags = mergedata(filenames)
+        test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+        test = pd.read_csv(test_filename, header=None).values.transpose()
+        data.drop(data.columns[len(data.columns) - 1], axis=1, inplace=True)
+        test = np.delete(test, -1, axis=1)
+        scaler = StandardScaler()
+        scaler.fit(data)
+        data = scaler.transform(data)
+        test = scaler.transform(test)
+        pca = PCA(n_components=30)
+        pca.fit(data)
+        data = pca.transform(data)
+        test = pca.transform(test)
+        # Set hyperparameters and architecture details
+        model = train_vae_ensemble(10, 16, 0.01, 1000)
+        models.append(model)
+    print(ensemble(0.15, 0.15, 0.15, 0.15, 0.15, 0.15))
+    print(fitness(ensemble(0.15, 0.15, 0.15, 0.15, 0.15, 0.15)))
+
 with open("results.csv", "w", newline="") as f:
     w = csv.DictWriter(f, resdict.keys())
     w.writeheader()
