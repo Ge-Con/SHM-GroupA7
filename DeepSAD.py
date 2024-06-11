@@ -291,7 +291,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
             #print("Batch loss: " + str(loss))
 
-        print(f"Epoch {epoch}, loss = {epoch_loss}")
+        print(f"DS Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -346,7 +346,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
-        print(f"Epoch {epoch}, loss = {epoch_loss}")
+        print(f"AE Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -414,7 +414,7 @@ def load_data(dir, filename):
     labels = None
     first = True    #First sample flag
 
-    print(f"Loading data from directory: {dir}, with filename: {filename}")
+    #print(f"Loading data from directory: {dir}, with filename: {filename}")
 
     #Walk directory
     for root, dirs, files in os.walk(dir):
@@ -450,7 +450,7 @@ def load_data(dir, filename):
         # labels[labels == 1][:5] = 1  # First 5 healthy labels
         # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
-        print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
+        #print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
         #print(labels)
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
@@ -544,14 +544,14 @@ def DeepSAD_train_run(dir, freq, file_name):
 
     # Make string of filename for train/test data
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
-    print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
+    #print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     #Initialise results matrix
-    results = np.empty((5, 30), dtype=object)
-
+    results = np.empty((5, 5, 30))
     #Loop for each sample as test data
     for sample_count in range(len(samples)):
+        print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
         test_sample = samples[sample_count]
 
         #Make new list of samples excluding test data
@@ -583,14 +583,16 @@ def DeepSAD_train_run(dir, freq, file_name):
 
         #Create list of data dimensions to set number of input nodes in neural network
         size = [train_data.shape[1], train_data.shape[2]]
-        print(train_data.shape)
-        print(semi_targets.shape)
+        #print(train_data.shape)
+        #print(semi_targets.shape)
         #Convert to dataset and create loader
         train_dataset = TensorDataset(train_data, semi_targets)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         # Hyperparameter opt.
-        optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=10)
+        #optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=10)
+        #print(optimized_params)
+        optimized_params = [105, 0.001916004419675022, 2]
 
         #Create, pretrain and train a model
         model = NeuralNet(size)
@@ -614,4 +616,4 @@ def DeepSAD_train_run(dir, freq, file_name):
             list.append(scale_exact(np.array(current_result)))
         results[sample_count] = np.array(list)
 
-    return np.array(results)
+    return results

@@ -80,22 +80,22 @@ def apply(list, pca, component=0):
 
 
 def read_matrices_from_folder(dir, filename, freq):
-    matrix = np.zeros((139, 30))
-
+    matrix = []
+    rmatrix = []
+    state = 0
     for root, dirs, files in os.walk(dir):
         for name in files:
-
             if name == freq + "kHz_" + filename + ".csv":  # Assuming files are stored in numpy format
-
                 df = pd.read_csv(os.path.join(root, name))
                 tempmatrix = df.values  # Convert DataFrame to numpy array
-                # Interpolate
-                tempmatrix = tempmatrix.T
-                count = 0
-                for row in range(len(tempmatrix)):
-                    matrix[row] = scale_exact(tempmatrix[row])
-                    count += 1
-    return np.array(matrix)
+                # Flatten
+                tempmatrix = tempmatrix.flatten()
+                matrix.append(tempmatrix)
+                state += 1
+    matrix = np.array(matrix).T
+    for row in range(len(matrix)):
+        rmatrix.append(scale_exact(matrix[row]))
+    return np.array(rmatrix)
 
 def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
     # Use the read_matrices_from_folder function to get the matrices from a folder
@@ -115,18 +115,19 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
 
     output = []
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    samples = ["L1-03", "L1-04", "L1-05", "L1-09", "L1-23"]
-    filename = "MF"
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    filename = "FFT_FT_Reduced"
 
     if component == 0:
         print("PCA to 95% variance")
     else:
-        print("Component: " + str(component))
+        print("--- Component: " + str(component) + " ---")
 
     for freq in range(6):
-        print("Test sample: " + frequencies[freq], "kHz")
+        print(frequencies[freq], "kHz")
         list = []
         for testsample in range(5):
+            print("Test sample:", testsample+1)
             matrices = []
             for trainsample in range(5):
                 if trainsample != testsample:
@@ -142,6 +143,7 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
             for testsample2 in samples:
                 x.append(apply(read_matrices_from_folder(dir + "\\" + testsample2, filename, frequencies[freq]), pca, component))
             list.append(x)
+
         output.append(list)
 
     #Removing extra dimension
