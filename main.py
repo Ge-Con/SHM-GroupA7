@@ -413,9 +413,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
     criteria = np.empty((4, 6, len(features[0])))
     # Iterate through each frequency and calculate features
-    featuresonly = False
-    if files_used[0] == "":  # Using features as HIs
-        featuresonly = True
+    featuresonly = files_used[0] == ""
 
     for freq in range(6):
         print("Saving: " + frequencies[freq] + "kHz")
@@ -431,10 +429,10 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             criteria[2][freq][feat] = float(pr)
             criteria[3][freq][feat] = float(tr)
             #Save graphs
-            Graphs.HI_graph(features[freq][feat], dir=dir, name=label + "-" + frequencies[freq] + "-" + str(feat))
+            Graphs.HI_graph(features[freq][feat], dir=dir, name=f"{label}-{frequencies[freq]}-{feat}")
         if featuresonly:
             files_used = np.array([str(i) for i in range(len(features[0]))])
-        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=label + "-" + frequencies[freq])
+        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=f"{label}-{frequencies[freq]}")
     #Bar charts against frequency
     #for feat in range(len(features[0])):
     #    Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
@@ -444,7 +442,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         for crit in range(4):
             avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
             avs[crit, 1] = np.std(criteria[crit], axis = 0)
-        Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=label + "- Av")
+        Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=f"{label}-Av")
         av_arr = np.vstack((avs[0, 0], avs[0, 1]))
         pd.DataFrame(av_arr).to_csv(os.path.join(dir, label + " Fit AF.csv"), index=False)
 
@@ -482,11 +480,21 @@ def evaluate(dir):
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filename = "kHz_HLB_FT_Reduced"    #No need for .csv
-    HIs = np.empty((6), dtype=object)
+    filename_HLB = "HLB_FT_Reduced"    #No need for .csv
+    filename_FFT = "FFT_FT_Reduced"
+
+    HIs_HLB = np.empty((6), dtype=object)
+    HIs_FFT = np.empty((6), dtype=object)
+
     for freq in range(len(frequencies)):
-        HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
-    save_evaluation(HIs, "DeepSAD", dir, filename)
+        print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
+        HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
+
+        print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
+        HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
+
+    save_evaluation(HIs_HLB, "DeepSAD_HLB", dir, filename_HLB)
+    save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
 
 
 def main_menu():

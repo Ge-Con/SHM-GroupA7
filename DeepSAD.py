@@ -12,6 +12,9 @@ from skopt.utils import use_named_args
 from skopt.callbacks import CheckpointSaver
 from skopt import load
 
+global pass_train_data
+global pass_semi_targets
+
 class NeuralNet(nn.Module):
     """
         Encoder network
@@ -59,8 +62,7 @@ class NeuralNet(nn.Module):
             Returns:
             - x (2D numpy array): Network output
         """
-
-        x = torch.flatten(x)    #Flatten matrix input
+        x = torch.flatten(x, start_dim=0)    #Flatten matrix input
         x = x.to(next(self.parameters()).dtype) #Ensure tensor is of correct datatype
         x = self.m(self.fc1(x)) #Forward pass through layers
         x = self.m(self.fc2(x))
@@ -98,11 +100,12 @@ class NeuralNet_Decoder(nn.Module):
         self.size = size        #Set size to an attribute
 
         #Create network layers
-        self.fc1 = nn.Linear(1024, size[0]*size[1])
-        self.fc2 = nn.Linear(512, 1024)
+        self.fc1 = nn.Linear(16, 64)
+        self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 512)
-        self.fc4 = nn.Linear(64, 128)
-        self.fc5 = nn.Linear(16, 64)
+        self.fc4 = nn.Linear(512, 1024)
+        self.fc5 = nn.Linear(1024, size[0]*size[1])
+
         #Create activation function
         self.m = torch.nn.LeakyReLU(0.001)
 
@@ -118,11 +121,11 @@ class NeuralNet_Decoder(nn.Module):
         """
 
         x = torch.flatten(x)    #Flatten matrix input
-        x = self.m(self.fc5(x)) #Run through network layers
-        x = self.m(self.fc4(x))
-        x = self.m(self.fc3(x))
+        x = self.m(self.fc1(x)) #Run through network layers
         x = self.m(self.fc2(x))
-        x = self.m(self.fc1(x))
+        x = self.m(self.fc3(x))
+        x = self.m(self.fc4(x))
+        x = self.m(self.fc5(x))
         x = x.view(-1, self.size[0], self.size[1])  #Reconstruct matrix of original data dimenions
         return x
 
@@ -190,17 +193,18 @@ def init_c(model, train_loader, eps=0.1):
     #Forward pass
     model.eval()
     with torch.no_grad():
-        #Load data
-        train_data, train_targets = enumerate(train_loader)
 
         #Calculate network outputs for all data
-        for data in train_data:
-            outputs = model(data)
-            n_samples += outputs.shape[0]
+        for train_data, train_target in train_loader:
+            for index in range(len(train_data)):
+                data = train_data[index]
+                target = train_target[index]
 
-            #Average outputs
-            c += torch.sum(outputs, dim=0)
-    c /= n_samples
+                outputs = model(data)
+                n_samples += 1
+
+                c += outputs
+    c /= n_samples  #Average outputs
 
     # If c_i is too close to 0, set to +-eps
     c[(abs(c) < eps) & (c < 0)] = -eps
@@ -235,7 +239,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
     #Initialise c if necessary
-    if model.c == None:
+    if model.c is None:
         model.c = init_c(model, train_loader, eps)
 
     #Iterate epochs to train model
@@ -248,12 +252,12 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
         #if epoch in lr_milestones:
         #    print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
 
-        for index, (train_data, train_target) in enumerate(train_loader):
+        for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
 
-            print("Shape of train_data:", train_data.shape)
-            print("Shape of train_target:", train_target.shape)
+            #print("Shape of train_data:", train_data.shape)
+            #print("Shape of train_target:", train_target.shape)
 
             for index in range(len(train_data)):
                 data = train_data[index]
@@ -266,18 +270,14 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 #Calculating loss function
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
+                loss_d = 0
                 if reg != 0:  # If we want to diversify
-                    C = torch.matmul(Y, Y.T)  # Gram Matrix
+                    C = torch.matmul(Y.T, Y)  # Gram Matrix
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
-                else:
-                    loss_d = 0
-                if target == 0:
-                    losses = dist
-                else:
-                    losses = eta * ((dist + eps) ** target)
+                losses = dist if target == 0 else eta * ((dist + eps) ** target)
+
                 #Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
-
                 loss += losses
                 n_batches += 1
 
@@ -290,7 +290,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
             #print("Batch loss: " + str(loss))
 
-        print("Epoch " + str(epoch) + ", loss = " + str(epoch_loss))
+        print(f"Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -327,29 +327,25 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         #    print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
         epoch_loss = 0.0
-        n_batches = 0
-        for index, (train_data, target) in enumerate(train_loader):
-            batch_loss = 0.0
-            for data in train_data:
-                data = data.float()
-                # Zero the network parameter gradients
+        for train_data, train_target in train_loader:
+            loss = 0.0
+            n_batches = 0
+            for index in range(len(train_data)):
+                data = train_data[index]
+                target = train_target[index]
+
+                #Zero the network parameter gradients
                 optimizer.zero_grad()
-
-                # Update network parameters via backpropagation: forward + backward + optimize
-                rec = model(data).float()
-                rec_loss = criterion(rec, data) #Not so sure about this
-                loss = torch.mean(rec_loss.float())
-                #print(loss)
-                batch_loss += loss.item()
-
+                outputs = model(data)
+                loss_f = nn.MSELoss()
+                losses = loss_f(outputs, data)
+                loss += losses
+                n_batches += 1
+            loss = loss / n_batches
             loss.backward()
             optimizer.step()
-
             epoch_loss += loss.item()
-
-            #print("Batch loss: " + str(batch_loss))
-        print(epoch_loss)
-
+        print(f"Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -400,8 +396,7 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   #Magnitude of the vector is anomaly score
     return y
 
-
-def load_data(dir, margin, filename):
+def load_data(dir, filename):
     """
         Loads data from CSV files
 
@@ -426,12 +421,12 @@ def load_data(dir, margin, filename):
             if name == filename:    #If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
-                print(f"Found file: {name}, data shape: {read_data.shape}")
+                #print(f"Found file: {name}, data shape: {read_data.shape}")
 
                 #Set data and labels arrays to data from first sample
                 if first:
                     data = np.array([read_data])
-                    labels = np.array([1])
+                    labels = np.array([1.0])
                     first = False
 
                 #Concatenate additional samples
@@ -439,45 +434,52 @@ def load_data(dir, margin, filename):
                     data = np.concatenate((data, [read_data]))
                     labels = np.append(labels, 0)   #Default label is 0
     if labels is not None and len(labels) > 0:
-        labels[-1*margin::] = -1    #Unhealthy labels
-        labels[::margin] = 1        #Healthy labels
 
-        #Artificial labels
-        labels[labels == 1][:5] = 1      #First 5 healthy labels
-        labels[labels == -1][-3:] = -1 #Last 3 unhealthy labels
+        #follow equation and flexible.
+        teol = data.shape[0]
+
+        x_values = np.arange(1, teol +1)
+        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    #Scaled from -1 to 1
+
+        for i in range(5):
+            labels[i] = health_indicators[-i-1] #Healthy
+
+        for i in range(3):
+            labels[-i-1] = health_indicators[i] #Unhealthy
+        # labels[labels == 1][:5] = 1  # First 5 healthy labels
+        # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
         print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
-
-        return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.int64)
+        #print(labels)
+        return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
         raise ValueError("No data loaded or empty dataset found.")
 
 #Hyperparameter Bayesian optimization
 def print_progress(res):
     n_calls = len(res.x_iters)
+    n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
 #Define this space with the parameters to optimise, type + range
 space = [
-        Integer(10, 100, name='hidden_1'),
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
-        Integer(500, 10000, name='epochs')
+        Integer(10, 20, name='epochs')
     ]
 
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
 #They Train VAE with the current parameters on the HI the code returns
 @use_named_args(space)
-def objective(train_data, semi_targets, **params):
-    print(params)
 
-    hidden_1 = params['hidden_1']
-    batch_size = params['batch_size']
-    learning_rate = params['learning_rate']
-    epochs = params['epochs']
+def objective(batch_size, learning_rate, epochs):
 
-    size = [hidden_1, 16]
-    model = NeuralNet(size)
+    train_data = pass_train_data
+    semi_targets = pass_semi_targets
+
+    model = NeuralNet([train_data.shape[1], train_data.shape[2]])
+
+    batch_size = int(batch_size)
 
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -485,15 +487,26 @@ def objective(train_data, semi_targets, **params):
     pretrain(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1)
     trained_model = train(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1, eta=1.0, eps=1e-6)
 
-    loss = embed(dataset, trained_model)
+    loss = 0
+    for data in train_data:
+        loss += embed(data, trained_model)
 
     return loss.item()
 
+#print(objective([1, 2]))
+
 #Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
 def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=42):
-    print("Shape of train_data in hyperparameter optimization:", train_data.shape)
-    print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
-    res_gp = gp_minimize(lambda params: objective(train_data, semi_targets, **params), space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
+    #print("Shape of train_data in hyperparameter optimization:", train_data.shape)
+    #print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
+
+    global pass_train_data
+    global pass_semi_targets
+
+    pass_train_data = train_data
+    pass_semi_targets = semi_targets
+
+    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = res_gp.x
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
@@ -532,10 +545,7 @@ def DeepSAD_train_run(dir, freq, file_name):
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
     print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
-    train_data, _ = load_data(dir, margin, file_name_with_freq)
-
-    samples = ["PZT-CSV-FFT-HLB-L1-03", "PZT-CSV-FFT-HLB-L1-04", "PZT-CSV-FFT-HLB-L1-05", "PZT-CSV-FFT-HLB-L1-09", "PZT-CSV-FFT-HLB-L1-23"]
-
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     #Initialise results matrix
     results = np.empty((5, 30), dtype=object)
 
@@ -553,15 +563,7 @@ def DeepSAD_train_run(dir, freq, file_name):
             sample = temp_samples[count]
 
             #Load training sample
-            temp_data, temp_targets = load_data(os.path.join(dir, sample), margin, file_name_with_freq)
-
-            if temp_data is None:
-                print(f"No data loaded for sample as is None for {sample}")
-            elif temp_data ==0:
-                print(f"No data loaded for sample as is 0 for {sample}")
-            else:
-                print(f"unknown for {sample}")
-
+            temp_data, temp_targets = load_data(os.path.join(dir, sample), file_name_with_freq)
 
             #Create new arrays for training data and targets
             if first:
@@ -573,36 +575,37 @@ def DeepSAD_train_run(dir, freq, file_name):
             else:
                 arr_data = np.concatenate((arr_data, temp_data))
                 arr_targets = np.concatenate((arr_targets, temp_targets))
-        if not first:
-            #Convert to pytorch tensors
-            train_data = arr_data
-            semi_targets = torch.tensor(arr_targets)
 
-            #Create list of data dimensions to set number of input nodes in neural network
-            size = [train_data.shape[1], train_data.shape[2]]
+        #Convert to pytorch tensors
+        train_data = torch.tensor(arr_data)
+        semi_targets = torch.tensor(arr_targets)
 
-            #Convert to dataset and create loader
-            train_dataset = TensorDataset(train_data, semi_targets)
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        #Create list of data dimensions to set number of input nodes in neural network
+        size = [train_data.shape[1], train_data.shape[2]]
+        print(train_data.shape)
+        print(semi_targets.shape)
+        #Convert to dataset and create loader
+        train_dataset = TensorDataset(train_data, semi_targets)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-            # Hyperparameter opt.
-            optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=20)
+        # Hyperparameter opt.
+        optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=20)
 
-            #Create, pretrain and train a model
-            model = NeuralNet(size)
-            model = pretrain(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30], gamma=0.1)
-            model = train(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
+        #Create, pretrain and train a model
+        model = NeuralNet(size)
+        model = pretrain(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30], gamma=0.1)
+        model = train(model, train_loader, optimized_params[2], weight_decay=1e-5, n_epochs=optimized_params[3], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
-            #Load test sample data (targets not used)
-            test_data, temp_targets = load_data(os.path.join(dir, test_sample), margin, file_name_with_freq)
+        #Load test sample data (targets not used)
+        test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
 
-            #Calculate HI at each state
-            current_result = []
-            for state in range(test_data.shape[0]):
-                data = test_data[state]
-                current_result.append(embed(torch.from_numpy(data), model).item())
+        #Calculate HI at each state
+        current_result = []
+        for state in range(test_data.shape[0]):
+            data = test_data[state]
+            current_result.append(embed(torch.from_numpy(data), model).item())
 
-            #Truncate (change to interpolation)
-            results[sample_count] = np.array(current_result[-30::])
+        #Truncate (change to interpolation)
+        results[sample_count] = np.array(current_result[-30::])
 
     return results
