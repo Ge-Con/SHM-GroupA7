@@ -174,7 +174,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
     z_arr = z_arr.transpose()
     HI_arr = []
     for j in tuple(x for x in panels if x != panel):
-        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv",
+        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_FFT_Features.csv",
                                  header=None).values.transpose()
         graph_data = np.delete(graph_data, -1, axis=1)
         graph_data = scaler.transform(graph_data)
@@ -203,19 +203,19 @@ panels = ("L103", "L105", "L109", "L104", "L123")
 freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
 counter = 0
-hyperparameters_df = pd.read_csv(dir_root + '/hyperparameters-opt-HLB.csv', index_col=0)
+hyperparameters_df = pd.read_csv(dir_root + '/hyperparameters-opt-FFT.csv', index_col=0)
 
 for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_FFT_Features.csv")
             filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(1):
             counter += 1
             data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_FFT_Features.csv")
             test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
@@ -239,6 +239,13 @@ for panel in panels:
             print("HI test", hi_test)
             resdict[f"{panel}{freq}"].append([hi_train, hi_test])
             print("Counter: ", counter)
+            for i, hi in enumerate(health_indicators[1]):
+                plt.plot(hi, label=f'HI_arr {i + 1}')
+            plt.xlabel('Timesteps')
+            plt.ylabel('Health Indicators')
+            plt.title('Health Indicators over Time')
+            plt.legend()
+            plt.show()
             params_test = (hi_test, m, t, p)
             params_hitrain = (hi_train)
             store_hyperparameters(params_test, params_hitrain, panel, freq)
