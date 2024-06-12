@@ -12,6 +12,7 @@ from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
+#from Data_concatenation import process_csv_files
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -426,11 +427,9 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         print(features.shape)
         for freq in range(6):
             print("Saving: " + frequencies[freq] + "kHz")
-            # print(components)
             for feat in range(len(features[0])):
                 if feat % 50 == 0 and feat != 0:
-                    print(feat)
-                # print(features[freq][feat])
+                    print(feat, " features")
 
                 features[freq][feat] = np.array(features[freq][feat])
                 ftn, mo, tr, pr, error = fitness(features[freq][feat])
@@ -467,7 +466,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
 
         return criteria
 
-def evaluate(dir):
+def retrieve_features(dir):
     #Apply prognostic criteria to PCA and extracted features
     frequencies = ["050", "100", "125", "150", "200", "250"]
     features = np.empty((6, 139), dtype=object)  #6 frequencies, 139 features, 5 samples with a list of values at each location
@@ -514,68 +513,63 @@ def saveDeepSAD(dir):
 
 def main_menu():
     print("Welcome! Please choose a signal processing method: ")
-    print("1. FFT")
-    print("2. EMD")
-    print("3. Hilbert")
-    print("4. STFT")
-    print("5. All of the above")
-    print("6. Extract all features (Requires 5)")
-    print("7. AverageFeatures (Requires 6)")
-    print("8. Apply PCA to all")
-    print("9. Evaluate feature HIs (Requires 7)")
-    print("10. Execute DeepSAD")
-    print("11. Export FFT and Hilbert only (on a separate directory)")
-    print("12. Extract reduced Features for FFT & Hilbert")
     print("0. Exit")
+    print("1. Extract PZTs")
+    print("")
+    print("From raw CSVs:")
+    print("2. Carry out SP transforms")
+    print("3. Extract and average all features")
+    print("4. Extract reduced features and export FFT and Hilbert only (on a separate directory)")
+    print("5. Evaluate all feature HIs (Requires MF.csv in directory)")
+    print("")
+    print("From FFT & Hilbert, raw & features:")
+    print("6. Execute and evaluate PCA")
+    print("7. Train VAE hyperparameters")
+    print("8. Execute and evaluate VAE")
+    print("9. Train DeepSAD hyperparameters")
+    print("10. Execute and evaluate DeepSAD")
 
-# Prompt the user to input the folder path
-extract = bool(int(input("Extract Matlab (0=No, 1=Yes): ")))
-if extract:
+def extract_matlab():
+    # Prompt the user to input the folder path
     folder_path = input("Enter the folder path of the Matlab files: ")
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
-    csv_dir = input("Enter the folder path of the CSV files: ")
-    #quit()
-    #csv_dir = folder_path.replace('PZT','PZT-CSV')
-else:
-    csv_dir = input("Enter the folder path of the CSV files: ")
+
+csv_dir = input("Enter the folder path of the CSV files: ")
 
 # Main program loop
 while True:
     main_menu()
     choice = input("Enter your choice: ")
 
-    if choice == '1':
-        SP.saveFFT(csv_dir)
-    elif choice == '2':
-        SP.saveEMD(csv_dir)
-    elif choice == '3':
-        SP.saveHilbert(csv_dir)
-    elif choice == '4':
-        SP.saveSTFT(csv_dir)
-    elif choice == '5':
-        SP.saveFFT(csv_dir)
-        SP.saveEMD(csv_dir)
-        SP.saveHilbert(csv_dir)
-        SP.saveSTFT(csv_dir)
-    elif choice == '6':
-        saveFeatures(csv_dir)
-    elif choice == '8':
-        savePCA(csv_dir)
-    elif choice == '7':
-        AverageFeatures(csv_dir)
-    elif choice == '9':
-        features = evaluate(csv_dir)
-        save_evaluation(features, "Features", csv_dir)
-    elif choice == '10':
-        saveDeepSAD(csv_dir)
-    elif choice == '11':
-        SP.saveFFTHLB(csv_dir)
-    elif choice == '12':
-        FFT_HLB_Reduced_Feat(csv_dir)
-    elif choice == '0':
+    if choice == '0':
         print("Exiting...")
         quit()
+    elif choice == '1':
+        extract_matlab()
+    elif choice == '2':
+        SP.saveFFT(csv_dir)
+        SP.saveEMD(csv_dir)
+        SP.saveHilbert(csv_dir)
+        SP.saveSTFT(csv_dir)
+    elif choice == '3':
+        saveFeatures(csv_dir)
+        AverageFeatures(csv_dir)
+    elif choice == '4':
+        FFT_HLB_Reduced_Feat(csv_dir)
+        SP.saveFFTHLB(csv_dir)
+    elif choice == '5':
+        features = retrieve_features(csv_dir)
+        save_evaluation(features, "Features", csv_dir)
+    elif choice == '6':
+        savePCA(csv_dir)
+    elif choice == '7':
+        pass
+    elif choice == '8':
+        pass
+    elif choice == '9':
+        pass
+    elif choice == '10':
+        saveDeepSAD(csv_dir)
     else:
-        print("Invalid choice. Please enter a number between 0 and 10.")
-
+        print("Invalid choice. Please select a valid option.")

@@ -292,7 +292,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
             #print("Batch loss: " + str(loss))
 
         print(f"DS Epoch {epoch}, loss = {epoch_loss}")
-    return model
+    return model, epoch_loss
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
     """
@@ -403,7 +403,6 @@ def load_data(dir, filename):
 
         Parameters:
         - dir (string): Root directory of train/test data
-        - margin (int): Number of data points at either end of lifespan to be labelled
         - filename (string): file name for train/test data
 
         Returns:
@@ -466,7 +465,7 @@ def print_progress(res):
 space = [
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
-        Integer(10, 20, name='epochs')
+        Integer(500, 1000, name='epochs'),
     ]
 
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
@@ -485,12 +484,8 @@ def objective(batch_size, learning_rate, epochs):
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    pretrain(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1)
-    trained_model = train(model, train_loader, learning_rate, weight_decay=1e-5, n_epochs=epochs, lr_milestones=[10, 20, 30], gamma=0.1, eta=1.0, eps=1e-6)
-
-    loss = 0
-    for data in train_data:
-        loss += embed(data, trained_model)
+    pretrain(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1)
+    trained_model, loss = train(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1, eta=1, eps=1e-6)
 
     return loss.item()
 
@@ -539,8 +534,6 @@ def DeepSAD_train_run(dir, freq, file_name):
     # eta = 3  # Weighting of labelled datapoints
     # eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
     # reg = 0.001  # Lambda - diversity weighting
-    batch_size = 10
-    margin = 5  # Number of samples labelled on each end
 
     # Make string of filename for train/test data
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
@@ -597,7 +590,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         #Create, pretrain and train a model
         model = NeuralNet(size)
         model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
-        model = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
+        model, loss = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
 
         #Test for all panels
