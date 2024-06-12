@@ -31,10 +31,6 @@ def mergedata(filenames):
     data = data.transpose()
     return data, flags
 
-panels = ("L103", "L105", "L109", "L104", "L123")
-freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
-resdict = {}
-
 def DCloss(feature, batch_size):
     s = 0
     for i in range(1, batch_size):
@@ -61,32 +57,13 @@ def find_largest_array_size(array_list):
 
     return max_size
 
-def store_hyperparameters(params_train, params_test, params_hi_train, panel, freq):
+def store_hyperparameters(params_test, params_hi_train, panel, freq):
     global dir_root
 
-    filename_opt = os.path.join(dir_root, "hyperparameters-opt.csv")
     filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
     filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
-    # Create an empty DataFrame with frequencies as the index if the file does not exist
-    if not os.path.exists(filename_opt):
-        df = pd.DataFrame(index=freqs)
-    else:
-        # Load the existing file if it exists
-        df = pd.read_csv(filename_opt, index_col=0)
-
-    # Ensure that the panel column exists
-    if panel not in df.columns:
-        df[panel] = None
-
-    # Update the DataFrame with the new parameters
-    df.loc[freq, panel] = str(params_train)
-
-    # Save the DataFrame back to the CSV
-    df.to_csv(filename_opt)
-
-    # Create an empty DataFrame with frequencies as the index if the file does not exist
     if not os.path.exists(filename_test):
         df = pd.DataFrame(index=freqs)
     else:
@@ -197,101 +174,71 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
     z_arr = z_arr.transpose()
     HI_arr = []
     for j in tuple(x for x in panels if x != panel):
-        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
+        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv",
+                                 header=None).values.transpose()
         graph_data = np.delete(graph_data, -1, axis=1)
         graph_data = scaler.transform(graph_data)
         graph_data = pca.transform(graph_data)
         y_pred = sess.run(z, feed_dict={x: graph_data})
         HI_arr.append(y_pred)
-    #scale all arrays to the same length
+    # scale all arrays to the same lenght
     for i in range(len(HI_arr)):
-        HI_arr[i] = resample_poly(HI_arr[i], find_largest_array_size(HI_arr), len(HI_arr[i]))
+        HI_arr[i] = HI_arr[i].transpose()
+    max = find_largest_array_size(HI_arr)
+    for i in range(len(HI_arr)):
+        if HI_arr[i].size < max:
+            arr_interp = interp.interp1d(np.arange(HI_arr[i].size), HI_arr[i])
+            arr_stretch = arr_interp(np.linspace(0, HI_arr[i].size - 1, max))
+            HI_arr[i] = arr_stretch
+    HI_arr = np.vstack(HI_arr)
+    if z_arr.size != HI_arr.shape[1]:
+        arr_interp = interp.interp1d(np.arange(z_arr.size), z_arr)
+        arr_stretch = arr_interp(np.linspace(0, z_arr.size - 1, HI_arr.shape[1]))
+        z_arr = arr_stretch
+    full = np.append(HI_arr, z_arr, axis=0)
+    sess.close()
+    return [full, HI_arr, z_arr]
 
-    scaler.fit(np.vstack([HI_arr, z_arr]))
-    z_arr = scaler.transform(z_arr)
-    HI_arr = scaler.transform(np.vstack(HI_arr))
-    fitness_train = fitness(HI_arr, data)
-    fitness_test = test_fitness(z_arr, test)
-    print("Results:")
-    print(f"Fitness train: {fitness_train}")
-    print(f"Fitness test: {fitness_test}")
-    return (hidden_1, batch_size, learning_rate, epochs), fitness_test[0]
+panels = ("L103", "L105", "L109", "L104", "L123")
+freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+resdict = {}
+counter = 0
+hyperparameters_df = pd.read_csv(dir_root + '/hyperparameters-opt-HLB.csv', index_col=0)
 
-def tune_vae(panel, freq):
-    filename = f"{dir_root}/concatenated_{freq}_{panel}_HLB_Features.csv"
-    global data
-    global valid
-    global test
-    global scaler
-    global pca
+for panel in panels:
+    for freq in freqs:
+        filenames = []
+        for i in tuple(x for x in panels if x != panel):
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
+            filenames.append(filename)
+        resdict[f"{panel}{freq}"] = []
+        for j in range(1):
+            counter += 1
+            data, flags = mergedata(filenames)
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
+            test = pd.read_csv(test_filename, header=None).values.transpose()
+            data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
+            test = np.delete(test, -1, axis=1)
+            scaler = StandardScaler()
+            scaler.fit(data)
+            data = scaler.transform(data)
+            test = scaler.transform(test)
+            pca = PCA(n_components=30)
+            pca.fit(data)
+            data = pca.transform(data)
+            test = pca.transform(test)
+            # Set hyperparameters and architecture details
+            hyperparameters_str = hyperparameters_df.loc[freq, panel]
+            hyperparameters = eval(hyperparameters_str)
 
-    if not os.path.exists(filename):
-        print(f"File {filename} does not exist.")
-        return
-
-    data = pd.read_csv(filename, header=None).values
-    data = np.delete(data, -1, axis=1)
-
-    # Normalize data
-    scaler = StandardScaler()
-    data = scaler.fit_transform(data)
-
-    # Reduce dimensions using PCA
-    pca = PCA(n_components=0.95)
-    data = pca.fit_transform(data)
-
-    valid = data[int(data.shape[0] * 0.7):int(data.shape[0] * 0.85)]
-    test = data[int(data.shape[0] * 0.85):]
-
-    params_list = []
-
-    # Hyperparameter tuning
-    best_fitness = float('-inf')
-    best_params = None
-
-    params_train = {
-        'hidden_1': [16, 32, 64],
-        'batch_size': [16, 32, 64],
-        'learning_rate': [0.001, 0.01, 0.1],
-        'epochs': [50, 100, 200]
-    }
-
-    # Define ranges for hyperparameters
-    for hidden_1 in params_train['hidden_1']:
-        for batch_size in params_train['batch_size']:
-            for learning_rate in params_train['learning_rate']:
-                for epochs in params_train['epochs']:
-                    try:
-                        params, fitness_value = train_vae(hidden_1, batch_size, learning_rate, epochs)
-                        if fitness_value > best_fitness:
-                            best_fitness = fitness_value
-                            best_params = params
-                    except Exception as e:
-                        print(f"Error during training with parameters {hidden_1}, {batch_size}, {learning_rate}, {epochs}: {e}")
-                        continue
-
-    print(f"Best parameters for {panel} at {freq}: {best_params} with fitness {best_fitness}")
-
-    params_list.append(best_params)
-    store_hyperparameters(best_params, params_list, [], panel, freq)
-
-def main():
-    hyperparameters_df = pd.read_csv('/mnt/data/hyperparameters-opt-FFT.csv')
-    for panel in panels:
-        for freq in freqs:
-            if not hyperparameters_df[(hyperparameters_df['Panel'] == panel) & (hyperparameters_df['Frequency'] == freq)].empty:
-                print(f"Processing Panel: {panel}, Frequency: {freq}")
-                params = hyperparameters_df[(hyperparameters_df['Panel'] == panel) & (hyperparameters_df['Frequency'] == freq)]
-                hidden_1 = params['hidden_1'].values[0]
-                batch_size = params['batch_size'].values[0]
-                learning_rate = params['learning_rate'].values[0]
-                epochs = params['epochs'].values[0]
-
-                try:
-                    train_vae(hidden_1, batch_size, learning_rate, epochs)
-                except Exception as e:
-                    print(f"Error during training with parameters {hidden_1}, {batch_size}, {learning_rate}, {epochs}: {e}")
-                    continue
-
-if __name__ == "__main__":
-    main()
+            health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                                          hyperparameters[0][2], hyperparameters[0][3])
+            hi_train = fitness(health_indicators[0])
+            print("HI train", hi_train)
+            hi_test, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
+            print("HI test", hi_test)
+            resdict[f"{panel}{freq}"].append([hi_train, hi_test])
+            print("Counter: ", counter)
+            params_test = (hi_test, m, t, p)
+            params_hitrain = (hi_train)
+            store_hyperparameters(params_test, params_hitrain, panel, freq)
