@@ -64,19 +64,20 @@ def find_largest_array_size(array_list):
     return max_size
 
 
-def store_hyperparameters(params_train, params_test, panel, freq):
+def store_hyperparameters(params_train, params_test, params_hi_train, panel, freq):
     global dir_root
 
-    filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
+    filename_opt = os.path.join(dir_root, "hyperparameters-opt.csv")
     filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
+    filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
     # Create an empty DataFrame with frequencies as the index if the file does not exist
-    if not os.path.exists(filename_train):
+    if not os.path.exists(filename_opt):
         df = pd.DataFrame(index=freqs)
     else:
         # Load the existing file if it exists
-        df = pd.read_csv(filename_train, index_col=0)
+        df = pd.read_csv(filename_opt, index_col=0)
 
     # Ensure that the panel column exists
     if panel not in df.columns:
@@ -86,7 +87,7 @@ def store_hyperparameters(params_train, params_test, panel, freq):
     df.loc[freq, panel] = str(params_train)
 
     # Save the DataFrame back to the CSV
-    df.to_csv(filename_train)
+    df.to_csv(filename_opt)
 
     # Create an empty DataFrame with frequencies as the index if the file does not exist
     if not os.path.exists(filename_test):
@@ -105,6 +106,21 @@ def store_hyperparameters(params_train, params_test, panel, freq):
     # Save the DataFrame back to the CSV
     df.to_csv(filename_test)
 
+    if not os.path.exists(filename_train):
+        df = pd.DataFrame(index=freqs)
+    else:
+        # Load the existing file if it exists
+        df = pd.read_csv(filename_train, index_col=0)
+
+    # Ensure that the panel column exists
+    if panel not in df.columns:
+        df[panel] = None
+
+    # Update the DataFrame with the new parameters
+    df.loc[freq, panel] = str(params_hi_train)
+
+    # Save the DataFrame back to the CSV
+    df.to_csv(filename_train)
 
 def train_vae_ensemble(hidden_1, batch_size, learning_rate, epochs):
     # Set hyperparameters and architecture details
@@ -268,7 +284,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
     z_arr = z_arr.transpose()
     HI_arr = []
     for j in tuple(x for x in panels if x != panel):
-        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + ".csv", header=None).values.transpose()
+        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
         graph_data = np.delete(graph_data, -1, axis=1)
         graph_data = scaler.transform(graph_data)
         graph_data = pca.transform(graph_data)
@@ -308,12 +324,13 @@ space = [
 def objective(**params):
     print(params)
     ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
+    print("Error: ", error)
     return error
 
 def hyperparameter_optimisation(n_calls, random_state=42):
     res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
                          callback=[print_progress])
-    opt_parameters = (res_gp.x + res_gp.fun)
+    opt_parameters = [res_gp.x, res_gp.fun]
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
 
@@ -330,13 +347,13 @@ for panel in panels:
     for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
-            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}.csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
             filenames.append(filename)
         resdict[f"{panel}{freq}"] = []
         for j in range(1):
             counter += 1
             data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}.csv")
+            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
             test = pd.read_csv(test_filename, header=None).values.transpose()
             data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
             test = np.delete(test, -1, axis=1)
@@ -349,17 +366,19 @@ for panel in panels:
             data = pca.transform(data)
             test = pca.transform(test)
             # Set hyperparameters and architecture details
-            hyperparameters = hyperparameter_optimisation(n_calls=10)
+            hyperparameters = hyperparameter_optimisation(n_calls=20)
 
-            health_indicators = train_vae(hyperparameters[0], hyperparameters[1],
-                                          hyperparameters[2], hyperparameters[3])
+            health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                                          hyperparameters[0][2], hyperparameters[0][3])
             hi_train = fitness(health_indicators[0])
-            print(hi_train)
+            print("HI train", hi_train)
             hi_test, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
+            print("HI test", hi_test)
             resdict[f"{panel}{freq}"].append([hi_train, hi_test])
-            print(counter)
-            params_test = (m, t, p)
-            store_hyperparameters(hyperparameters, params_test, panel, freq)
+            print("Counter: ", counter)
+            params_test = (hi_test, m, t, p)
+            params_hitrain = (hi_train)
+            store_hyperparameters(hyperparameters, params_test, params_hitrain, panel, freq)
 with open("results.csv", "w", newline="") as f:
     w = csv.DictWriter(f, resdict.keys())
     w.writeheader()
