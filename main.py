@@ -328,15 +328,14 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
 
-    pcs_upto = 10
+    pcs_upto = 2
 
-    output = np.zeros((6, pcs_upto, 5, 30))
+    output = np.zeros((6, pcs_upto, 5, 5, 30))
     for pc in range(1, pcs_upto+1):
         tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
         for freq in range(6):
             output[freq][pc-1] = tempout[freq]
             #print(tempout)
-            #print(output[freq])
     labels = []
     for pc in range(1, pcs_upto+1):
         if pc == 1:
@@ -348,6 +347,7 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
         else:
             add = "th"
         labels.append(str(pc) + add + " PC")
+    labels = ["1", "2", "3", "4", "5"]
     save_evaluation(np.array(output), "PCA", dir, labels)
 
     """
@@ -398,7 +398,7 @@ def switch_dimensions(output):
 def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x freq, features, then HIs along the states within each
     """
         Args:
-            features (arr): feature extraction output of all campaigns
+            features (arr): feature extraction output of all campaigns - 2D or 3D
             label (str) : name of the new folder
             dir (str) : directory of the original folder
             files_used (str)
@@ -409,48 +409,63 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         Notes:
             This function saves the pca output for each campaign
     """
-    frequencies = ["050", "100", "125", "150", "200", "250"]
-    # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
-    criteria = np.empty((4, 6, len(features[0])))
-    # Iterate through each frequency and calculate features
-    featuresonly = files_used[0] == ""
 
-    for freq in range(6):
-        print("Saving: " + frequencies[freq] + "kHz")
-        # print(components)
-        for feat in range(len(features[0])):
-            if feat % 50 == 0 and feat != 0:
-                print(feat)
-            # print(features[freq][feat])
-            features[freq][feat] = np.array(features[freq][feat])
-            ftn, mo, tr, pr, error = fitness(features[freq][feat])
-            criteria[0][freq][feat] = float(ftn)
-            criteria[1][freq][feat] = float(mo)
-            criteria[2][freq][feat] = float(pr)
-            criteria[3][freq][feat] = float(tr)
-            #Save graphs
-            Graphs.HI_graph(features[freq][feat], dir=dir, name=f"{label}-{frequencies[freq]}-{feat}")
+    if features.ndim > 4:
+        criteria = []
+        for i in range(features.shape[1]):
+            criteria.append(save_evaluation(features[:, i], label + "component" + str(i+1), dir, files_used))
+        #Graph here for ensemble learning
+    else:
+
+        frequencies = ["050", "100", "125", "150", "200", "250"]
+        # Initiliase arrays for feature extraction results, for fitness and the three criteria respectively
+        criteria = np.empty((4, 6, len(features[0])))
+        # Iterate through each frequency and calculate features
+        featuresonly = files_used[0] == ""
+
+        print(features.shape)
+        for freq in range(6):
+            print("Saving: " + frequencies[freq] + "kHz")
+            # print(components)
+            for feat in range(len(features[0])):
+                if feat % 50 == 0 and feat != 0:
+                    print(feat)
+                # print(features[freq][feat])
+
+                features[freq][feat] = np.array(features[freq][feat])
+                ftn, mo, tr, pr, error = fitness(features[freq][feat])
+                criteria[0][freq][feat] = float(ftn)
+                criteria[1][freq][feat] = float(mo)
+                criteria[2][freq][feat] = float(pr)
+                criteria[3][freq][feat] = float(tr)
+                #Save graphs
+                Graphs.HI_graph(features[freq][feat], dir=dir, name=f"{label}-{frequencies[freq]}-{feat}")
+            if featuresonly:
+                files_used = np.array([str(i) for i in range(len(features[0]))])
+            try:
+                Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=f"{label}-{frequencies[freq]}")
+            except ValueError:
+                print("ValueError, bar chart not generated")
+        #Bar charts against frequency
+        #for feat in range(len(features[0])):
+        #    Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
+
         if featuresonly:
-            files_used = np.array([str(i) for i in range(len(features[0]))])
-        Graphs.criteria_chart(files_used, criteria[1][freq], criteria[2][freq], criteria[3][freq], dir=dir, name=f"{label}-{frequencies[freq]}")
-    #Bar charts against frequency
-    #for feat in range(len(features[0])):
-    #    Graphs.criteria_chart(frequencies, criteria[1][:, feat], criteria[2][:, feat], criteria[3][:, feat], dir=dir, name=label + "-" + str(feat))
+            avs = np.empty((4, 2), dtype=object)
+            for crit in range(4):
+                avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
+                avs[crit, 1] = np.std(criteria[crit], axis = 0)
+            Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=f"{label}-Av")
+            av_arr = np.vstack((avs[0, 0], avs[0, 1]))
+            pd.DataFrame(av_arr).to_csv(os.path.join(dir, label + " Fit AF.csv"), index=False)
 
-    if featuresonly:
-        avs = np.empty((4, 2), dtype=object)
-        for crit in range(4):
-            avs[crit, 0] = np.expand_dims(np.mean(criteria[crit], axis= 0),axis=0)[0]
-            avs[crit, 1] = np.std(criteria[crit], axis = 0)
-        Graphs.criteria_chart(files_used, avs[1][0], avs[2][0], avs[3][0], dir=dir, name=f"{label}-Av")
-        av_arr = np.vstack((avs[0, 0], avs[0, 1]))
-        pd.DataFrame(av_arr).to_csv(os.path.join(dir, label + " Fit AF.csv"), index=False)
+        # Save all to files
+        pd.DataFrame(criteria[0]).to_csv(os.path.join(dir, label + " Fit.csv"), index=False)    #Feature against frequency
+        pd.DataFrame(criteria[1]).to_csv(os.path.join(dir, label + " Mon.csv"), index=False)
+        pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + " Tre.csv"), index=False)
+        pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + " Pro.csv"), index=False)
 
-    # Save all to files
-    pd.DataFrame(criteria[0]).to_csv(os.path.join(dir, label + " Fit.csv"), index=False)    #Feature against frequency
-    pd.DataFrame(criteria[1]).to_csv(os.path.join(dir, label + " Mon.csv"), index=False)
-    pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + " Tre.csv"), index=False)
-    pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + " Pro.csv"), index=False)
+        return criteria
 
 def evaluate(dir):
     #Apply prognostic criteria to PCA and extracted features
@@ -490,11 +505,11 @@ def saveDeepSAD(dir):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
         HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
 
-        print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
-        HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
+        #print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
+        #HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
 
     save_evaluation(HIs_HLB, "DeepSAD_HLB", dir, filename_HLB)
-    save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
+    #save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
 
 
 def main_menu():
@@ -506,9 +521,9 @@ def main_menu():
     print("5. All of the above")
     print("6. Extract all features (Requires 5)")
     print("7. AverageFeatures (Requires 6)")
-    print("8. Apply PCA to all (Requires 7)")
-    print("9. Evaluate feature HIs (Requires 8)")
-    print("10. Execute DeepSAD (Requires 7)")
+    print("8. Apply PCA to all")
+    print("9. Evaluate feature HIs (Requires 7)")
+    print("10. Execute DeepSAD")
     print("11. Export FFT and Hilbert only (on a separate directory)")
     print("12. Extract reduced Features for FFT & Hilbert")
     print("0. Exit")
