@@ -20,7 +20,7 @@ from PIL import Image
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-seed = 42
+seed = 140
 tf.random.set_seed(seed)
 np.random.seed(seed)
 dir_root = r"C:\Users\pablo\Downloads\SHM_Concatenated_FFT_Features"
@@ -64,6 +64,9 @@ def find_largest_array_size(array_list):
     return max_size
 
 def plot_images():
+    global dir_root
+    global seed
+    filedir = os.path.join(dir_root, f"big_VAE_graph_seed_{seed}")
     nrows = 6
     ncols = 5
     panels = ("L103", "L105", "L109", "L104", "L123")
@@ -99,7 +102,7 @@ def plot_images():
         ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
 
     plt.tight_layout()  # Adjust spacing between subplots
-    plt.show()
+    plt.savefig(filedir)
 
 def store_hyperparameters(params_test, params_hi_train, panel, freq):
     global dir_root
@@ -297,7 +300,7 @@ for panel_idx, panel in enumerate(panels):
             print("Counter: ", counter)
             print("Panel: ", panel)
             print("Freq: ", freq)
-            graph_hi_filename = f"HI_graph_{freq}_{panel}"
+            graph_hi_filename = f"HI_graph_{freq}_{panel}_seed_{seed}"
             graph_hi_dir = os.path.join(dir_root, graph_hi_filename)
             fig = plt.figure()
             train_panels = [k for k in panels if k != panel]
