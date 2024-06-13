@@ -450,6 +450,8 @@ def load_data(dir, filename):
 
         for i in range(3):
             labels[-i-1] = health_indicators[i] #Unhealthy
+
+
         # labels[labels == 1][:5] = 1  # First 5 healthy labels
         # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
 
