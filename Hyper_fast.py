@@ -21,7 +21,7 @@ tf.compat.v1.reset_default_graph()
 seed = 42
 tf.random.set_seed(seed)
 np.random.seed(seed)
-dir_root = input("Enter directory of folder with data: ")
+dir_root = r"C:\Users\pablo\Downloads\SHM_Concatenated_FFT_Features"
 # C:\Users\pablo\Downloads\PZT Output folder
 
 def mergedata(filenames):
@@ -63,9 +63,9 @@ def find_largest_array_size(array_list):
 
 def store_hyperparameters(params_test, params_hi_train, panel, freq):
     global dir_root
-
-    filename_test = os.path.join(dir_root, "fitness-test.csv")
-    filename_train = os.path.join(dir_root, "fitness-all.csv")
+    global seed
+    filename_test = os.path.join(dir_root, f"fitness-test-seed-{seed}.csv")
+    filename_train = os.path.join(dir_root, f"fitness-all-seed-{seed}.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
     if not os.path.exists(filename_test):
