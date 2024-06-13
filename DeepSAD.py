@@ -12,9 +12,12 @@ from skopt.utils import use_named_args
 from skopt.callbacks import CheckpointSaver
 from skopt import load
 from Interpolating import scale_exact
+from prognosticcriteria_v2 import fitness
 
 global pass_train_data
 global pass_semi_targets
+global pass_fnwf
+global pass_dir
 torch.manual_seed(42)
 
 class NeuralNet(nn.Module):
@@ -488,7 +491,22 @@ def objective(batch_size, learning_rate, epochs):
     pretrain(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1)
     trained_model, loss = train(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1, eta=1, eps=1e-6)
 
-    return loss
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    list = []
+    for test_sample in samples:
+        test_data, temp_targets = load_data(os.path.join(pass_dir, test_sample), pass_fnwf)
+
+        # Calculate HI at each state
+        current_result = []
+        for state in range(test_data.shape[0]):
+            data = test_data[state]
+            current_result.append(embed(data, model).item())
+
+        # Truncate (change to interpolation)
+        list.append(scale_exact(np.array(current_result)))
+    ftn, monotonicity, trendability, prognosability, error = fitness(np.array(list))
+
+    return error
 
 #print(objective([1, 2]))
 
@@ -536,6 +554,9 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     # eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
     # reg = 0.001  # Lambda - diversity weighting
 
+    global pass_dir
+    pass_dir = dir
+
     # Make string of filename for train/test data
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
     #print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
@@ -544,6 +565,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     #Initialise results matrix
     results = np.empty((5, 5, 30))
     hps = []
+    global pass_fnwf
     #Loop for each sample as test data
     for sample_count in range(len(samples)):
         print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
@@ -585,6 +607,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
         # Hyperparameter opt.
         if opt:
+            pass_fnwf = file_name_with_freq
             hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
         else:
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)

@@ -510,12 +510,12 @@ def saveDeepSAD(dir):
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
         HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
-    save_evaluation(HIs_HLB, "DeepSAD_HLB", dir, filename_HLB)
+    save_evaluation(np.array(HIs_HLB), "DeepSAD_HLB", dir, filename_HLB)
 
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
         HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
-    save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
+    save_evaluation(np.array(HIs_FFT), "DeepSAD_FFT", dir, filename_FFT)
 
 def hyperVAE(dir):
     filenames = ["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
@@ -567,7 +567,7 @@ repeat = True
 while repeat:
     #main_menu()
     #choice = input("Enter your choice: ")
-    choice = '10'
+    choice = '9'
     repeat = False
 
     if choice == '0':
