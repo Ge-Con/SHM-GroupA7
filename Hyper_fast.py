@@ -1,12 +1,12 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import pandas as pd
 from time import time
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np
-from Interpolating import scale_exact
 from scipy.stats import pearsonr
 from sklearn.preprocessing import Normalizer
 from scipy.signal import resample_poly
@@ -15,13 +15,14 @@ import scipy.interpolate as interp
 import csv
 from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness, Pr_single
 import os
+from PIL import Image
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-seed = 42
+seed = 36
 tf.random.set_seed(seed)
 np.random.seed(seed)
-dir_root = r"C:\Users\pablo\Downloads\SHM_Concatenated_FFT_Features"
+dir_root = input("Enter directory of folder with data: ")
 # C:\Users\pablo\Downloads\PZT Output folder
 
 def mergedata(filenames):
@@ -63,9 +64,9 @@ def find_largest_array_size(array_list):
 
 def store_hyperparameters(params_test, params_hi_train, panel, freq):
     global dir_root
-    global seed
-    filename_test = os.path.join(dir_root, f"fitness-test-seed-{seed}.csv")
-    filename_train = os.path.join(dir_root, f"fitness-all-seed-{seed}.csv")
+
+    filename_test = os.path.join(dir_root, "fitness-test.csv")
+    filename_train = os.path.join(dir_root, "fitness-all.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
     if not os.path.exists(filename_test):
@@ -99,6 +100,44 @@ def store_hyperparameters(params_test, params_hi_train, panel, freq):
 
     # Save the DataFrame back to the CSV
     df.to_csv(filename_train)
+    
+def plot_images():
+    nrows = 6
+    ncols = 5
+    panels = ("L103", "L105", "L109", "L104", "L123")
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
+    
+    
+    for i, freq in enumerate(freqs):
+        for j, panel in enumerate(panels):
+            # Generate the filename
+            filename = f"HI_graph_{freq}_{panel}.png"
+            
+            # Check if the file exists
+            if os.path.exists(os.path.join(dir_root, filename)):
+                # Load the image
+                img = mpimg.imread(os.path.join(dir_root, filename))
+                
+                # Display the image in the corresponding subplot
+                axs[i, j].imshow(img)
+                axs[i, j].axis('off')  # Hide the axes
+            else:
+                # If the image does not exist, print a warning and leave the subplot blank
+                axs[i, j].text(0.5, 0.5, 'Image not found', ha='center', va='center', fontsize=12, color='red')
+                axs[i, j].axis('off')
+    freqs = ("050 kHz", "100 kHz", "125 kHz", "150 kHz", "200 kHz", "250 kHz")
+
+    # Add row labels
+    for ax, row in zip(axs[:, 0], freqs):
+        ax.annotate(f'{row}', (-0.1, 0.5), xycoords = 'axes fraction', rotation = 90, va = 'center', fontweight = 'bold', fontsize = 40)
+    
+    # Add column labels
+    for ax, col in zip(axs[0], panels):
+        ax.annotate(f'Test Sample {panels.index(panel)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
+
+    plt.tight_layout()  # Adjust spacing between subplots
+    plt.show()
 
 def train_vae(hidden_1, batch_size, learning_rate, epochs):
     tf.random.set_seed(seed)
@@ -208,18 +247,12 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
 panels = ("L103", "L105", "L109", "L104", "L123")
 freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
+colors = ("b", "g", "y", "r", "m")
 counter = 0
 hyperparameters_df = pd.read_csv(dir_root + '/hyperparameters-opt-FFT.csv', index_col=0)
-time_steps = 30
-num_HIs = 5  # Number of rows in f_all_array
-num_freqs = len(freqs)
-num_panels = len(panels)
 
-# Initialize the final array with zeros
-hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
-
-for panel_idx, panel in enumerate(panels):
-    for freq_idx, freq in enumerate(freqs):
+for panel in panels:
+    for freq in freqs:
         filenames = []
         for i in tuple(x for x in panels if x != panel):
             filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_FFT_Features.csv")
@@ -264,9 +297,9 @@ for panel_idx, panel in enumerate(panels):
             x = x*(1/(x.shape[0]-1))
             x = x * 100
             for i, hi in enumerate(health_indicators[1]):
-                plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train')
+                plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train', c=f"{colors[panels.index(train_panels[i])]}")
             for i, hi in enumerate(health_indicators[2]):
-                plt.plot(x, hi, label=f'Sample {panels.index(panel) + 1}: Test')
+                plt.plot(x, hi, label=f'Sample {panels.index(panel)+ 1}: Test', c=f"{colors[panels.index(panel)]}")
             plt.xlabel('Lifetime (%)')
             plt.ylabel('Health Indicators')
             plt.title('Train and Test Health Indicators over Time')
@@ -276,13 +309,4 @@ for panel_idx, panel in enumerate(panels):
             params_test = (hi_test)
             params_hitrain = (hi_train)
             store_hyperparameters(params_test, params_hitrain, panel, freq)
-
-            # Apply scale_exact to each row in f_all_array and reshape to the required 4D shape
-            f_all_array2 = np.array([scale_exact(row) for row in f_all_array[:num_HIs]])
-            f_all_array2 = f_all_array2.reshape(num_HIs, time_steps)
-
-            # Assign f_all_array2 to the correct position in hi_full_array
-            hi_full_array[panel_idx, freq_idx] = f_all_array2
-label = f"VAE_seed_{seed}"
-savedir = dir_root + '\\' + label
-np.save(savedir, hi_full_array)
+plot_images()
