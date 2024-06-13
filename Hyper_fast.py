@@ -17,7 +17,7 @@ import os
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-seed = 42
+seed = 36
 tf.random.set_seed(seed)
 np.random.seed(seed)
 dir_root = input("Enter directory of folder with data: ")
@@ -63,8 +63,8 @@ def find_largest_array_size(array_list):
 def store_hyperparameters(params_test, params_hi_train, panel, freq):
     global dir_root
 
-    filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
-    filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
+    filename_test = os.path.join(dir_root, "fitness-test.csv")
+    filename_train = os.path.join(dir_root, "fitness-all.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
     if not os.path.exists(filename_test):
@@ -238,12 +238,16 @@ for panel in panels:
 
             health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
                                           hyperparameters[0][2], hyperparameters[0][3])
-            hi_train = fitness(health_indicators[0])
-            print("HI train", hi_train)
-            hi_test, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
-            print("HI test", hi_test)
+            f_all_array = health_indicators[1]
+            f_all_array = np.append(f_all_array, health_indicators[2], axis=0)
+            hi_train = fitness(f_all_array)
+            print("Fitness all", hi_train)
+            hi_test = test_fitness(health_indicators[2], health_indicators[1])
+            print("Fitness test", hi_test)
             resdict[f"{panel}{freq}"].append([hi_train, hi_test])
             print("Counter: ", counter)
+            print("Panel: ", panel)
+            print("Freq: ", freq)
             graph_hi_filename = f"HI_graph_{freq}_{panel}"
             graph_hi_dir = os.path.join(dir_root, graph_hi_filename)
             fig = plt.figure()
@@ -257,6 +261,6 @@ for panel in panels:
             plt.legend()
             plt.savefig(graph_hi_dir)
             plt.close(fig)
-            params_test = (hi_test, m, t, p)
+            params_test = (hi_test)
             params_hitrain = (hi_train)
             store_hyperparameters(params_test, params_hitrain, panel, freq)
