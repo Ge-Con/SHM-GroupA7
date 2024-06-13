@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import csv
 import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
 
@@ -403,6 +404,14 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             This function saves the pca output for each campaign
     """
 
+    count = 1
+    savedir = dir + '\\' + label
+    while os.path.exists(savedir + '.npy'):
+        savedir = dir + '\\' + label + str(count)
+        count += 1
+    np.save(savedir, features)
+    print(features.shape)
+
     if features.ndim > 4:
         criteria = []
         for i in range(features.shape[1]):
@@ -567,7 +576,7 @@ repeat = True
 while repeat:
     #main_menu()
     #choice = input("Enter your choice: ")
-    choice = '9'
+    choice = '6'
     repeat = False
 
     if choice == '0':
