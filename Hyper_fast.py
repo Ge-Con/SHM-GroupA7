@@ -17,7 +17,9 @@ import os
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-tf.random.set_seed(42)
+seed = 42
+tf.random.set_seed(seed)
+np.random.seed(seed)
 dir_root = input("Enter directory of folder with data: ")
 # C:\Users\pablo\Downloads\PZT Output folder
 
@@ -32,6 +34,7 @@ def mergedata(filenames):
     return data, flags
 
 def DCloss(feature, batch_size):
+    tf.random.set_seed(seed)
     s = 0
     for i in range(1, batch_size):
         s += tf.pow(feature[i] - tf.constant(10, dtype=tf.float32) - tf.random.normal([1], 0, 1) - feature[i - 1], 2)
@@ -97,6 +100,7 @@ def store_hyperparameters(params_test, params_hi_train, panel, freq):
     df.to_csv(filename_train)
 
 def train_vae(hidden_1, batch_size, learning_rate, epochs):
+    tf.random.set_seed(seed)
     # Set hyperparameters and architecture details
     global data
     global test
@@ -109,6 +113,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs):
 
     # Xavier initialization for weights
     def xavier_init(fan_in, fan_out, constant=1):
+        tf.random.set_seed(seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
         return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
@@ -239,22 +244,19 @@ for panel in panels:
             print("HI test", hi_test)
             resdict[f"{panel}{freq}"].append([hi_train, hi_test])
             print("Counter: ", counter)
-            plt.figure()
+            graph_hi_filename = f"HI_graph_{freq}_{panel}"
+            graph_hi_dir = os.path.join(dir_root, graph_hi_filename)
+            fig = plt.figure()
             for i, hi in enumerate(health_indicators[1]):
                 plt.plot(hi, label=f'HI_arr {i + 1}')
-            plt.xlabel('Timesteps')
-            plt.ylabel('Health Indicators')
-            plt.title('Train Health Indicators over Time')
-            plt.legend()
-            plt.savefig(f"HI_train_{freq}_{panel}")
-            plt.figure()
             for i, hi in enumerate(health_indicators[2]):
                 plt.plot(hi, label=f'HI_arr {i + 1}')
             plt.xlabel('Timesteps')
-            plt.ylabel('Health Indicator')
-            plt.title('Test Health Indicator over Time')
+            plt.ylabel('Health Indicators')
+            plt.title('Train and Test Health Indicators over Time')
             plt.legend()
-            plt.savefig(f"\HI_test_{freq}_{panel}")
+            plt.savefig(graph_hi_dir)
+            plt.close(fig)
             params_test = (hi_test, m, t, p)
             params_hitrain = (hi_train)
             store_hyperparameters(params_test, params_hitrain, panel, freq)
