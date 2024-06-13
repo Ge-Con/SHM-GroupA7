@@ -251,11 +251,15 @@ for panel in panels:
             graph_hi_filename = f"HI_graph_{freq}_{panel}"
             graph_hi_dir = os.path.join(dir_root, graph_hi_filename)
             fig = plt.figure()
+            train_panels = [k for k in panels if k != panel]
+            x = np.arange(0, health_indicators[2].shape[1], 1)
+            x = x*(1/(x.shape[0]-1))
+            x = x * 100
             for i, hi in enumerate(health_indicators[1]):
-                plt.plot(hi, label=f'HI_arr {i + 1}')
+                plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train')
             for i, hi in enumerate(health_indicators[2]):
-                plt.plot(hi, label=f'HI_arr {i + 1}')
-            plt.xlabel('Timesteps')
+                plt.plot(x, hi, label=f'Sample {panels.index(panel)+ 1}: Test')
+            plt.xlabel('Lifetime (%)')
             plt.ylabel('Health Indicators')
             plt.title('Train and Test Health Indicators over Time')
             plt.legend()
