@@ -15,6 +15,7 @@ from Interpolating import scale_exact
 
 global pass_train_data
 global pass_semi_targets
+torch.manual_seed(42)
 
 class NeuralNet(nn.Module):
     """
@@ -291,7 +292,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
             #print("Batch loss: " + str(loss))
 
-        print(f"DS Epoch {epoch}, loss = {epoch_loss}")
+        #print(f"DS Epoch {epoch}, loss = {epoch_loss}")
     return model, epoch_loss
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -346,7 +347,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
-        print(f"AE Epoch {epoch}, loss = {epoch_loss}")
+        #print(f"AE Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -465,7 +466,7 @@ def print_progress(res):
 space = [
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
-        Integer(500, 1000, name='epochs'),
+        Integer(20, 100, name='epochs'),
     ]
 
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
@@ -487,7 +488,7 @@ def objective(batch_size, learning_rate, epochs):
     pretrain(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1)
     trained_model, loss = train(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1, eta=1, eps=1e-6)
 
-    return loss.item()
+    return loss
 
 #print(objective([1, 2]))
 
@@ -508,7 +509,7 @@ def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=
     return opt_parameters
 
 
-def DeepSAD_train_run(dir, freq, file_name):
+def DeepSAD_train_run(dir, freq, file_name, opt=False):
     """
        Trains and runs the DeepSAD model
 
@@ -542,6 +543,7 @@ def DeepSAD_train_run(dir, freq, file_name):
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     #Initialise results matrix
     results = np.empty((5, 5, 30))
+    hps = []
     #Loop for each sample as test data
     for sample_count in range(len(samples)):
         print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
@@ -580,33 +582,41 @@ def DeepSAD_train_run(dir, freq, file_name):
         #print(semi_targets.shape)
         #Convert to dataset and create loader
         train_dataset = TensorDataset(train_data, semi_targets)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
         # Hyperparameter opt.
-        #optimized_params = hyperparameter_optimisation(train_data, semi_targets, n_calls=10)
-        #print(optimized_params)
-        optimized_params = [105, 0.001916004419675022, 2]
+        if opt:
+            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
+        else:
+            hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
+            hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
+            optimized_params = eval(hyperparameters_str)
+            #print(optimized_params)
+        #optimized_params = [105, 0.001916004419675022, 2]
 
-        #Create, pretrain and train a model
-        model = NeuralNet(size)
-        model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
-        model, loss = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
+            train_loader = DataLoader(train_dataset, batch_size=optimized_params[0], shuffle=True)
+            #Create, pretrain and train a model
+            model = NeuralNet(size)
+            model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
+            model, loss = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
 
-        #Test for all panels
-        #Load test sample data (targets not used)
-        list = []
-        for test_sample in samples:
-            test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+            #Test for all panels
+            #Load test sample data (targets not used)
+            list = []
+            for test_sample in samples:
+                test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
 
-            #Calculate HI at each state
-            current_result = []
-            for state in range(test_data.shape[0]):
-                data = test_data[state]
-                current_result.append(embed(data, model).item())
+                #Calculate HI at each state
+                current_result = []
+                for state in range(test_data.shape[0]):
+                    data = test_data[state]
+                    current_result.append(embed(data, model).item())
 
-            #Truncate (change to interpolation)
-            list.append(scale_exact(np.array(current_result)))
-        results[sample_count] = np.array(list)
+                #Truncate (change to interpolation)
+                list.append(scale_exact(np.array(current_result)))
+            results[sample_count] = np.array(list)
 
-    return results
+    if opt:
+        return hps
+    else:
+        return results

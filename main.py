@@ -12,7 +12,8 @@ from DeepSAD import DeepSAD_train_run
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
-#from Data_concatenation import process_csv_files
+from Data_concatenation import process_csv_files
+import Hyper_integrated as HYP
 
 pd.set_option('display.max_columns', 15)
 pd.set_option('display.width', 400)
@@ -330,25 +331,16 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
     """
 
     pcs_upto = 2
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"] #["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
+    output = np.zeros((6, pcs_upto * len(filenames), 5, 5, 30))
 
-    output = np.zeros((6, pcs_upto, 5, 5, 30))
-    for pc in range(1, pcs_upto+1):
-        tempout = PCA.doPCA_multiple_Campaigns(dir, pc)
-        for freq in range(6):
-            output[freq][pc-1] = tempout[freq]
-            #print(tempout)
-    labels = []
-    for pc in range(1, pcs_upto+1):
-        if pc == 1:
-            add = "st"
-        elif pc == 2:
-            add = "nd"
-        elif pc == 3:
-            add = "rd"
-        else:
-            add = "th"
-        labels.append(str(pc) + add + " PC")
-    labels = ["1", "2", "3", "4", "5"]
+    for file in range(len(filenames)):
+        for pc in range(pcs_upto):
+            tempout = PCA.doPCA_multiple_Campaigns(dir, filenames[file], pc+1)
+            for freq in range(6):
+                output[freq][pc+file*pcs_upto] = tempout[freq]   #This stores each PC for each file sequentially
+                #print(tempout)
+    labels = np.array(["Sample 1", "Sample 2", "Sample 3", "Sample 4", "Sample 5"])
     save_evaluation(np.array(output), "PCA", dir, labels)
 
     """
@@ -414,7 +406,7 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
     if features.ndim > 4:
         criteria = []
         for i in range(features.shape[1]):
-            criteria.append(save_evaluation(features[:, i], label + "component" + str(i+1), dir, files_used))
+            criteria.append(save_evaluation(features[:, i], label + " framework " + str(i+1), dir, files_used))
         #Graph here for ensemble learning
     else:
 
@@ -424,9 +416,9 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
         # Iterate through each frequency and calculate features
         featuresonly = files_used[0] == ""
 
-        print(features.shape)
+        #print(features.shape)
         for freq in range(6):
-            print("Saving: " + frequencies[freq] + "kHz")
+            print("Evaluating: " + frequencies[freq] + "kHz")
             for feat in range(len(features[0])):
                 if feat % 50 == 0 and feat != 0:
                     print(feat, " features")
@@ -437,6 +429,17 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
                 criteria[1][freq][feat] = float(mo)
                 criteria[2][freq][feat] = float(pr)
                 criteria[3][freq][feat] = float(tr)
+
+        # Save all to files
+        print("Saving to CSVs")
+        pd.DataFrame(criteria[0]).to_csv(os.path.join(dir, label + " Fit.csv"), index=False)  # Feature against frequency
+        pd.DataFrame(criteria[1]).to_csv(os.path.join(dir, label + " Mon.csv"), index=False)
+        pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + " Tre.csv"), index=False)
+        pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + " Pro.csv"), index=False)
+
+        for freq in range(6):
+            print("Graphing: " + frequencies[freq] + "kHz")
+            for feat in range(len(features[0])):
                 #Save graphs
                 Graphs.HI_graph(features[freq][feat], dir=dir, name=f"{label}-{frequencies[freq]}-{feat}")
             if featuresonly:
@@ -458,16 +461,10 @@ def save_evaluation(features, label, dir, files_used=[""]):  #Features is 6x fre
             av_arr = np.vstack((avs[0, 0], avs[0, 1]))
             pd.DataFrame(av_arr).to_csv(os.path.join(dir, label + " Fit AF.csv"), index=False)
 
-        # Save all to files
-        pd.DataFrame(criteria[0]).to_csv(os.path.join(dir, label + " Fit.csv"), index=False)    #Feature against frequency
-        pd.DataFrame(criteria[1]).to_csv(os.path.join(dir, label + " Mon.csv"), index=False)
-        pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + " Tre.csv"), index=False)
-        pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + " Pro.csv"), index=False)
-
         return criteria
 
 def retrieve_features(dir):
-    #Apply prognostic criteria to PCA and extracted features
+    #Read extracted features from CSVs
     frequencies = ["050", "100", "125", "150", "200", "250"]
     features = np.empty((6, 139), dtype=object)  #6 frequencies, 139 features, 5 samples with a list of values at each location
 
@@ -492,6 +489,16 @@ def retrieve_features(dir):
 #         time.append(i*(5e-7))
 #     return time
 
+def hyperDeepSad(dir):
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    for file in filenames:
+        for freq in frequencies:
+            params = DeepSAD_train_run(dir, freq, file, True)
+            for sample in range(5):
+                HYP.store_hyperparameters(params[sample], file, samples[sample], freq, dir)
+
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
     filename_HLB = "HLB_FT_Reduced"    #No need for .csv
@@ -503,15 +510,32 @@ def saveDeepSAD(dir):
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
         HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
-
-        #print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
-        #HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
-
     save_evaluation(HIs_HLB, "DeepSAD_HLB", dir, filename_HLB)
-    #save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
 
+    for freq in range(len(frequencies)):
+        print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
+        HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
+    save_evaluation(HIs_FFT, "DeepSAD_FFT", dir, filename_FFT)
+
+def hyperVAE(dir):
+    filenames = ["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    concat = False
+    if concat:
+        for panel in samples:
+            for file in filenames:
+                process_csv_files(dir, panel, file)
+    for file in filenames:
+        HYP.VAE(dir, file, opt=True)
+
+def saveVAE(dir):
+    filenames = ["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
+    labels = ["Sample 1", "Sample 2", "Sample 3", "Sample 4", "Sample 5"]
+    for file in filenames:
+        save_evaluation(HYP.VAE(dir, file), "VAE_" + file, dir, labels)
 
 def main_menu():
+    print("\n---")
     print("Welcome! Please choose a signal processing method: ")
     print("0. Exit")
     print("1. Extract PZTs")
@@ -535,12 +559,16 @@ def extract_matlab():
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
 
-csv_dir = input("Enter the folder path of the CSV files: ")
+#csv_dir = input("Enter the folder path of the CSV files: ")
+csv_dir = "C:\\Users\Jamie\Documents\\Uni\Year 2\Q3+4\Project\PZT-FFT-HLB"#\Concatenated"
 
 # Main program loop
-while True:
-    main_menu()
-    choice = input("Enter your choice: ")
+repeat = True
+while repeat:
+    #main_menu()
+    #choice = input("Enter your choice: ")
+    choice = '10'
+    repeat = False
 
     if choice == '0':
         print("Exiting...")
@@ -564,11 +592,11 @@ while True:
     elif choice == '6':
         savePCA(csv_dir)
     elif choice == '7':
-        pass
+        hyperVAE(csv_dir)
     elif choice == '8':
-        pass
+        saveVAE(csv_dir)
     elif choice == '9':
-        pass
+        hyperDeepSad(csv_dir)
     elif choice == '10':
         saveDeepSAD(csv_dir)
     else:

@@ -97,7 +97,7 @@ def read_matrices_from_folder(dir, filename, freq):
         rmatrix.append(scale_exact(matrix[row]))
     return np.array(rmatrix)
 
-def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
+def doPCA_multiple_Campaigns(dir, filename, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
     # Use the read_matrices_from_folder function to get the matrices from a folder
 
     """
@@ -116,7 +116,6 @@ def doPCA_multiple_Campaigns(dir, component=0): #If 0 to 95% var, else expect 1,
     output = []
     frequencies = ["050", "100", "125", "150", "200", "250"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    filename = "FFT_FT_Reduced"
 
     if component == 0:
         print("PCA to 95% variance")
