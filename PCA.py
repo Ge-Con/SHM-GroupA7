@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import warnings
 from Interpolating import scale_exact
+from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings('ignore')
 
@@ -95,6 +96,10 @@ def read_matrices_from_folder(dir, filename, freq):
     matrix = np.array(matrix).T
     for row in range(len(matrix)):
         rmatrix.append(scale_exact(matrix[row]))
+    scaler = StandardScaler()
+    #print(rmatrix[0])
+    rmatrix = scaler.fit_transform(np.array(rmatrix).T).T
+    #print(rmatrix[0])
     return np.array(rmatrix)
 
 def doPCA_multiple_Campaigns(dir, filename, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
