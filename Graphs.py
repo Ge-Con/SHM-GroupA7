@@ -8,7 +8,10 @@ def HI_graph(X, dir="", name=""):
     for sample in range(len(X)):
         states = np.arange(len(X[sample]))
         cycles = states*5000
-        plt.plot(cycles, X[sample], label="Sample "+str(sample))
+        if str(sample) == str(name[-1]):
+            plt.plot(cycles, X[sample], label="Sample "+str(sample+1) + ": Test")
+        else:
+            plt.plot(cycles, X[sample], label="Sample " + str(sample+1) + ": Train")
     plt.legend()
     plt.xlabel('Compression Cycles')
     plt.ylabel('HI')

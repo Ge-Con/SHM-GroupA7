@@ -25,15 +25,15 @@ HIs = np.load(filepath + "\\" + filename)
 print(HIs.shape)
 if HIs.ndim != 5:
     print("Wrong number of dimensions")
-else:
-    for freq in range(6):
-        print("Freq " + str(freq))
+else:   #Keeping folds and repetitions separate
+    newHIses2 = []
+    for repetition in range(HIs.shape[1]):
+        print("Repetition " + str(repetition))
         newHIses = []
         for fold in range(5):
-            print("-> fold " + str(fold))
-            newHIs = wae_fitness(HIs[freq, :, fold], 4) #Average repetitions
+            print("-> Fold " + str(fold))
+            newHIs = wae_fitness(HIs[:, repetition, fold], 4) #Average repetitions
             print(fitness(newHIs)[0])
-            newHIses.append(newHIs)
-        nnHI = wae_fitness(newHIses, 5)
-        print("Freq averaged:")
-        print(fitness(nnHI)[0])
+            newHIses.append(fitness(newHIs)[0])
+        newHIses2.append(newHIses)
+    print(newHIses2)

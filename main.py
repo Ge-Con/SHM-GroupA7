@@ -331,7 +331,7 @@ def savePCA(dir): #Calculates and saves 1 principle component PCA
             files in a new directory PZT-ONLY-FEATURES for different SPs
     """
 
-    pcs_upto = 2
+    pcs_upto = 3
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"] #["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
     output = np.zeros((6, pcs_upto * len(filenames), 5, 5, 30))
 
@@ -568,16 +568,16 @@ def extract_matlab():
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
 
-#csv_dir = input("Enter the folder path of the CSV files: ")
-csv_dir = "C:\\Users\Jamie\Documents\\Uni\Year 2\Q3+4\Project\PZT-FFT-HLB"#\Concatenated"
+csv_dir = input("Enter the folder path of the CSV files: ")
+#csv_dir = "C:\\Users\Jamie\Documents\\Uni\Year 2\Q3+4\Project\PZT-FFT-HLB"#\Concatenated"
 
 # Main program loop
 repeat = True
 while repeat:
-    #main_menu()
-    #choice = input("Enter your choice: ")
-    choice = '6'
-    repeat = False
+    main_menu()
+    choice = input("Enter your choice: ")
+    #choice = '9'
+    #repeat = False
 
     if choice == '0':
         print("Exiting...")

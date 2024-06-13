@@ -218,7 +218,7 @@ def init_c(model, train_loader, eps=0.1):
     return c
 
 
-def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg=0):
+def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma, eta, eps, reg=0.001):
     """
         Train the DeepSAD model from a semi-labelled dataset.
 
@@ -468,8 +468,8 @@ def print_progress(res):
 #Define this space with the parameters to optimise, type + range
 space = [
         Integer(16, 128, name='batch_size'),
-        Real(0.0001, 0.01, name='learning_rate'),
-        Integer(20, 100, name='epochs'),
+        Real(0.0001, 0.001, name='learning_rate'),
+        Integer(50, 200, name='epochs'),
     ]
 
 #Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
