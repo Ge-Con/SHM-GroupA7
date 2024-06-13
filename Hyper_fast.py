@@ -6,6 +6,7 @@ from time import time
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np
+from Interpolating import scale_exact
 from scipy.stats import pearsonr
 from sklearn.preprocessing import Normalizer
 from scipy.signal import resample_poly
@@ -17,7 +18,7 @@ import os
 
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-seed = 36
+seed = 42
 tf.random.set_seed(seed)
 np.random.seed(seed)
 dir_root = input("Enter directory of folder with data: ")
@@ -209,9 +210,16 @@ freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
 counter = 0
 hyperparameters_df = pd.read_csv(dir_root + '/hyperparameters-opt-FFT.csv', index_col=0)
+time_steps = 30
+num_HIs = 5  # Number of rows in f_all_array
+num_freqs = len(freqs)
+num_panels = len(panels)
 
-for panel in panels:
-    for freq in freqs:
+# Initialize the final array with zeros
+hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
+
+for panel_idx, panel in enumerate(panels):
+    for freq_idx, freq in enumerate(freqs):
         filenames = []
         for i in tuple(x for x in panels if x != panel):
             filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_FFT_Features.csv")
@@ -258,7 +266,7 @@ for panel in panels:
             for i, hi in enumerate(health_indicators[1]):
                 plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train')
             for i, hi in enumerate(health_indicators[2]):
-                plt.plot(x, hi, label=f'Sample {panels.index(panel)+ 1}: Test')
+                plt.plot(x, hi, label=f'Sample {panels.index(panel) + 1}: Test')
             plt.xlabel('Lifetime (%)')
             plt.ylabel('Health Indicators')
             plt.title('Train and Test Health Indicators over Time')
@@ -268,3 +276,13 @@ for panel in panels:
             params_test = (hi_test)
             params_hitrain = (hi_train)
             store_hyperparameters(params_test, params_hitrain, panel, freq)
+
+            # Apply scale_exact to each row in f_all_array and reshape to the required 4D shape
+            f_all_array2 = np.array([scale_exact(row) for row in f_all_array[:num_HIs]])
+            f_all_array2 = f_all_array2.reshape(num_HIs, time_steps)
+
+            # Assign f_all_array2 to the correct position in hi_full_array
+            hi_full_array[panel_idx, freq_idx] = f_all_array2
+label = f"VAE_seed_{seed}"
+savedir = dir_root + '\\' + label
+np.save(savedir, hi_full_array)
