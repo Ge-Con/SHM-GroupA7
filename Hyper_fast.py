@@ -96,7 +96,7 @@ def plot_images():
 
     # Add column labels
     for ax, col in zip(axs[0], panels):
-        ax.annotate(f'Test Sample {panels.index(panel)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
+        ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
 
     plt.tight_layout()  # Adjust spacing between subplots
     plt.show()
