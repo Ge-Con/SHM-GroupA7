@@ -469,7 +469,7 @@ def print_progress(res):
 
 #Define this space with the parameters to optimise, type + range
 space = [
-        Integer(16, 128, name='batch_size'),
+        Integer(100, 200, name='batch_size'),
         Real(0.0001, 0.001, name='learning_rate'),
         Integer(50, 200, name='epochs'),
     ]
@@ -506,7 +506,11 @@ def objective(batch_size, learning_rate, epochs):
 
         # Truncate (change to interpolation)
         list.append(scale_exact(np.array(current_result)))
-    ftn, monotonicity, trendability, prognosability, error = fitness(np.array(list))
+    try:
+        ftn, monotonicity, trendability, prognosability, error = fitness(np.array(list))
+    except ValueError:
+        print("\tskipping NaN")
+        error = 100
 
     return error
 
@@ -610,7 +614,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         # Hyperparameter opt.
         if opt:
             pass_fnwf = file_name_with_freq
-            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
+            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=20))
         else:
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
