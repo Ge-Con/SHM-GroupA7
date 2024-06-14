@@ -621,7 +621,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
-            optimized_params[2] = 10
+            optimized_params[2] = 20
             #print(optimized_params)
         #optimized_params = [105, 0.001916004419675022, 2]
 
@@ -654,7 +654,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         return results
 
 def plot_ds_images(dir):
-    filedir = os.path.join(dir, f"big_VAE_graph_seed_{dseed}")
+    filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
     nrows = 6
     ncols = 5
     panels = ("L103", "L105", "L109", "L104", "L123")
