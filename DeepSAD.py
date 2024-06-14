@@ -13,13 +13,15 @@ from skopt.callbacks import CheckpointSaver
 from skopt import load
 from Interpolating import scale_exact
 from prognosticcriteria_v2 import fitness
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 global pass_train_data
 global pass_semi_targets
 global pass_fnwf
 global pass_dir
 global ds_seed
-ds_seed = 42
+ds_seed = 120
 torch.manual_seed(ds_seed)
 
 class NeuralNet(nn.Module):
@@ -653,19 +655,19 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     else:
         return results
 
-def plot_ds_images(dir):
+def plot_ds_images(dir, type):
     filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
     nrows = 6
     ncols = 5
-    panels = ("L103", "L105", "L109", "L104", "L123")
-    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    panels = ("0", "1", "2", "3", "4")
+    freqs = ("050", "100", "125", "150", "200", "250")
     fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
 
 
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"HI_graph_{freq}_{panel}.png"
+            filename = f"DeepSAD_{type}-{freq}-{panel} HIs.png"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
@@ -691,3 +693,5 @@ def plot_ds_images(dir):
 
     plt.tight_layout()  # Adjust spacing between subplots
     plt.savefig(filedir)
+
+#plot_ds_images(input("CSV: "), "FFT")
