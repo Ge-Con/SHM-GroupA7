@@ -7,13 +7,13 @@ def HI_graph(X, dir="", name=""):
     plt.figure()
     for sample in range(len(X)):
         states = np.arange(len(X[sample]))
-        cycles = states*5000
+        cycles = states/30*100
         if str(sample) == str(name[-1]):
             plt.plot(cycles, X[sample], label="Sample "+str(sample+1) + ": Test")
         else:
             plt.plot(cycles, X[sample], label="Sample " + str(sample+1) + ": Train")
     plt.legend()
-    plt.xlabel('Compression Cycles')
+    plt.xlabel('Lifetime (%)')
     plt.ylabel('HI')
     if dir != "" and name != "":
         plt.savefig(dir + "\\" + name + " HIs")

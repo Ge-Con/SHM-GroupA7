@@ -9,7 +9,7 @@ import extract_features
 import PCA
 from Signal_Processing import fft, emdfinal, stft, hilbert, Data_Preprocess
 from prognosticcriteria_v2 import fitness
-from DeepSAD import DeepSAD_train_run
+from DeepSAD import DeepSAD_train_run, plot_ds_images
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
@@ -501,12 +501,12 @@ def retrieve_features(dir):
 def hyperDeepSad(dir):
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    frequencies = ["050", "100", "125", "150", "200", "250"]
+    frequencies = ["150", "200", "250"]
     for file in filenames:
         for freq in frequencies:
             params = DeepSAD_train_run(dir, freq, file, True)
-            for sample in range(5):
-                HYP.store_hyperparameters(params[sample], file, samples[sample], freq, dir)
+            #for sample in range(5):
+            #    HYP.store_hyperparameters(params[sample], file, samples[sample], freq, dir)
 
 def saveDeepSAD(dir):
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -520,11 +520,13 @@ def saveDeepSAD(dir):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
         HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
     save_evaluation(np.array(HIs_HLB), "DeepSAD_HLB", dir, filename_HLB)
+    plot_ds_images(dir)
 
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
         HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
     save_evaluation(np.array(HIs_FFT), "DeepSAD_FFT", dir, filename_FFT)
+    plot_ds_images(dir)
 
 def hyperVAE(dir):
     filenames = ["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]

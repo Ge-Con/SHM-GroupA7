@@ -18,7 +18,9 @@ global pass_train_data
 global pass_semi_targets
 global pass_fnwf
 global pass_dir
-torch.manual_seed(42)
+global ds_seed
+ds_seed = 42
+torch.manual_seed(ds_seed)
 
 class NeuralNet(nn.Module):
     """
@@ -517,7 +519,7 @@ def objective(batch_size, learning_rate, epochs):
 #print(objective([1, 2]))
 
 #Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
-def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=42):
+def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=ds_seed):
     #print("Shape of train_data in hyperparameter optimization:", train_data.shape)
     #print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
 
@@ -614,11 +616,12 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         # Hyperparameter opt.
         if opt:
             pass_fnwf = file_name_with_freq
-            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=20))
+            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
         else:
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
+            optimized_params[2] = 10
             #print(optimized_params)
         #optimized_params = [105, 0.001916004419675022, 2]
 
@@ -649,3 +652,42 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         return hps
     else:
         return results
+
+def plot_ds_images(dir):
+    filedir = os.path.join(dir, f"big_VAE_graph_seed_{dseed}")
+    nrows = 6
+    ncols = 5
+    panels = ("L103", "L105", "L109", "L104", "L123")
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
+
+
+    for i, freq in enumerate(freqs):
+        for j, panel in enumerate(panels):
+            # Generate the filename
+            filename = f"HI_graph_{freq}_{panel}.png"
+
+            # Check if the file exists
+            if os.path.exists(os.path.join(dir, filename)):
+                # Load the image
+                img = mpimg.imread(os.path.join(dir, filename))
+
+                # Display the image in the corresponding subplot
+                axs[i, j].imshow(img)
+                axs[i, j].axis('off')  # Hide the axes
+            else:
+                # If the image does not exist, print a warning and leave the subplot blank
+                axs[i, j].text(0.5, 0.5, 'Image not found', ha='center', va='center', fontsize=12, color='red')
+                axs[i, j].axis('off')
+    freqs = ("050 kHz", "100 kHz", "125 kHz", "150 kHz", "200 kHz", "250 kHz")
+
+    # Add row labels
+    for ax, row in zip(axs[:, 0], freqs):
+        ax.annotate(f'{row}', (-0.1, 0.5), xycoords = 'axes fraction', rotation = 90, va = 'center', fontweight = 'bold', fontsize = 40)
+
+    # Add column labels
+    for ax, col in zip(axs[0], panels):
+        ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
+
+    plt.tight_layout()  # Adjust spacing between subplots
+    plt.savefig(filedir)
