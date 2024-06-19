@@ -122,6 +122,31 @@ def store_hyperparameters(params_train, params_test, params_hi_train, panel, fre
     # Save the DataFrame back to the CSV
     df.to_csv(filename_train)
 
+def simple_store_hyperparameters(params, file, panel, freq, dir):
+
+    filename_opt = os.path.join(dir, file + "-hopt.csv")
+    #filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
+    #filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
+    freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
+    freq = freq + "_kHz"
+
+    # Create an empty DataFrame with frequencies as the index if the file does not exist
+    if not os.path.exists(filename_opt):
+        df = pd.DataFrame(index=freqs)
+    else:
+        # Load the existing file if it exists
+        df = pd.read_csv(filename_opt, index_col=0)
+
+    # Ensure that the panel column exists
+    if panel not in df.columns:
+        df[panel] = None
+
+    # Update the DataFrame with the new parameters
+    df.loc[freq, panel] = str(params)
+
+    # Save the DataFrame back to the CSV
+    df.to_csv(filename_opt)
+
 def train_vae_ensemble(hidden_1, batch_size, learning_rate, epochs):
     # Set hyperparameters and architecture details
     global data
