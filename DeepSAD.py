@@ -1,7 +1,7 @@
+# Import libraries
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset, dataset
-import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
 import os
@@ -9,20 +9,22 @@ import copy
 from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
-from skopt.callbacks import CheckpointSaver
-from skopt import load
 from Interpolating import scale_exact
 from prognosticcriteria_v2 import fitness
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+# Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
 global pass_semi_targets
 global pass_fnwf
 global pass_dir
+
+# Random seed for repeatability
 global ds_seed
 ds_seed = 120
 torch.manual_seed(ds_seed)
+
 
 class NeuralNet(nn.Module):
     """
@@ -48,11 +50,11 @@ class NeuralNet(nn.Module):
             Returns:
             None
         """
-        super().__init__()      #Initialise parent torch module
-        self.c = None           #Define c to be set later
-        self.size = size        #Set size to an attribute
+        super().__init__()      # Initialise parent torch module
+        self.c = None           # Define c to be set later
+        self.size = size        # Set size to an attribute
 
-        #Create network layers
+        # Create network layers
         self.fc1 = nn.Linear(size[0]*size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 128)
@@ -71,9 +73,9 @@ class NeuralNet(nn.Module):
             Returns:
             - x (2D numpy array): Network output
         """
-        x = torch.flatten(x, start_dim=0)    #Flatten matrix input
-        x = x.to(next(self.parameters()).dtype) #Ensure tensor is of correct datatype
-        x = self.m(self.fc1(x)) #Forward pass through layers
+        x = torch.flatten(x, start_dim=0)    # Flatten matrix input
+        x = x.to(next(self.parameters()).dtype) # Ensure tensor is of correct datatype
+        x = self.m(self.fc1(x)) # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
@@ -105,17 +107,17 @@ class NeuralNet_Decoder(nn.Module):
             Returns:
             None
         """
-        super().__init__()      #Initialise parent torch module
-        self.size = size        #Set size to an attribute
+        super().__init__()      # Initialise parent torch module
+        self.size = size        # Set size to an attribute
 
-        #Create network layers
+        # Create network layers
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 512)
         self.fc4 = nn.Linear(512, 1024)
         self.fc5 = nn.Linear(1024, size[0]*size[1])
 
-        #Create activation function
+        # Create activation function
         self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
@@ -129,13 +131,13 @@ class NeuralNet_Decoder(nn.Module):
             - x (2D numpy array): Network output
         """
 
-        x = torch.flatten(x)    #Flatten matrix input
-        x = self.m(self.fc1(x)) #Run through network layers
+        x = torch.flatten(x)    # Flatten matrix input
+        x = self.m(self.fc1(x)) # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
-        x = x.view(-1, self.size[0], self.size[1])  #Reconstruct matrix of original data dimenions
+        x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
 
 class NeuralNet_Autoencoder(nn.Module):
@@ -160,9 +162,9 @@ class NeuralNet_Autoencoder(nn.Module):
             Returns:
             None
         """
-        super().__init__()      #Initialise parent torch module
+        super().__init__()      # Initialise parent torch module
 
-        #Create encoder and decoder and save as attributes
+        # Create encoder and decoder and save as attributes
         self.encoder = NeuralNet(size)
         self.decoder = NeuralNet_Decoder(size)
 
@@ -177,7 +179,7 @@ class NeuralNet_Autoencoder(nn.Module):
             - x (2D numpy array): Network output
         """
 
-        #Run encoder and decoder
+        # Run encoder and decoder
         x = self.encoder(x)
         x = self.decoder(x)
         return x
@@ -197,13 +199,13 @@ def init_c(model, train_loader, eps=0.1):
     """
 
     n_samples = 0
-    c = torch.zeros((4, 4))     #16-dimensional coordinates, formatted into 2D array
+    c = torch.zeros((4, 4))     # 16-dimensional coordinates, formatted into 2D array
 
-    #Forward pass
+    # Forward pass
     model.eval()
     with torch.no_grad():
 
-        #Calculate network outputs for all data
+        # Calculate network outputs for all data
         for train_data, train_target in train_loader:
             for index in range(len(train_data)):
                 data = train_data[index]
@@ -213,7 +215,7 @@ def init_c(model, train_loader, eps=0.1):
                 n_samples += 1
 
                 c += outputs
-    c /= n_samples  #Average outputs
+    c /= n_samples  # Average outputs
 
     # If c_i is too close to 0, set to +-eps
     c[(abs(c) < eps) & (c < 0)] = -eps
@@ -243,40 +245,33 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
         None
     """
 
-    #Setup optimizer and scheduler
+    # Setup optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=lr_milestones, gamma=gamma)
 
-    #Initialise c if necessary
+    # Initialise c if necessary
     if model.c is None:
         model.c = init_c(model, train_loader, eps)
 
-    #Iterate epochs to train model
+    # Iterate epochs to train model
     model.train()
     for epoch in range(n_epochs):
         epoch_loss = 0.0
         scheduler.step()
 
-        # Report new learning rate on milestones
-        #if epoch in lr_milestones:
-        #    print("\tNew learning rate is " + str(float(scheduler.get_lr()[0])))
-
         for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
-
-            #print("Shape of train_data:", train_data.shape)
-            #print("Shape of train_target:", train_target.shape)
 
             for index in range(len(train_data)):
                 data = train_data[index]
                 target = train_target[index]
 
-                #Forward and backward pass
+                # Forward and backward pass
                 optimizer.zero_grad()
                 outputs = model(data)
 
-                #Calculating loss function
+                # Calculating loss function
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
                 loss_d = 0
@@ -285,7 +280,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
                 losses = dist if target == 0 else eta * ((dist + eps) ** target)
 
-                #Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
+                # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
                 loss += losses
                 n_batches += 1
@@ -297,9 +292,6 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
             epoch_loss += loss.item()
 
-            #print("Batch loss: " + str(loss))
-
-        #print(f"DS Epoch {epoch}, loss = {epoch_loss}")
     return model, epoch_loss
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -330,12 +322,10 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
     model.train()
     for epoch in range(n_epochs):
-        #print("Epoch " + str(epoch))
-        scheduler.step()
-        #if epoch in lr_milestones:
-        #    print('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
+        scheduler.step()
         epoch_loss = 0.0
+        
         for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
@@ -343,7 +333,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
                 data = train_data[index]
                 target = train_target[index]
 
-                #Zero the network parameter gradients
+                # Zero the network parameter gradients
                 optimizer.zero_grad()
                 outputs = model(data)
                 loss_f = nn.MSELoss()
@@ -354,7 +344,6 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
-        #print(f"AE Epoch {epoch}, loss = {epoch_loss}")
     return model
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
@@ -373,11 +362,11 @@ def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         - model (NeuralNet object): Pretrained neural network
     """
 
-    #Create and train autoencoder
+    # Create and train autoencoder
     ae_model = NeuralNet_Autoencoder(model.size)
     ae_model = AE_train(ae_model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma)
 
-    #Create dictionaries to store network states
+    # Create dictionaries to store network states
     model_dict = model.state_dict()
     ae_model_dict = ae_model.state_dict()
 
@@ -402,7 +391,7 @@ def embed(X, model):
     """
 
     model.eval()
-    y = torch.norm(model(X) - model.c)   #Magnitude of the vector is anomaly score
+    y = torch.norm(model(X) - model.c)   # Magnitude of the vector is anomaly score
     return y
 
 def load_data(dir, filename):
@@ -419,84 +408,88 @@ def load_data(dir, filename):
     """
     data = None
     labels = None
-    first = True    #First sample flag
+    first = True    # First sample flag
 
-    #print(f"Loading data from directory: {dir}, with filename: {filename}")
-
-    #Walk directory
+    # Walk directory
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name == filename:    #If correct file to be included in training data
+            if name == filename:    # If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
-                #print(f"Found file: {name}, data shape: {read_data.shape}")
-
-                #Set data and labels arrays to data from first sample
+                # Set data and labels arrays to data from first sample
                 if first:
                     data = np.array([read_data])
                     labels = np.array([1.0])
                     first = False
 
-                #Concatenate additional samples
+                # Concatenate additional samples
                 else:
                     data = np.concatenate((data, [read_data]))
-                    labels = np.append(labels, 0)   #Default label is 0
+                    labels = np.append(labels, 0)   # Default label is 0
     if labels is not None and len(labels) > 0:
 
-        #follow equation and flexible.
+        # Add artificial labels
         teol = data.shape[0]
 
         x_values = np.arange(1, teol +1)
-        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    #Scaled from -1 to 1
+        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    # Equation scaled from -1 to 1
 
         for i in range(5):
-            labels[i] = health_indicators[-i-1] #Healthy
+            labels[i] = health_indicators[-i-1] # Healthy
 
         for i in range(3):
-            labels[-i-1] = health_indicators[i] #Unhealthy
+            labels[-i-1] = health_indicators[i] # Unhealthy
 
 
-        # labels[labels == 1][:5] = 1  # First 5 healthy labels
-        # labels[labels == -1][-3:] = -1  # Last 3 unhealthy labels
-
-        #print(f"Data loaded successfully, data shape: {data.shape}, labels shape: {labels.shape}")
-        #print(labels)
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
         raise ValueError("No data loaded or empty dataset found.")
 
-#Hyperparameter Bayesian optimization
+
+# Hyperparameter Bayesian optimization
 def print_progress(res):
     n_calls = len(res.x_iters)
     n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
-#Define this space with the parameters to optimise, type + range
+# Define this space with the parameters to optimise, type + range
 space = [
         Integer(100, 200, name='batch_size'),
         Real(0.0001, 0.001, name='learning_rate'),
         Integer(50, 200, name='epochs'),
     ]
 
-#Change the 451 line to whatever want to minimise. In their case the error output from the fitness function.
-#They Train VAE with the current parameters on the HI the code returns
+
 @use_named_args(space)
 
 def objective(batch_size, learning_rate, epochs):
+    """
+    Objective function for hyperparameter optimisation
 
+    Parameters:
+    - space (list): Hyperparameters
+
+    Returns:
+    - error (float): Fitness error to minimise
+    """
+
+    # Retrieve training data from global variables
     train_data = pass_train_data
     semi_targets = pass_semi_targets
 
+    # Initialise a model
     model = NeuralNet([train_data.shape[1], train_data.shape[2]])
 
+    # Convert batch size from float to integer
     batch_size = int(batch_size)
 
+    # Pretrain and train DeepSAD model
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-
     pretrain(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1)
     trained_model, loss = train(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1, eta=1, eps=1e-6)
 
+    # Evaluate HIs of training data
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     list = []
     for test_sample in samples:
@@ -510,6 +503,8 @@ def objective(batch_size, learning_rate, epochs):
 
         # Truncate (change to interpolation)
         list.append(scale_exact(np.array(current_result)))
+
+    # If possible, evaluate fitness scores
     try:
         ftn, monotonicity, trendability, prognosability, error = fitness(np.array(list))
     except ValueError:
@@ -518,12 +513,10 @@ def objective(batch_size, learning_rate, epochs):
 
     return error
 
-#print(objective([1, 2]))
+# print(objective([1, 2]))
 
-#Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
+# Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
 def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=ds_seed):
-    #print("Shape of train_data in hyperparameter optimization:", train_data.shape)
-    #print("Shape of semi_targets in hyperparameter optimization:", semi_targets.shape)
 
     global pass_train_data
     global pass_semi_targets
@@ -569,53 +562,52 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
     # Make string of filename for train/test data
     file_name_with_freq = freq + "kHz_" + file_name + ".csv"
-    #print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
+    # print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    #Initialise results matrix
+    # Initialise results matrix
     results = np.empty((5, 5, 30))
     hps = []
     global pass_fnwf
-    #Loop for each sample as test data
+    # Loop for each sample as test data
     for sample_count in range(len(samples)):
         print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
         test_sample = samples[sample_count]
 
-        #Make new list of samples excluding test data
+        # Make new list of samples excluding test data
         temp_samples = copy.deepcopy(samples)
         temp_samples.remove(test_sample)
 
         first = True  # Flag for first training sample
-        #Iterate and retrieve each training sample
+        # Iterate and retrieve each training sample
         for count in range(len(temp_samples)):
             sample = temp_samples[count]
 
-            #Load training sample
+            # Load training sample
             temp_data, temp_targets = load_data(os.path.join(dir, sample), file_name_with_freq)
 
-            #Create new arrays for training data and targets
+            # Create new arrays for training data and targets
             if first:
                 arr_data = copy.deepcopy(temp_data)
                 arr_targets = copy.deepcopy(temp_targets)
                 first = False
 
-            #Concatenate data and targets from other samples
+            # Concatenate data and targets from other samples
             else:
                 arr_data = np.concatenate((arr_data, temp_data))
                 arr_targets = np.concatenate((arr_targets, temp_targets))
 
-        #Convert to pytorch tensors
+        # Convert to pytorch tensors
         train_data = torch.tensor(arr_data)
         semi_targets = torch.tensor(arr_targets)
 
-        #Create list of data dimensions to set number of input nodes in neural network
+        # Create list of data dimensions to set number of input nodes in neural network
         size = [train_data.shape[1], train_data.shape[2]]
-        #print(train_data.shape)
-        #print(semi_targets.shape)
-        #Convert to dataset and create loader
+
+        # Convert to dataset and create loader
         train_dataset = TensorDataset(train_data, semi_targets)
 
-        # Hyperparameter opt.
+        # Hyperparameter optimisation
         if opt:
             pass_fnwf = file_name_with_freq
             hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
@@ -624,29 +616,28 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
             optimized_params[2] = 20
-            #print(optimized_params)
-        #optimized_params = [105, 0.001916004419675022, 2]
 
             train_loader = DataLoader(train_dataset, batch_size=optimized_params[0], shuffle=True)
-            #Create, pretrain and train a model
+            
+            # Create, pretrain and train a model
             model = NeuralNet(size)
             model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
             model, loss = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
 
 
-            #Test for all panels
-            #Load test sample data (targets not used)
+            # Test for all panels
+            # Load test sample data (targets not used)
             list = []
             for test_sample in samples:
                 test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
 
-                #Calculate HI at each state
+                # Calculate HI at each state
                 current_result = []
                 for state in range(test_data.shape[0]):
                     data = test_data[state]
                     current_result.append(embed(data, model).item())
 
-                #Truncate (change to interpolation)
+                # Truncate (change to interpolation)
                 list.append(scale_exact(np.array(current_result)))
             results[sample_count] = np.array(list)
 
@@ -655,7 +646,19 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     else:
         return results
 
+
 def plot_ds_images(dir, type):
+    """
+        Assemble grid of HI graphs
+        
+        Parameters:
+        - dir (str): Directory of HI graph images
+        - type (str): Seed of HIs generated
+        
+        Returns: None
+    """
+    
+    # Define variables
     filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
     nrows = 6
     ncols = 5
@@ -663,7 +666,7 @@ def plot_ds_images(dir, type):
     freqs = ("050", "100", "125", "150", "200", "250")
     fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
 
-
+    # For each frequency and panel
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
@@ -691,7 +694,6 @@ def plot_ds_images(dir, type):
     for ax, col in zip(axs[0], panels):
         ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
 
-    plt.tight_layout()  # Adjust spacing between subplots
+    # Adjust spacing between subplots and save
+    plt.tight_layout()
     plt.savefig(filedir)
-
-#plot_ds_images(input("CSV: "), "FFT")

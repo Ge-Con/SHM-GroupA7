@@ -81,6 +81,15 @@ def apply(list, pca, component=0):
 
 
 def read_matrices_from_folder(dir, filename, freq):
+    """
+        Reads matrices from CSV files and saves them to an array of consistent length
+
+        Parameters:
+        - dir (str): Root directory of CSV files
+        - filename (str): File type of CSV files (no frequency or .csv)
+        - freq (str): 3-digit frequency of CSV files (no kHz)
+    """
+
     matrix = []
     rmatrix = []
     state = 0
@@ -93,29 +102,28 @@ def read_matrices_from_folder(dir, filename, freq):
                 tempmatrix = tempmatrix.flatten()
                 matrix.append(tempmatrix)
                 state += 1
+
+    # Scale data to consistent length
     matrix = np.array(matrix).T
     for row in range(len(matrix)):
         rmatrix.append(scale_exact(matrix[row]))
     scaler = StandardScaler()
-    #print(rmatrix[0])
     rmatrix = scaler.fit_transform(np.array(rmatrix).T).T
-    #print(rmatrix[0])
+
     return np.array(rmatrix)
 
 def doPCA_multiple_Campaigns(dir, filename, component=0): #If 0 to 95% var, else expect 1, 2 or 3rd principle component
-    # Use the read_matrices_from_folder function to get the matrices from a folder
-
     """
-    Creates and applies any PCA model
+        Creates and applies either PCA model
 
-    Parameters:
-        - dir (string): CSV directory for test and training data
-        - components: Principal component to keep, not specified if model to 95% variance
+        Parameters:
+            - dir (string): CSV directory for test and training data
+            - components: Principal component to keep, not specified if model to 95% variance
 
-    Returns:
-        - output (2 or 3D numpy array): PCA transform of data, for each of 6 frequencies and 30 states (6, 30).
-          if to 95% variance each element is an extra dimension of the array containing the transform of unknown length
-          if to one principal component each element is an integer
+        Returns:
+            - output (2 or 3D numpy array): PCA transform of data, for each of 6 frequencies and 30 states (6, 30).
+              if to 95% variance each element is an extra dimension of the array containing the transform of unknown length
+              if to one principal component each element is an integer
     """
 
     output = []
