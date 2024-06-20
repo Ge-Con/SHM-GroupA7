@@ -297,7 +297,8 @@ def save_evaluation(features, label, dir, files_used=[""]):
             dir (str): Directory to save results to
             files_used (list): Names of features used
         Returns:
-            criteria (3D+ array): Prognostic criteria results with 4 PC types, 5 frequencies, n features - extra dimensions if recursive calls
+            criteria (3D+ array): Prognostic criteria results with 4 PC types, 5 frequencies,
+                                  n features - extra dimensions if recursive calls
     """
 
     # Create save directory for HIs which will not overwrite existing files
