@@ -335,6 +335,12 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   # Magnitude of the vector is anomaly score
     return y
 
+def norm(data):
+    """Normalises numpy array"""
+    t_data = torch.tensor(data)
+    t_data = torch.nn.functional.normalize(t_data)
+    return t_data.numpy()
+
 def load_data(dir, filename):
     """
         Loads data from CSV files
@@ -355,7 +361,7 @@ def load_data(dir, filename):
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == filename:    # If correct file to be included in training data
-                read_data = np.array(pd.read_csv(os.path.join(root, name)))
+                read_data = norm(np.array(pd.read_csv(os.path.join(root, name))))
 
                 # Set data and labels arrays to data from first sample
                 if first:
