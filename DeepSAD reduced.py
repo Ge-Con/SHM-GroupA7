@@ -335,11 +335,6 @@ def embed(X, model):
     y = torch.norm(model(X) - model.c)   # Magnitude of the vector is anomaly score
     return y
 
-def norm(data):
-    """Normalises numpy array"""
-    t_data = torch.tensor(data)
-    t_data = torch.nn.functional.normalize(t_data)
-    return t_data.numpy()
 
 def load_data(dir, filename):
     """
@@ -361,7 +356,7 @@ def load_data(dir, filename):
     for root, dirs, files in os.walk(dir):
         for name in files:
             if name == filename:    # If correct file to be included in training data
-                read_data = norm(np.array(pd.read_csv(os.path.join(root, name))))
+                read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
                 # Set data and labels arrays to data from first sample
                 if first:
@@ -381,11 +376,11 @@ def load_data(dir, filename):
         x_values = np.arange(1, teol +1)
         health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    # Equation scaled from -1 to 1
 
-        for i in range(5):
-            labels[i] = health_indicators[-i-1] # Healthy
+        for i in range(len(labels)/2):  # Originally 5
+            labels[i] = health_indicators[-i-1]  # Healthy
 
-        for i in range(3):
-            labels[-i-1] = health_indicators[i] # Unhealthy
+        for i in range(len(labels)/2):  # Originally 3
+            labels[-i-1] = health_indicators[i]  # Unhealthy
 
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
@@ -462,6 +457,11 @@ def DeepSAD_train_run(dir, freq, file_name):
                 arr_data = np.concatenate((arr_data, temp_data))
                 arr_targets = np.concatenate((arr_targets, temp_targets))
 
+        #Normalise training data
+        normal_mn = np.mean(arr_data, axis=0)   #Check this is the correct axis
+        normal_sd = np.std(arr_data, axis=0)
+        arr_data = (arr_data-normal_mn)/normal_sd
+
         # Convert to pytorch tensors
         train_data = torch.tensor(arr_data)
         semi_targets = torch.tensor(arr_targets)
@@ -486,6 +486,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         list = []
         for test_sample in samples:
             test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+            test_data = (test_data-normal_mn)/normal_sd  # Normalise using test statistics
 
             # Calculate HI at each state
             current_result = []
@@ -493,9 +494,16 @@ def DeepSAD_train_run(dir, freq, file_name):
                 data = test_data[state]
                 current_result.append(embed(data, model).item())
 
-            # Truncate (change to interpolation)
+            # Interpolate
             list.append(scale_exact(np.array(current_result)))
-        results[sample_count] = np.array(list)
+
+        # Scale so on average starts at 0 and ends at 1
+        list = np.array(list)
+        av_start = np.mean(list[:,0])
+        av_end = np.mean(list[:,-1])
+        list = (list - av_start)/av_end
+
+        results[sample_count] = list
 
     return results
 
