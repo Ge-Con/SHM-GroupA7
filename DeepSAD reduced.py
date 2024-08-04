@@ -376,10 +376,10 @@ def load_data(dir, filename):
         x_values = np.arange(1, teol +1)
         health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    # Equation scaled from -1 to 1
 
-        for i in range(len(labels)/2):  # Originally 5
+        for i in range(int(len(labels)/2)):  # Originally 5
             labels[i] = health_indicators[-i-1]  # Healthy
 
-        for i in range(len(labels)/2):  # Originally 3
+        for i in range(int(len(labels)/2)):  # Originally 3
             labels[-i-1] = health_indicators[i]  # Unhealthy
 
 
@@ -561,7 +561,7 @@ def plot_ds_images(dir, type):
 
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
-dir = input("CSV dir: ")
+dir = "C:/Users/Jamie/Documents/Uni/Year 2/Q3+4/Project/CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
