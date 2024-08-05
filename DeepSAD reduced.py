@@ -13,6 +13,12 @@ from Interpolating import scale_exact
 from prognosticcriteria_v2 import fitness
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import Graphs
+
+#Suppress warnings - please comment out if doing any troubleshooting or changes to the model
+import warnings
+warnings.filterwarnings('ignore')
+
 
 # Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
@@ -252,9 +258,6 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         - model (NeuralNet object): Trained neural network
     """
 
-    # Set loss
-    criterion = nn.MSELoss(reduction='none')
-
     # Set optimizer (Adam optimizer for now)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
@@ -379,7 +382,7 @@ def load_data(dir, filename):
         for i in range(int(len(labels)/2)):  # Originally 5
             labels[i] = health_indicators[-i-1]  # Healthy
 
-        for i in range(int(len(labels)/2)):  # Originally 3
+        for i in range(int(len(labels)/2)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
             labels[-i-1] = health_indicators[i]  # Unhealthy
 
 
@@ -502,6 +505,12 @@ def DeepSAD_train_run(dir, freq, file_name):
         av_start = np.mean(list[:,0])
         av_end = np.mean(list[:,-1])
         list = (list - av_start)/av_end
+
+        #Plot and print fitness
+        ftn, monotonicity, trendability, prognosability, error = fitness(list)
+        print("Fitness:", ftn)
+        print("Mo:", monotonicity, "| Tr:", trendability, "| Pr:", prognosability)
+        Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
 
         results[sample_count] = list
 
