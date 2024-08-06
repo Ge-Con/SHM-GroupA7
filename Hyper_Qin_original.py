@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import scipy.io as scio
 from time import *
 
-# This "resets the default graph" - esentially ensuring that there is no variable clashes
+# This "resets the default graph" - essentially ensuring that there is no variable clashes
 tf.compat.v1.reset_default_graph()
 
 # This loads the data from their local directory. As you can see it is being imported from a MATLAB file, from a variable called "n" I believe. And then is transposed
@@ -74,7 +74,7 @@ b1 = tf.Variable(tf.zeros([hidden_1, ]))
 # so the VAE creates distributions of how the data is distributed
 # mean_w is a vector which has the mean values for all the distributions for the weights between the first hidden layer
 # and the second, where the second hidden layer is the bottleneck z (what we want). Xavier initialized
-# same goes for mean_b, just the bias of these weight mean values. Initialied as 0 again
+# same goes for mean_b, just the bias of these weight mean values. Initialized as 0 again
 # This distribution is only used for the latent space (the bottleneck) and not the output, so we won't use this in the decoder
 mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
 mean_b = tf.Variable(tf.zeros([hidden_2, ]))
@@ -174,7 +174,7 @@ with tf.compat.v1.Session() as sess:
             # sess.run executes the session, basically running through the operations we have indicated
             # here the optimizer, and calculates the loss. _ is the variable returned by optm which is not needed
             # the part with feed_dict indicates to the code that any instances of "x" should be replaced with batch_xs
-            # esentially x = batch_xs. As we saw before, x is a PLACEHOLDER. We can replace x and rerun the code
+            # essentially x = batch_xs. As we saw before, x is a PLACEHOLDER. We can replace x and rerun the code
             _, cost = sess.run([optm, loss], feed_dict={x: batch_xs})
 
         # Print loss every 50 epochs
