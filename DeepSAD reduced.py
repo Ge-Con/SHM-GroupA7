@@ -517,7 +517,7 @@ def DeepSAD_train_run(dir, freq, file_name):
     return results
 
 
-def plot_ds_images(dir, type):
+def plot_ds_images(dir):
     """
         Assemble grid of HI graphs
         
@@ -529,10 +529,11 @@ def plot_ds_images(dir, type):
     """
     
     # Define variables
-    filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
+    filedir = os.path.join(dir, f"big_DeepSAD_graph_seed_{ds_seed}")
     nrows = 6
     ncols = 5
     panels = ("0", "1", "2", "3", "4")
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     freqs = ("050", "100", "125", "150", "200", "250")
     fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
 
@@ -540,7 +541,8 @@ def plot_ds_images(dir, type):
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"DeepSAD_{type}-{freq}-{panel} HIs.png"
+            sample = samples[int(panel)]
+            filename = f"{sample} {freq}kHz HIs.png"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
@@ -573,10 +575,15 @@ HIs = np.empty((6), dtype=object)
 dir = "C:/Users/Jamie/Documents/Uni/Year 2/Q3+4/Project/CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
+plot_ds_images(dir)
+quit()
+
 for freq in range(len(frequencies)):
     print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
 # Save and plot results
 #save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
-plot_ds_images(dir, "FFT")
+
+# This test version only prints fitness scores and does not save them elsewhere
+# Only uses FFT inputs
