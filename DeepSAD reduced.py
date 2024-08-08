@@ -204,7 +204,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     model.train()
     for epoch in range(n_epochs):
         epoch_loss = 0.0
-        scheduler.step()
+
 
         for train_data, train_target in train_loader:
             loss = 0.0
@@ -224,7 +224,7 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 loss_d = 0
                 if reg != 0:  # If we want to diversify
                     C = torch.matmul(Y.T, Y)  # Gram Matrix
-                    loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
+                    loss_d = -torch.log(torch.det(C) + 1e-7) + torch.trace(C)  # Diversity loss contribution
                 losses = dist if target == 0 else eta * ((dist + eps) ** target)
 
                 # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
@@ -238,6 +238,8 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
             optimizer.step()
 
             epoch_loss += loss.item()
+
+        scheduler.step()
 
     return model, epoch_loss
 
@@ -572,7 +574,7 @@ def plot_ds_images(dir):
 
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
-dir = "C:/Users/Jamie/Documents/Uni/Year 2/Q3+4/Project/CSV-FFT-HLB-Reduced"
+dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
