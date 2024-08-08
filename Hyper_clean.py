@@ -29,7 +29,7 @@ dir_root = input("Enter directory of folder with data: ")
 # C:\Users\pablo\Downloads\PZT Output folder
 
 # This function takes the names of the csv's and returns the data concatenated horizontally and transposed
-# The flags indicate where the data for a new file starts. We use this to combine the files later
+# The flags indicate where the data for a new file starts. We use this to combine the files later. We haven't used flags as far as I know?
 def mergedata(train_filenames):
     flags = tuple([0])
     data = pd.read_csv(train_filenames[0], header=None)
@@ -72,16 +72,16 @@ def find_largest_array_size(array_list):
     return max_size
 
 # This function creates the csv's where hyperparameters will be stored and does the actual storing.
-# It will create 3 files: hyperparameters-opt/test/train
+# It will create 3 files: hyperparameters-opt, and fitness-test/train
 # After a given number of repetitions, the best-performing hyperparameters for each fold need to be stored
-# opt is a csv which contains the actual values for those hyperparameters e.g. hidden_1=15, learning_rate=0.001, etc...
-# test contains the fitness-all value (including test HI) when running the VAE with those hyperparameters
-# train is the same, but it contains the fitness-train values. These last 2 files are just to compare the performance of the found optimum hyperparameters
-def store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, freq):
+# hyperparameters-opt is a csv which contains the actual values for those hyperparameters e.g. hidden_1=15, learning_rate=0.001, etc...
+# fitness-test contains the fitness-test value (only test HI) when running the VAE with those hyperparameters
+# fitness-all is the same, but it saves the fitness of train+test HIs. These last 2 files are just to compare the performance of the found optimum hyperparameters
+def store_hyperparameters(hyperparameters, fitness_all, fitness_test, panel, freq):
     global dir_root
     filename_opt = os.path.join(dir_root, "hyperparameters-opt.csv")
-    filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
-    filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
+    filename_test = os.path.join(dir_root, "fitness-test.csv")
+    filename_all = os.path.join(dir_root, "fitness-all.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
     # Create an empty dataframe with frequencies as the index if the file does not exist
@@ -102,6 +102,22 @@ def store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, fr
     df.to_csv(filename_opt)
 
     # Create an empty dataframe with frequencies as the index if the file does not exist
+    if not os.path.exists(filename_all):
+        df = pd.DataFrame(index=freqs)
+    else:
+        # Load the existing file if it exists
+        df = pd.read_csv(filename_all, index_col=0)
+
+    # Ensure that the panel column exists
+    if panel not in df.columns:
+        df[panel] = None
+
+    # Update the dataframe with the new parameters
+    df.loc[freq, panel] = str(fitness_all)
+
+    # Save the dataframe back to the CSV
+    df.to_csv(filename_all)
+
     if not os.path.exists(filename_test):
         df = pd.DataFrame(index=freqs)
     else:
@@ -113,33 +129,15 @@ def store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, fr
         df[panel] = None
 
     # Update the dataframe with the new parameters
-    df.loc[freq, panel] = str(fitness_all)
+    df.loc[freq, panel] = str(fitness_test)
 
     # Save the dataframe back to the CSV
     df.to_csv(filename_test)
 
-    if not os.path.exists(filename_train):
-        df = pd.DataFrame(index=freqs)
-    else:
-        # Load the existing file if it exists
-        df = pd.read_csv(filename_train, index_col=0)
-
-    # Ensure that the panel column exists
-    if panel not in df.columns:
-        df[panel] = None
-
-    # Update the dataframe with the new parameters
-    df.loc[freq, panel] = str(fitness_train)
-
-    # Save the dataframe back to the CSV
-    df.to_csv(filename_train)
-
 # Same function but only stores one file with the hyperparameters and not the other 2 with results
-def simple_store_hyperparameters(params, file, panel, freq, dir):
+def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
 
     filename_opt = os.path.join(dir, file + "-hopt.csv")
-    #filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
-    #filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
     freq = freq + "_kHz"
 
@@ -155,14 +153,15 @@ def simple_store_hyperparameters(params, file, panel, freq, dir):
         df[panel] = None
 
     # Update the dataframe with the new parameters
-    df.loc[freq, panel] = str(params)
+    df.loc[freq, panel] = str(hyperparameters)
 
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
 ################ MAIN FUNCTION
-# Function to train VAE but with hyperparameters as function inputs
-def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca):
+# Function to train VAE and generate results but with hyperparameters as function inputs
+# NOTE: have removed global variables, that's why there's 5 extra inputs: train_data, test_data, scaler, pca, seed
+def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed):
 
     #global valid
     # commented, this is for validation data?
@@ -172,32 +171,31 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
     display = 200
 
     # Xavier initialization for weights, as explained in Hyper_Qin_original.py
-    def xavier_init(fan_in, fan_out, constant=1):
-        global seed
+    def xavier_init(fan_in, fan_out, constant=1, seed):
         tf.random.set_seed(seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
         return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
 
-    # I don't know what this line is
+    # I don't remember what this line is, but we need it for some compatibility issues
     tf.compat.v1.disable_eager_execution()
 
     # Architecture and losses below as explained in Hyper_Qin_original.py
     x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
 
-    w1 = tf.Variable(xavier_init(n_input, hidden_1))
+    w1 = tf.Variable(xavier_init(n_input, hidden_1, seed=seed))
     b1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
+    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2), seed=seed)
     mean_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2))
+    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2), seed=seed)
     logvar_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1))
+    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1), seed=seed)
     db1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    dw2 = tf.Variable(xavier_init(hidden_1, n_input))
+    dw2 = tf.Variable(xavier_init(hidden_1, n_input), seed=seed)
     db2 = tf.Variable(tf.zeros([n_input, ]))
 
     l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
@@ -251,46 +249,53 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
     # In this variable the train HIs will be saved
     z_train = []
 
-    # This loops x over all panels EXCEPT the current test panel
-    # j represents panel name
+    # This loops x over all panels EXCEPT the current test panel. j represents panel name
     for j in tuple(x for x in panels if x != panel):
 
         # dir_root comes from the input at the start of the code
-        # concat_data is the data from the files
-        # first
-        concat_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
-        concat_data = np.delete(concat_data, -1, axis=1)
-        concat_data = scaler.transform(concat_data)
-        concat_data = pca.transform(concat_data)
-        y_pred = sess.run(z, feed_dict={x: concat_data})
-        z_train.append(y_pred)
+        # single_panel_data is the data from the files, but only from one panel at a time, NOT merged
+        # first the file is read, the final column is deleted (don't know why), then it is normalized and PCA is applied
+        # Not sure why we must import scaler and pca to do this, when those are fitted with the merged train data
+        single_panel_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
+        single_panel_data = np.delete(single_panel_data, -1, axis=1)
+
+        # Then, the train HI is calculated for each panel individually and appended to the array z_train
+        single_panel_data = scaler.transform(single_panel_data)
+        single_panel_data = pca.transform(single_panel_data)
+        z_train_individual = sess.run(z, feed_dict={x: single_panel_data})
+        z_train.append(z_train_individual)
 
 
-    #scale all arrays to the same lenght
+    # Transpose
     for i in range(len(z_train)):
         z_train[i] = z_train[i].transpose()
 
-
+    # We find the longest HI and interpolate the other HIs so that they all have matching lengths
     max = find_largest_array_size(z_train)
     for i in range(len(z_train)):
         if z_train[i].size < max:
-            arr_interp = interp.interp1d(np.arange(z_train[i].size), z_train[i])
-            arr_stretch = arr_interp(np.linspace(0, z_train[i].size - 1, max))
+
+            # The interpolation function is found for the shorter HI, and applied to arr_stretch. Then the shorter HI z_train[i] is updated
+            interp_function = interp.interp1d(np.arange(z_train[i].size), z_train[i])
+            arr_stretch = interp_function(np.linspace(0, z_train[i].size - 1, max))
             z_train[i] = arr_stretch
 
-
+    # Vertically stack the HIs
     z_train = np.vstack(z_train)
 
+    # We do the same but to match the length of z_test with z_train
     if z_test.size != z_train.shape[1]:
-        arr_interp = interp.interp1d(np.arange(z_test.size), z_test)
-        arr_stretch = arr_interp(np.linspace(0, z_test.size - 1, z_train.shape[1]))
+        interp_function = interp.interp1d(np.arange(z_test.size), z_test)
+        arr_stretch = interp_function(np.linspace(0, z_test.size - 1, z_train.shape[1]))
         z_test = arr_stretch
 
-    full = np.append(z_train, z_test, axis = 0)
+    # Create an array that contains all HIs (train+test)
+    z_all = np.append(z_train, z_test, axis = 0)
 
+    # Close the TensorFlow session
     sess.close()
 
-    return [full, z_train, z_test]
+    return [z_all, z_train, z_test]
 
 # Hyperparameter optimization
 
@@ -312,7 +317,7 @@ space = [
 # This function is the objective so what we want to minimize. That is the error (3/fitness).
 # We give it all these inputs so that we can run train_vae and calculate fitness
 def objective(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca):
-    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca)[1])
+    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed)[1])
     print("Error: ", error)
     return error
 
@@ -354,7 +359,7 @@ for panel in panels:
 
         # The array train_filenames saves the filenames of the data to be used for training
         # Note that here and a few lines below, we hardcode the name "HLB". This is to run the VAE on HLB data
-        # When implementing VAE into main, this will need to be changed such that its not hardcoded
+        # When implementing VAE into main, this will need to be changed such that it's not hardcoded
         for i in tuple(x for x in panels if x != panel):
             filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
             train_filenames.append(filename)
@@ -365,9 +370,11 @@ for panel in panels:
         counter += 1
         print("Counter: ", counter)
 
+        # For train_data, create the merged file with all 4 panels, delete the last column. I don't know why we delete the last column though
         train_data, flags = mergedata(train_filenames)
         train_data.drop(train_data.columns[len(train_data.columns) - 1], axis=1, inplace=True)
 
+        # Same as with train data. Read the filename, and delete the last column
         # Also hardcoded
         test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
         test_data = pd.read_csv(test_filename, header=None).values.transpose()
@@ -385,29 +392,31 @@ for panel in panels:
         train_data = pca.transform(train_data)
         test_data = pca.transform(test_data)
 
-        # Extract optimal hyperparameters
+        # Extract optimal hyperparameters, here we indicate how many calls for hyperparameter optimisation we want (min. 10)
         hyperparameters = hyperparameter_optimisation(n_calls=20)
 
         # Determine the test and train HIs from the VAE model
         # [0][0] is hidden_1, [0][1] is batch_size, [0][2] is learning_rate and [0][3] is epochs
         health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
-                                      hyperparameters[0][2], hyperparameters[0][3], train_data, test_data, scaler, pca)
+                                      hyperparameters[0][2], hyperparameters[0][3], train_data, test_data, scaler, pca, seed)
 
-        # fitness_train value, health_indicators[0] is ...
-        fitness_train = fitness(health_indicators[0])
-        print("HI train", fitness_train)
+        # fitness_all value (includes train panel), health_indicators[0] is z_all (all HIs, train+test)
+        fitness_all = fitness(health_indicators[0])
+        print("Fitness all", fitness_all)
 
-        #fitness_all value (includes test panel), health_indicators[2] is ... and health_indicators[1] is ...
-        fitness_all, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
-        print("HI test", fitness_all)
+        #fitness_test value (only test panel), health_indicators[2] is z_test and health_indicators[1] is z_train
+        # Remember for test_fitness we compare the test HI to the train HIs
+        # health_indicators[2] is z_test, health_indicators[1] is z_train
+        fitness_test, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
+        print("Fitness test", fitness_test)
 
         # For the current entry of result_dictionary, append the fitness_train and all values
-        result_dictionary[f"{panel}{freq}"].append([fitness_train, fitness_all])
+        result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test])
 
         # Writing to the csv's
-        fitness_all = (fitness_all, m, t, p)
-        fitness_train = (fitness_train)
-        store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, freq)
+        fitness_test = (fitness_test, m, t, p)
+        fitness_all = (fitness_all)
+        store_hyperparameters(hyperparameters, fitness_all, fitness_test, panel, freq)
 
 # Write the result_dictionary to a csv file. To reach this line, the two for loops must be completed
 # This takes extremely long for Hyper_clean, so realistically will only be reached with Hyper_clean_fast (as the hyperparameter optimization is skipped)
@@ -418,3 +427,6 @@ with open("results.csv", "w", newline="") as f:
     w.writeheader()
     w.writerow(result_dictionary)
 
+# CONCERNS:
+# 1. I don't know yet why columns are deleted in the data 2. Don't know why we import pca and scaler to transform the individual panel data when this has
+# been fitted to the merged data, seems weird 3.
