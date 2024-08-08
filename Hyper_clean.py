@@ -18,31 +18,37 @@ import csv
 from prognosticcriteria_v2 import Mo_single, Pr, Tr, Mo, fitness, Pr_single
 import os
 
-# Reset any previous graph and set seed for reproducibility
+# Reset any previous graph (as explained in Hyper_Qin_original.py) and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
-tf.random.set_seed(42)
+seed = 42
+tf.random.set_seed(seed)
+np.random.seed(seed)
+
+# Directory with data
 dir_root = input("Enter directory of folder with data: ")
 # C:\Users\pablo\Downloads\PZT Output folder
-def mergedata(filenames):
+
+# This function takes the names of the csv's and returns the data concatenated horizontally and transposed
+# The flags indicate where the data for a new file starts. We use this to combine the files later
+def mergedata(train_filenames):
     flags = tuple([0])
-    data = pd.read_csv(filenames[0], header=None)
-    if len(filenames) > 1:
-        for i in range(len(filenames)-1):
+    data = pd.read_csv(train_filenames[0], header=None)
+    if len(train_filenames) > 1:
+        for i in range(len(train_filenames)-1):
             flags += tuple([len(data)])
-            data = pd.concat([data, pd.read_csv(filenames[i+1])], axis = 1)
+            data = pd.concat([data, pd.read_csv(train_filenames[i+1])], axis = 1)
     data = data.transpose()
     return data, flags
 
-panels = ("L103", "L105", "L109", "L104", "L123")
-freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
-resdict = {}
-
+# As explained in Hyper_Qin_original.py
 def DCloss(feature, batch_size):
     s = 0
     for i in range(1, batch_size):
         s += tf.pow(feature[i] - tf.constant(10, dtype=tf.float32) - tf.random.normal([1], 0, 1) - feature[i - 1], 2)
     return s
 
+# As you might remember from the oral exam presentations, we need a different formula to calculate fitness with test HI, this is it
+# Just uses different Pr and Mo functions. test_HI is self explanatory, X is an array with the training HIs (test_HI needs to be compared to them for trendability)6
 def test_fitness(test_HI, X):
     test_HI = test_HI[0]
     monotonicity = Mo_single(test_HI)
@@ -52,6 +58,8 @@ def test_fitness(test_HI, X):
 
     return fitness_test
 
+# This function finds the size of the largest array in a list of arrays
+# We use this to scale all HIs later to the same length
 def find_largest_array_size(array_list):
     max_size = 0
 
@@ -63,16 +71,20 @@ def find_largest_array_size(array_list):
 
     return max_size
 
-
-def store_hyperparameters(params_train, params_test, params_hi_train, panel, freq):
+# This function creates the csv's where hyperparameters will be stored and does the actual storing.
+# It will create 3 files: hyperparameters-opt/test/train
+# After a given number of repetitions, the best-performing hyperparameters for each fold need to be stored
+# opt is a csv which contains the actual values for those hyperparameters e.g. hidden_1=15, learning_rate=0.001, etc...
+# test contains the fitness-all value (including test HI) when running the VAE with those hyperparameters
+# train is the same, but it contains the fitness-train values. These last 2 files are just to compare the performance of the found optimum hyperparameters
+def store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, freq):
     global dir_root
-
     filename_opt = os.path.join(dir_root, "hyperparameters-opt.csv")
     filename_test = os.path.join(dir_root, "hyperparameters-test.csv")
     filename_train = os.path.join(dir_root, "hyperparameters-train.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
 
-    # Create an empty DataFrame with frequencies as the index if the file does not exist
+    # Create an empty dataframe with frequencies as the index if the file does not exist
     if not os.path.exists(filename_opt):
         df = pd.DataFrame(index=freqs)
     else:
@@ -83,13 +95,13 @@ def store_hyperparameters(params_train, params_test, params_hi_train, panel, fre
     if panel not in df.columns:
         df[panel] = None
 
-    # Update the DataFrame with the new parameters
-    df.loc[freq, panel] = str(params_train)
+    # Update the dataframe with the new hyperparameters
+    df.loc[freq, panel] = str(hyperparameters)
 
-    # Save the DataFrame back to the CSV
+    # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-    # Create an empty DataFrame with frequencies as the index if the file does not exist
+    # Create an empty dataframe with frequencies as the index if the file does not exist
     if not os.path.exists(filename_test):
         df = pd.DataFrame(index=freqs)
     else:
@@ -100,10 +112,10 @@ def store_hyperparameters(params_train, params_test, params_hi_train, panel, fre
     if panel not in df.columns:
         df[panel] = None
 
-    # Update the DataFrame with the new parameters
-    df.loc[freq, panel] = str(params_test)
+    # Update the dataframe with the new parameters
+    df.loc[freq, panel] = str(fitness_all)
 
-    # Save the DataFrame back to the CSV
+    # Save the dataframe back to the CSV
     df.to_csv(filename_test)
 
     if not os.path.exists(filename_train):
@@ -116,12 +128,13 @@ def store_hyperparameters(params_train, params_test, params_hi_train, panel, fre
     if panel not in df.columns:
         df[panel] = None
 
-    # Update the DataFrame with the new parameters
-    df.loc[freq, panel] = str(params_hi_train)
+    # Update the dataframe with the new parameters
+    df.loc[freq, panel] = str(fitness_train)
 
-    # Save the DataFrame back to the CSV
+    # Save the dataframe back to the CSV
     df.to_csv(filename_train)
 
+# Same function but only stores one file with the hyperparameters and not the other 2 with results
 def simple_store_hyperparameters(params, file, panel, freq, dir):
 
     filename_opt = os.path.join(dir, file + "-hopt.csv")
@@ -130,7 +143,7 @@ def simple_store_hyperparameters(params, file, panel, freq, dir):
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
     freq = freq + "_kHz"
 
-    # Create an empty DataFrame with frequencies as the index if the file does not exist
+    # Create an empty dataframe with frequencies as the index if the file does not exist
     if not os.path.exists(filename_opt):
         df = pd.DataFrame(index=freqs)
     else:
@@ -141,34 +154,37 @@ def simple_store_hyperparameters(params, file, panel, freq, dir):
     if panel not in df.columns:
         df[panel] = None
 
-    # Update the DataFrame with the new parameters
+    # Update the dataframe with the new parameters
     df.loc[freq, panel] = str(params)
 
-    # Save the DataFrame back to the CSV
+    # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-def train_vae_ensemble(hidden_1, batch_size, learning_rate, epochs):
-    # Set hyperparameters and architecture details
-    global data
-    global test
-    global valid
-    global scaler
-    global pca
-    n_input = data.shape[1]  # Number of features
-    hidden_2 = 1
-    display = 50
+################ MAIN FUNCTION
+# Function to train VAE but with hyperparameters as function inputs
+def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca):
 
-    # Xavier initialization for weights
+    #global valid
+    # commented, this is for validation data?
+
+    n_input = train_data.shape[1]  # Number of features
+    hidden_2 = 1
+    display = 200
+
+    # Xavier initialization for weights, as explained in Hyper_Qin_original.py
     def xavier_init(fan_in, fan_out, constant=1):
+        global seed
+        tf.random.set_seed(seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
         return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
 
+    # I don't know what this line is
     tf.compat.v1.disable_eager_execution()
-    # Input placeholder
+
+    # Architecture and losses below as explained in Hyper_Qin_original.py
     x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
 
-    # Encoder weights and biases
     w1 = tf.Variable(xavier_init(n_input, hidden_1))
     b1 = tf.Variable(tf.zeros([hidden_1, ]))
 
@@ -188,330 +204,217 @@ def train_vae_ensemble(hidden_1, batch_size, learning_rate, epochs):
     mean = tf.matmul(l1, mean_w) + mean_b
     logvar = tf.matmul(l1, logvar_w) + logvar_b
     eps = tf.random.normal(tf.shape(logvar), 0, 1, dtype=tf.float32)
+
     z = tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean
     l2 = tf.nn.sigmoid(tf.matmul(z, dw1) + db1)
     pred = tf.matmul(l2, dw2) + db2
 
-    # Loss function with additional KL divergence and custom loss
     reloss = tf.reduce_sum(tf.square(pred - x))
     klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
-
-    # Total loss
     fealoss = DCloss(z, batch_size)
+
     loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
 
-    # Optimizer
     optm = tf.compat.v1.train.AdamOptimizer(learning_rate).minimize(loss)
 
-    # Training parameters
+    # Training, as explained in Hyper_Qin_original.py
     begin_time = time()
 
+    # In sess, we are saving everything from the training loop, the learnt weights and biases, etc
     sess = tf.compat.v1.Session()
     sess.run(tf.compat.v1.global_variables_initializer())
+
     print('Start training!!!')
-    num_batch = int(data.shape[0] / batch_size)
+    num_batch = int(train_data.shape[0] / batch_size)
     if num_batch == 0:
         raise ValueError("Batch size is too large for the given data.")
 
     for epoch in range(epochs):
         for i in range(num_batch):
-            batch_xs = data[i * batch_size:(i + 1) * batch_size]
+            batch_xs = train_data[i * batch_size:(i + 1) * batch_size]
             _, cost = sess.run([optm, loss], feed_dict={x: batch_xs})
             #validation_loss = sess.run(loss, feed_dict={x: valid})
+            # not sure why this line is here, it's for something with validation, but we can keep it as a comment
 
-        #if epoch % display == 0:
-            #print(f"Epoch {epoch}, Cost = {cost}, validation loss = N/a")
+        if epoch % display == 0:
+            print(f"Epoch {epoch}, Cost = {cost})
 
     print('Training finished!!!')
     end_time = time()
     print(f"Training time: {end_time - begin_time:.2f} seconds")
-    return sess, x, z
 
-def train_vae(hidden_1, batch_size, learning_rate, epochs):
-    # Set hyperparameters and architecture details
-    global data
-    global test
-    global valid
-    global scaler
-    global pca
-    n_input = data.shape[1]  # Number of features
-    hidden_2 = 1
-    display = 50
+    # Here is where things start changing a lot compared to Hyper_Qin_original
+    # So this z_test stores the bottleneck values for the test dataset (x: test -> x=test). We will see later where test comes from
+    z_test = sess.run(z, feed_dict={x: test_data})
+    z_test = z_test.transpose()
 
-    # Xavier initialization for weights
-    def xavier_init(fan_in, fan_out, constant=1):
-        low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
-        high = constant * np.sqrt(6.0 / (fan_in + fan_out))
-        return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
+    # In this variable the train HIs will be saved
+    z_train = []
 
-    tf.compat.v1.disable_eager_execution()
-    # Input placeholder
-    x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
-
-    # Encoder weights and biases
-    w1 = tf.Variable(xavier_init(n_input, hidden_1))
-    b1 = tf.Variable(tf.zeros([hidden_1, ]))
-
-    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
-    mean_b = tf.Variable(tf.zeros([hidden_2, ]))
-
-    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2))
-    logvar_b = tf.Variable(tf.zeros([hidden_2, ]))
-
-    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1))
-    db1 = tf.Variable(tf.zeros([hidden_1, ]))
-
-    dw2 = tf.Variable(xavier_init(hidden_1, n_input))
-    db2 = tf.Variable(tf.zeros([n_input, ]))
-
-    l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
-    mean = tf.matmul(l1, mean_w) + mean_b
-    logvar = tf.matmul(l1, logvar_w) + logvar_b
-    eps = tf.random.normal(tf.shape(logvar), 0, 1, dtype=tf.float32)
-    z = tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean
-    l2 = tf.nn.sigmoid(tf.matmul(z, dw1) + db1)
-    pred = tf.matmul(l2, dw2) + db2
-
-    # Loss function with additional KL divergence and custom loss
-    reloss = tf.reduce_sum(tf.square(pred - x))
-    klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
-
-    # Total loss
-    fealoss = DCloss(z, batch_size)
-    loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
-
-    # Optimizer
-    optm = tf.compat.v1.train.AdamOptimizer(learning_rate).minimize(loss)
-
-    # Training parameters
-    begin_time = time()
-
-    sess = tf.compat.v1.Session()
-    sess.run(tf.compat.v1.global_variables_initializer())
-    print('Start training!!!')
-    num_batch = int(data.shape[0] / batch_size)
-    if num_batch == 0:
-        raise ValueError("Batch size is too large for the given data.")
-
-    for epoch in range(epochs):
-        for i in range(num_batch):
-            batch_xs = data[i * batch_size:(i + 1) * batch_size]
-            _, cost = sess.run([optm, loss], feed_dict={x: batch_xs})
-            #validation_loss = sess.run(loss, feed_dict={x: valid})
-
-        #if epoch % display == 0:
-            #print(f"Epoch {epoch}, Cost = {cost}, validation loss = N/a")
-
-    print('Training finished!!!')
-    end_time = time()
-    print(f"Training time: {end_time - begin_time:.2f} seconds")
-    z_arr = sess.run(z, feed_dict={x: test})
-    z_arr = z_arr.transpose()
-    HI_arr = []
+    # This loops x over all panels EXCEPT the current test panel
+    # j represents panel name
     for j in tuple(x for x in panels if x != panel):
-        graph_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
-        graph_data = np.delete(graph_data, -1, axis=1)
-        graph_data = scaler.transform(graph_data)
-        graph_data = pca.transform(graph_data)
-        y_pred = sess.run(z, feed_dict={x: graph_data})
-        HI_arr.append(y_pred)
+
+        # dir_root comes from the input at the start of the code
+        # concat_data is the data from the files
+        # first
+        concat_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
+        concat_data = np.delete(concat_data, -1, axis=1)
+        concat_data = scaler.transform(concat_data)
+        concat_data = pca.transform(concat_data)
+        y_pred = sess.run(z, feed_dict={x: concat_data})
+        z_train.append(y_pred)
+
+
     #scale all arrays to the same lenght
-    for i in range(len(HI_arr)):
-        HI_arr[i] = HI_arr[i].transpose()
-    max = find_largest_array_size(HI_arr)
-    for i in range(len(HI_arr)):
-        if HI_arr[i].size < max:
-            arr_interp = interp.interp1d(np.arange(HI_arr[i].size), HI_arr[i])
-            arr_stretch = arr_interp(np.linspace(0, HI_arr[i].size - 1, max))
-            HI_arr[i] = arr_stretch
-    HI_arr = np.vstack(HI_arr)
-    if z_arr.size != HI_arr.shape[1]:
-        arr_interp = interp.interp1d(np.arange(z_arr.size), z_arr)
-        arr_stretch = arr_interp(np.linspace(0, z_arr.size - 1, HI_arr.shape[1]))
-        z_arr = arr_stretch
-    full = np.append(HI_arr, z_arr, axis = 0)
+    for i in range(len(z_train)):
+        z_train[i] = z_train[i].transpose()
+
+
+    max = find_largest_array_size(z_train)
+    for i in range(len(z_train)):
+        if z_train[i].size < max:
+            arr_interp = interp.interp1d(np.arange(z_train[i].size), z_train[i])
+            arr_stretch = arr_interp(np.linspace(0, z_train[i].size - 1, max))
+            z_train[i] = arr_stretch
+
+
+    z_train = np.vstack(z_train)
+
+    if z_test.size != z_train.shape[1]:
+        arr_interp = interp.interp1d(np.arange(z_test.size), z_test)
+        arr_stretch = arr_interp(np.linspace(0, z_test.size - 1, z_train.shape[1]))
+        z_test = arr_stretch
+
+    full = np.append(z_train, z_test, axis = 0)
+
     sess.close()
-    return [full, HI_arr, z_arr]
 
-# Bayesian optimization
+    return [full, z_train, z_test]
 
+# Hyperparameter optimization
+
+# This function is just to print what call number you are on
 def print_progress(res):
     n_calls = len(res.x_iters)
     print(f"Call number: {n_calls}")
 
+# This is the space over which we let hyperparameters be optimized. So for example hidden_1 can only be between 10 and 100
 space = [
         Integer(10, 100, name='hidden_1'),
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
         Integer(500, 10000, name='epochs')
     ]
+# I'm not 100% sure how this works, but apparently it maps the parameters from objective to the gp.minimize below
 @use_named_args(space)
-def objective(**params):
-    print(params)
-    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
+
+# This function is the objective so what we want to minimize. That is the error (3/fitness).
+# We give it all these inputs so that we can run train_vae and calculate fitness
+def objective(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca):
+    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca)[1])
     print("Error: ", error)
     return error
 
+# Now this function looks a little different than what it used to be
+# As train_vae no longer uses global variables, there's now this objective_with_fixed_args function inside this function
+# Essentially it's the same as what it used to be except that now we must specify which inputs to optimize and which are fixed
 def hyperparameter_optimisation(n_calls, random_state=42):
-    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
+    fixed_args = {
+        'train_data': train_data,
+        'test_data': test_data,
+        'scaler': scaler,
+        'pca': pca
+    }
+    def objective_with_fixed_args(**params):
+        all_args = {**params, **fixed_args}
+        return objective(**all_args)
+
+    res_gp = gp_minimize(objective_with_fixed_args, space, n_calls=n_calls, random_state=random_state,
                          callback=[print_progress])
     opt_parameters = [res_gp.x, res_gp.fun]
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
 
-# You can create additional datasets if needed
-# Example: Using the first few columns as one dataset and the rest as another
-#data1 = data[:, :1]  # First column as one dataset
-#data2 = data[:, 1:2]  # Second column as another dataset
-
+# This is what we will iterate over in 2 for loops, in this order.
+# So first: panel l103 freq 050, l103 100, l103 125, l103 150, l103 200, l103 250, l105 050, etc...
+# result_dictionary is an empty dictionary where results will be stored
+# Counter is to know how many iterations you've completed, so one for every combination of freq and panel
 panels = ("L103", "L105", "L109", "L104", "L123")
 freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
-resdict = {}
+result_dictionary = {}
 counter = 0
+
+# Here are the two for loops
+# MAIN BLOCK OF CODE
 for panel in panels:
     for freq in freqs:
-        filenames = []
+
+        train_filenames = []
+
+        # The array train_filenames saves the filenames of the data to be used for training
+        # Note that here and a few lines below, we hardcode the name "HLB". This is to run the VAE on HLB data
+        # When implementing VAE into main, this will need to be changed such that its not hardcoded
         for i in tuple(x for x in panels if x != panel):
             filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
-            filenames.append(filename)
-        resdict[f"{panel}{freq}"] = []
-        for j in range(1):
-            counter += 1
-            data, flags = mergedata(filenames)
-            test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
-            test = pd.read_csv(test_filename, header=None).values.transpose()
-            data.drop(data.columns[len(data.columns)-1], axis=1, inplace=True)
-            test = np.delete(test, -1, axis=1)
-            scaler = StandardScaler()
-            scaler.fit(data)
-            data = scaler.transform(data)
-            test = scaler.transform(test)
-            pca = PCA(n_components=30)
-            pca.fit(data)
-            data = pca.transform(data)
-            test = pca.transform(test)
-            # Set hyperparameters and architecture details
-            hyperparameters = hyperparameter_optimisation(n_calls=20)
+            train_filenames.append(filename)
 
-            health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
-                                          hyperparameters[0][2], hyperparameters[0][3])
-            hi_train = fitness(health_indicators[0])
-            print("HI train", hi_train)
-            hi_test, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
-            print("HI test", hi_test)
-            resdict[f"{panel}{freq}"].append([hi_train, hi_test])
-            print("Counter: ", counter)
-            params_test = (hi_test, m, t, p)
-            params_hitrain = (hi_train)
-            store_hyperparameters(hyperparameters, params_test, params_hitrain, panel, freq)
+        # Create an empty entry in the dictionary for this fold (e.g. L103050_kHz)
+        result_dictionary[f"{panel}{freq}"] = []
+
+        counter += 1
+        print("Counter: ", counter)
+
+        train_data, flags = mergedata(train_filenames)
+        train_data.drop(train_data.columns[len(train_data.columns) - 1], axis=1, inplace=True)
+
+        # Also hardcoded
+        test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
+        test_data = pd.read_csv(test_filename, header=None).values.transpose()
+        test_data = np.delete(test_data, -1, axis=1)
+
+        # Normalizing the train and test data, scaled with train_data
+        scaler = StandardScaler()
+        scaler.fit(train_data)
+        train_data = scaler.transform(train_data)
+        test_data = scaler.transform(test_data)
+
+        # Applying PCA to the train and test data, fit with train_data
+        pca = PCA(n_components=30)
+        pca.fit(train_data)
+        train_data = pca.transform(train_data)
+        test_data = pca.transform(test_data)
+
+        # Extract optimal hyperparameters
+        hyperparameters = hyperparameter_optimisation(n_calls=20)
+
+        # Determine the test and train HIs from the VAE model
+        # [0][0] is hidden_1, [0][1] is batch_size, [0][2] is learning_rate and [0][3] is epochs
+        health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                                      hyperparameters[0][2], hyperparameters[0][3], train_data, test_data, scaler, pca)
+
+        # fitness_train value, health_indicators[0] is ...
+        fitness_train = fitness(health_indicators[0])
+        print("HI train", fitness_train)
+
+        #fitness_all value (includes test panel), health_indicators[2] is ... and health_indicators[1] is ...
+        fitness_all, m, t, p = test_fitness(health_indicators[2], health_indicators[1])
+        print("HI test", fitness_all)
+
+        # For the current entry of result_dictionary, append the fitness_train and all values
+        result_dictionary[f"{panel}{freq}"].append([fitness_train, fitness_all])
+
+        # Writing to the csv's
+        fitness_all = (fitness_all, m, t, p)
+        fitness_train = (fitness_train)
+        store_hyperparameters(hyperparameters, fitness_all, fitness_train, panel, freq)
+
+# Write the result_dictionary to a csv file. To reach this line, the two for loops must be completed
+# This takes extremely long for Hyper_clean, so realistically will only be reached with Hyper_clean_fast (as the hyperparameter optimization is skipped)
+# Basically means we only need this file to generate the hyperparameters and not also generate results all at once
+# We can implement into main a hyperparameter generation step and a results step, one "modelled" after Hyper_clean, the other after Hyper_clean_fast
 with open("results.csv", "w", newline="") as f:
-    w = csv.DictWriter(f, resdict.keys())
+    w = csv.DictWriter(f, result_dictionary.keys())
     w.writeheader()
-    w.writerow(resdict)
+    w.writerow(result_dictionary)
 
-
-        # # Xavier initialization for weights
-        # def xavier_init(fan_in, fan_out, constant=1):
-        #     low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
-        #     high = constant * np.sqrt(6.0 / (fan_in + fan_out))
-        #     return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
-        #
-        # tf.compat.v1.disable_eager_execution()
-        # # Input placeholder
-        # x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
-        #
-        # # Encoder weights and biases
-        # w1 = tf.Variable(xavier_init(n_input, hidden_1))
-        # b1 = tf.Variable(tf.zeros([hidden_1, ]))
-        #
-        # mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
-        # mean_b = tf.Variable(tf.zeros([hidden_2, ]))
-        #
-        # logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2))
-        # logvar_b = tf.Variable(tf.zeros([hidden_2, ]))
-        #
-        # dw1 = tf.Variable(xavier_init(hidden_2, hidden_1))
-        # db1 = tf.Variable(tf.zeros([hidden_1, ]))
-        #
-        # dw2 = tf.Variable(xavier_init(hidden_1, n_input))
-        # db2 = tf.Variable(tf.zeros([n_input, ]))
-        #
-        # l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
-        # mean = tf.matmul(l1, mean_w) + mean_b
-        # logvar = tf.matmul(l1, logvar_w) + logvar_b
-        # eps = tf.random.normal(tf.shape(logvar), 0, 1, dtype=tf.float32)
-        # z = tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean
-        # l2 = tf.nn.sigmoid(tf.matmul(z, dw1) + db1)
-        # pred = tf.matmul(l2, dw2) + db2
-        #
-        # # Loss function with additional KL divergence and custom loss
-        # reloss = tf.reduce_sum(tf.square(pred - x))
-        # klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
-        #
-        #
-        #
-        #
-        # # Total loss
-        # fealoss = DCloss(z, batch_size)
-        # loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
-        #
-        # # Optimizer
-        # optm = tf.compat.v1.train.AdamOptimizer(0.003).minimize(loss)
-        #
-        # # Training parameters
-        # epochs = 1200
-        # display = 50
-        # begin_time = time()
-
-# Training the VAE
-
-
-#resdict = {{}}
-        # with tf.compat.v1.Session() as sess:
-        #     sess.run(tf.compat.v1.global_variables_initializer())
-        #     print('Start training!!!')
-        #     num_batch = int(data.shape[0] / batch_size)
-        #     if num_batch == 0:
-        #         raise ValueError("Batch size is too large for the given data.")
-        #
-        #     for epoch in range(epochs):
-        #         for i in range(num_batch):
-        #             batch_xs = data[i * batch_size:(i + 1) * batch_size]
-        #             _, cost = sess.run([optm, loss], feed_dict={x: batch_xs})
-        #             #validation_loss = sess.run([loss], feed_dict={x: valid})
-        #
-        #         if epoch % display == 0:
-        #             print(f"Epoch {epoch}, Cost = {cost}, validation loss = N/a")
-        #
-        #     print('Training finished!!!')
-        #     end_time = time()
-        #     print(f"Training time: {end_time - begin_time:.2f} seconds")
-        #     z_arr = sess.run(z, feed_dict={x: test})
-        #     plt.figure()
-        #     plt.plot(z_arr, 'c-', label='Feature 1')
-        #     HI_arr = [z_arr]
-        #     for j in tuple(x for x in panels if x != panel):
-        #         graph_data = pd.read_csv(j + freq + ".csv", header=None).values.transpose()
-        #         graph_data = np.delete(graph_data, -1, axis=1)
-        #         graph_data = scaler.transform(graph_data)
-        #         graph_data = pca.transform(graph_data)
-        #         y_pred = sess.run(z, feed_dict={x: graph_data})
-        #         HI_arr.append(y_pred)
-        #         plt.plot(y_pred, 'g-', label=f'{j}')
-        #     #scale all arrays to the same lenght
-        #     for i in range(len(HI_arr)):
-        #         HI_arr[i] = HI_arr[i].transpose()
-        #     max = find_largest_array_size(HI_arr)
-        #     for i in range(len(HI_arr)):
-        #         if HI_arr[i].size < max:
-        #             arr_interp = interp.interp1d(np.arange(HI_arr[i].size), HI_arr[i])
-        #             arr_stretch = arr_interp(np.linspace(0, HI_arr[i].size - 1, max))
-        #             HI_arr[i] = arr_stretch
-        #     HI_arr = np.vstack(HI_arr)
-        #
-        #     print(fitness(HI_arr))
-        #     # plt.title("Health Index")
-        #     # plt.xlabel("# state")
-        #     # plt.ylabel("Health Index")
-        #     # plt.show()
-        #     #resdict[panel][freq] = prognostic_eval(z_arr)
