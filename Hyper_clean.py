@@ -158,7 +158,7 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-################ MAIN FUNCTION
+################ MAIN FUNCTION: takes data and hyperparameters, generates train and test HIs
 # Function to train VAE and generate results but with hyperparameters as function inputs
 # NOTE: have removed global variables, that's why there's 5 extra inputs: train_data, test_data, scaler, pca, seed
 def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed):
@@ -369,6 +369,8 @@ for panel in panels:
 
         counter += 1
         print("Counter: ", counter)
+        print("Panel: ", panel)
+        print("Freq: ", freq)
 
         # For train_data, create the merged file with all 4 panels, delete the last column. I don't know why we delete the last column though
         train_data, flags = mergedata(train_filenames)
