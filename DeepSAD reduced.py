@@ -15,10 +15,10 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import Graphs
 
-#Suppress warnings - please comment out if doing any troubleshooting or changes to the model
+# Suppress warnings - please comment out if doing any troubleshooting or changes to the model
 import warnings
-warnings.filterwarnings('ignore')
 
+warnings.filterwarnings('ignore')
 
 # Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
@@ -47,12 +47,12 @@ class NeuralNet(nn.Module):
     """
 
     def __init__(self, size):
-        super().__init__()      # Initialise parent torch module
-        self.c = None           # Define c to be set later
-        self.size = size        # Set size to an attribute
+        super().__init__()  # Initialise parent torch module
+        self.c = None  # Define c to be set later
+        self.size = size  # Set size to an attribute
 
         # Create network layers
-        self.fc1 = nn.Linear(size[0]*size[1], 1024)
+        self.fc1 = nn.Linear(size[0] * size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 128)
         self.fc4 = nn.Linear(128, 64)
@@ -61,9 +61,9 @@ class NeuralNet(nn.Module):
         self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
-        x = torch.flatten(x, start_dim=0)    # Flatten matrix input
-        x = x.to(next(self.parameters()).dtype) # Ensure tensor is of correct datatype
-        x = self.m(self.fc1(x)) # Forward pass through layers
+        x = torch.flatten(x, start_dim=0)  # Flatten matrix input
+        x = x.to(next(self.parameters()).dtype)  # Ensure tensor is of correct datatype
+        x = self.m(self.fc1(x))  # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
@@ -71,6 +71,7 @@ class NeuralNet(nn.Module):
         # Reshape output to same as c
         encoded = x.view(4, 4)
         return encoded
+
 
 class NeuralNet_Decoder(nn.Module):
     """
@@ -86,26 +87,27 @@ class NeuralNet_Decoder(nn.Module):
     """
 
     def __init__(self, size):
-        super().__init__()      # Initialise parent torch module
-        self.size = size        # Set size to an attribute
+        super().__init__()  # Initialise parent torch module
+        self.size = size  # Set size to an attribute
         # Create network layers
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 512)
         self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, size[0]*size[1])
+        self.fc5 = nn.Linear(1024, size[0] * size[1])
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.001)
 
     def forward(self, x):
-        x = torch.flatten(x)    # Flatten matrix input
-        x = self.m(self.fc1(x)) # Run through network layers
+        x = torch.flatten(x)  # Flatten matrix input
+        x = self.m(self.fc1(x))  # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
         x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
+
 
 class NeuralNet_Autoencoder(nn.Module):
     """
@@ -120,7 +122,7 @@ class NeuralNet_Autoencoder(nn.Module):
     """
 
     def __init__(self, size):
-        super().__init__()      # Initialise parent torch module
+        super().__init__()  # Initialise parent torch module
         # Create encoder and decoder and save as attributes
         self.encoder = NeuralNet(size)
         self.decoder = NeuralNet_Decoder(size)
@@ -146,7 +148,7 @@ def init_c(model, train_loader, eps=0.1):
     """
 
     n_samples = 0
-    c = torch.zeros((4, 4))     # 16-dimensional coordinates, formatted into 2D array
+    c = torch.zeros((4, 4))  # 16-dimensional coordinates, formatted into 2D array
 
     # Forward pass
     model.eval()
@@ -204,7 +206,6 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     model.train()
     for epoch in range(n_epochs):
         epoch_loss = 0.0
-        scheduler.step()
 
         for train_data, train_target in train_loader:
             loss = 0.0
@@ -233,13 +234,15 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 n_batches += 1
 
             # Finish off training the network
-            loss = loss/n_batches
+            loss = loss / n_batches
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
+        scheduler.step()
 
     return model, epoch_loss
+
 
 def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
     """
@@ -269,7 +272,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
         scheduler.step()
         epoch_loss = 0.0
-        
+
         for train_data, train_target in train_loader:
             loss = 0.0
             n_batches = 0
@@ -289,6 +292,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             optimizer.step()
             epoch_loss += loss.item()
     return model
+
 
 def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma):
     """
@@ -322,6 +326,7 @@ def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
     return model
 
+
 def embed(X, model):
     """
         Returns a health indicator for a test dataset
@@ -335,7 +340,7 @@ def embed(X, model):
     """
 
     model.eval()
-    y = torch.norm(model(X) - model.c)   # Magnitude of the vector is anomaly score
+    y = torch.norm(model(X) - model.c)  # Magnitude of the vector is anomaly score
     return y
 
 
@@ -353,12 +358,12 @@ def load_data(dir, filename):
     """
     data = None
     labels = None
-    first = True    # First sample flag
+    first = True  # First sample flag
 
     # Walk directory
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name == filename:    # If correct file to be included in training data
+            if name == filename:  # If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
                 # Set data and labels arrays to data from first sample
@@ -370,21 +375,21 @@ def load_data(dir, filename):
                 # Concatenate additional samples
                 else:
                     data = np.concatenate((data, [read_data]))
-                    labels = np.append(labels, 0)   # Default label is 0
+                    labels = np.append(labels, 0)  # Default label is 0
     if labels is not None and len(labels) > 0:
 
         # Add artificial labels
         teol = data.shape[0]
 
-        x_values = np.arange(1, teol +1)
-        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    # Equation scaled from -1 to 1
+        x_values = np.arange(1, teol + 1)
+        health_indicators = ((x_values ** 2) / (teol ** 2)) * 2 - 1  # Equation scaled from -1 to 1
 
-        for i in range(int(len(labels)/2)):  # Originally 5
-            labels[i] = health_indicators[-i-1]  # Healthy
+        for i in range(int(len(labels) / 2)):  # Originally 5
+            labels[i] = health_indicators[-i - 1]  # Healthy
 
-        for i in range(int(len(labels)/2)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
-            labels[-i-1] = health_indicators[i]  # Unhealthy
-
+        for i in range(
+                int(len(labels) / 2)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
+            labels[-i - 1] = health_indicators[i]  # Unhealthy
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
@@ -414,8 +419,8 @@ def DeepSAD_train_run(dir, freq, file_name):
     n_epochs = 100
     lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
     lr_milestones = [5, 10, 50, 70, 90]
-    gamma = 0.1    # Factor to reduce LR by at milestones
-    gamma_AE = 0.1 # "
+    gamma = 0.1  # Factor to reduce LR by at milestones
+    gamma_AE = 0.1  # "
     eta = 1  # Weighting of labelled datapoints
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
     reg = 0.001  # Lambda - diversity weighting
@@ -434,7 +439,7 @@ def DeepSAD_train_run(dir, freq, file_name):
     global pass_fnwf
     # Loop for each sample as test data
     for sample_count in range(len(samples)):
-        print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
+        print("--- ", freq, "kHz, Sample ", sample_count + 1, " as test ---")
         test_sample = samples[sample_count]
 
         # Make new list of samples excluding test data
@@ -460,10 +465,10 @@ def DeepSAD_train_run(dir, freq, file_name):
                 arr_data = np.concatenate((arr_data, temp_data))
                 arr_targets = np.concatenate((arr_targets, temp_targets))
 
-        #Normalise training data
-        normal_mn = np.mean(arr_data, axis=0)   #Check this is the correct axis
+        # Normalise training data
+        normal_mn = np.mean(arr_data, axis=0)  # Check this is the correct axis
         normal_sd = np.std(arr_data, axis=0)
-        arr_data = (arr_data-normal_mn)/normal_sd
+        arr_data = (arr_data - normal_mn) / normal_sd
 
         # Convert to pytorch tensors
         train_data = torch.tensor(arr_data)
@@ -475,21 +480,21 @@ def DeepSAD_train_run(dir, freq, file_name):
         # Convert to dataset and create loader
         train_dataset = TensorDataset(train_data, semi_targets)
 
-
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            
+
         # Create, pretrain and train a model
         model = NeuralNet(size)
-        model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE, lr_milestones=lr_milestones_AE, gamma=gamma_AE)
-        model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs, lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
-
+        model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE,
+                         lr_milestones=lr_milestones_AE, gamma=gamma_AE)
+        model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs,
+                            lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
 
         # Test for all panels
         # Load test sample data (targets not used)
         list = []
         for test_sample in samples:
             test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
-            test_data = (test_data-normal_mn)/normal_sd  # Normalise using test statistics
+            test_data = (test_data - normal_mn) / normal_sd  # Normalise using test statistics
 
             # Calculate HI at each state
             current_result = []
@@ -502,11 +507,11 @@ def DeepSAD_train_run(dir, freq, file_name):
 
         # Scale so on average starts at 0 and ends at 1
         list = np.array(list)
-        av_start = np.mean(list[:,0])
-        av_end = np.mean(list[:,-1])
-        list = (list - av_start)/av_end
+        av_start = np.mean(list[:, 0])
+        av_end = np.mean(list[:, -1])
+        list = (list - av_start) / av_end
 
-        #Plot and print fitness
+        # Plot and print fitness
         ftn, monotonicity, trendability, prognosability, error = fitness(list)
         print("Fitness:", ftn)
         print("Mo:", monotonicity, "| Tr:", trendability, "| Pr:", prognosability)
@@ -520,14 +525,14 @@ def DeepSAD_train_run(dir, freq, file_name):
 def plot_ds_images(dir, type):
     """
         Assemble grid of HI graphs
-        
+
         Parameters:
         - dir (str): Directory of HI graph images
         - type (str): Seed of HIs generated
-        
+
         Returns: None
     """
-    
+
     # Define variables
     filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
     nrows = 6
@@ -558,25 +563,28 @@ def plot_ds_images(dir, type):
 
     # Add row labels
     for ax, row in zip(axs[:, 0], freqs):
-        ax.annotate(f'{row}', (-0.1, 0.5), xycoords = 'axes fraction', rotation = 90, va = 'center', fontweight = 'bold', fontsize = 40)
+        ax.annotate(f'{row}', (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold',
+                    fontsize=40)
 
     # Add column labels
     for ax, col in zip(axs[0], panels):
-        ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
+        ax.annotate(f'Test Sample {panels.index(col) + 1}', (0.5, 1), xycoords='axes fraction', ha='center',
+                    fontweight='bold', fontsize=40)
 
     # Adjust spacing between subplots and save
     plt.tight_layout()
     plt.savefig(filedir)
 
+
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
-dir = "C:/Users/Jamie/Documents/Uni/Year 2/Q3+4/Project/CSV-FFT-HLB-Reduced"
+dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
     print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
 # Save and plot results
-#save_evaluation(np.array(HIs), "DeepSAD
+# save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
 plot_ds_images(dir, "FFT")
