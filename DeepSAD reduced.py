@@ -575,15 +575,13 @@ HIs = np.empty((6), dtype=object)
 dir = "C:/Users/Jamie/Documents/Uni/Year 2/Q3+4/Project/CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
-plot_ds_images(dir)
-quit()
-
 for freq in range(len(frequencies)):
     print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
 # Save and plot results
 #save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
+plot_ds_images(dir)
 
 # This test version only prints fitness scores and does not save them elsewhere
 # Only uses FFT inputs
