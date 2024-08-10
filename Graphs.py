@@ -4,11 +4,12 @@ import numpy as np
 def HI_graph(X, dir="", name=""):
     #Graph of HI against cycles
     #X is numpy list of HI at different states, & name is root to save at
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     plt.figure()
     for sample in range(len(X)):
         states = np.arange(len(X[sample]))
         cycles = states/30*100
-        if str(sample) == str(name[-1]):
+        if str(sample) == str(name[-1]) or samples[sample] == name[:-7]:
             plt.plot(cycles, X[sample], label="Sample "+str(sample+1) + ": Test")
         else:
             plt.plot(cycles, X[sample], label="Sample " + str(sample+1) + ": Train")
@@ -16,7 +17,7 @@ def HI_graph(X, dir="", name=""):
     plt.xlabel('Lifetime (%)')
     plt.ylabel('HI')
     if dir != "" and name != "":
-        plt.savefig(dir + "\\" + name + " HIs")
+        plt.savefig(dir + "\\" + name)
     else:
         plt.show()
     plt.close()

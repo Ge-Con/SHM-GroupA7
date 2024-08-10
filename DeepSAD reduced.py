@@ -223,10 +223,11 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
                 loss_d = 0
+                losses = dist if target == 0 else eta * ((dist + eps) ** target)
+
                 if reg != 0:  # If we want to diversify
                     C = torch.matmul(Y.T, Y)  # Gram Matrix
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
-                losses = dist if target == 0 else eta * ((dist + eps) ** target)
 
                 # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
@@ -410,20 +411,20 @@ def DeepSAD_train_run(dir, freq, file_name):
     """
 
     # Hyperparamters
-    batch_size = 100
+    batch_size = 20
     learning_rate_AE = 0.001
     learning_rate = 0.0005
-    weight_decay = 0.1
-    weight_decay_AE = 0.1
+    weight_decay = 1
+    weight_decay_AE = 1
     n_epochs_AE = 10
     n_epochs = 100
-    lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
-    lr_milestones = [5, 10, 50, 70, 90]
-    gamma = 0.1  # Factor to reduce LR by at milestones
+    lr_milestones_AE = [8]  # Milestones when learning rate reduces
+    lr_milestones = [20, 50, 70, 90]
+    gamma = 0.1 # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
     eta = 1  # Weighting of labelled datapoints
+    reg = 0.01  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
-    reg = 0.001  # Lambda - diversity weighting
 
     global pass_dir
     pass_dir = dir
@@ -505,7 +506,7 @@ def DeepSAD_train_run(dir, freq, file_name):
             # Interpolate
             list.append(scale_exact(np.array(current_result)))
 
-        # Scale so on average starts at 0 and ends at 1
+        # Scale so on average starts at 0 and ends at 1 excluding test sample
         list = np.array(list)
         av_start = np.mean(list[:, 0])
         av_end = np.mean(list[:, -1])
@@ -539,13 +540,14 @@ def plot_ds_images(dir, type):
     ncols = 5
     panels = ("0", "1", "2", "3", "4")
     freqs = ("050", "100", "125", "150", "200", "250")
+    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
 
     # For each frequency and panel
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"DeepSAD_{type}-{freq}-{panel} HIs.png"
+            filename = f"{samples[int(panel)]} {freq}kHz.png"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
@@ -578,7 +580,8 @@ def plot_ds_images(dir, type):
 
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
-dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
+#dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
+dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
