@@ -15,6 +15,16 @@ def process_csv_files(base_dir, panel, type):
                     concatenated_column = pd.concat([df0[col] for col in df0.columns], ignore_index=True)
                     # Add concatenated column to respective index (with respect to timestep) in full_matrix
                     full_matrix.append(concatenated_column)
+        if panel.endswith("03"):
+            panel = "L103"
+        if panel.endswith("04"):
+            panel = "L104"
+        if panel.endswith("05"):
+            panel = "L105"
+        if panel.endswith("09"):
+            panel = "L109"
+        if panel.endswith("23"):
+            panel = "L123"
         result_df = pd.DataFrame(full_matrix).T
         output_file_path = os.path.join(base_dir, f"concatenated_{freq}_kHz_{panel}_{type}.csv")
         result_df.to_csv(output_file_path, index=False)

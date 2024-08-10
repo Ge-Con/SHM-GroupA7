@@ -14,6 +14,9 @@ import SP_save as SP
 from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
 import Hyper as HYP
+import Hyper_save_parameters as HYPparameters
+from skopt.space import Real, Integer
+from skopt.utils import use_named_args
 
 # Set options
 pd.set_option('display.max_columns', 15)
@@ -463,7 +466,7 @@ def saveDeepSAD(dir):
     plot_ds_images(dir, "HLB")
 
 
-def hyperVAE(dir):
+def hyperVAE(dir, vae_seed=42, concatenate=False):
     """
         Optimise hyperparameters for VAE
 
@@ -473,15 +476,59 @@ def hyperVAE(dir):
 
         This function is a work in progress, VAE is currently run independently
     """
-    filenames = ["FFT", "FFT_FT_Reduced", "HLB", "HLB_FT_Reduced"]
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    # Concatenate input files ready for VAE
-    for panel in samples:
-        for file in filenames:
-            process_csv_files(dir, panel, file)
-    # Optimise hyperparameters
-    pass
+    panels = ("L103", "L105", "L109", "L104", "L123")
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 
+    # Concatenate input files ready for VAE
+    if concatenate:
+        for panel in samples:
+            for file in filenames:
+                process_csv_files(dir, panel, file)
+    # Optimise hyperparameters
+    for file_type in filenames:
+        counter = 0
+        for panel in panels:
+            for freq in freqs:
+
+                train_filenames = []
+
+                for i in tuple(x for x in panels if x != panel):
+                    filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
+                    train_filenames.append(filename)
+
+                counter += 1
+                print("Counter: ", counter)
+                print("Panel: ", panel)
+                print("Freq: ", freq)
+                print("SP Features: ", file_type)
+
+                # For vae_train_data, create the merged file with all 4 panels, delete the last column. I don't know why we delete the last column though
+                vae_train_data, flags = HYPparameters.mergedata(train_filenames)
+                vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
+
+                # Same as with train data. Read the filename, and delete the last column
+                # Also hardcoded
+                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
+                vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
+                vae_test_data = np.delete(vae_test_data, -1, axis=1)
+
+                # Normalizing the train and test data, scaled with vae_train_data
+                vae_scaler = HYPparameters.StandardScaler()
+                vae_scaler.fit(vae_train_data)
+                vae_train_data = vae_scaler.transform(vae_train_data)
+                vae_test_data = vae_scaler.transform(vae_test_data)
+
+                # Applying PCA to the train and test data, fit with vae_train_data
+                vae_pca = HYPparameters.PCA(n_components=30)
+                vae_pca.fit(vae_train_data)
+                vae_train_data = vae_pca.transform(vae_train_data)
+                vae_test_data = vae_pca.transform(vae_test_data)
+
+                hyperparameters = HYPparameters.hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
+                                                              vae_seed, file_type, panel, freq, csv_dir, n_calls=20)
+                HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
 def saveVAE(dir):
     """
@@ -515,7 +562,7 @@ def main_menu():
     print("")
     print("From FFT & Hilbert, raw & features:")
     print("6. Execute and evaluate PCA")
-    print("7. Train VAE hyperparameters")
+    print("7. Train VAE hyperparameters (and concatenate data if necessary)")
     print("8. Execute and evaluate VAE")
     print("9. Train DeepSAD hyperparameters")
     print("10. Execute and evaluate DeepSAD")
@@ -563,7 +610,12 @@ while True:
     elif choice == '6':
         savePCA(csv_dir)
     elif choice == '7':
-        hyperVAE(csv_dir)
+        conc_choice = input("Concatenate files? Y/N: ")
+        if conc_choice == "Y" or conc_choice == "y":
+            hyperVAE(csv_dir, concatenate=True)
+
+        if conc_choice == "N" or conc_choice == "n":
+            hyperVAE(csv_dir)
     elif choice == '8':
         saveVAE(csv_dir)
     elif choice == '9':

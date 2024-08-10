@@ -161,8 +161,8 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
 ################ MAIN FUNCTION: takes data and hyperparameters, generates train and test HIs
 # Function to train VAE and generate results but with hyperparameters as function inputs
 # NOTE: have removed global variables, that's why there's 5 extra inputs: train_data, test_data, scaler, pca, seed
-def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed):
-
+def train_vae(hidden_1, batch_size, learning_rate, epochs):
+    global train_data, test_data, scaler, pca, seed
     #global valid
     # commented, this is for validation data?
 
@@ -171,7 +171,8 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
     display = 200
 
     # Xavier initialization for weights, as explained in Hyper_Qin_original.py
-    def xavier_init(fan_in, fan_out, constant=1, seed):
+    def xavier_init(fan_in, fan_out, constant=1):
+        global seed
         tf.random.set_seed(seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
@@ -183,19 +184,19 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
     # Architecture and losses below as explained in Hyper_Qin_original.py
     x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
 
-    w1 = tf.Variable(xavier_init(n_input, hidden_1, seed=seed))
+    w1 = tf.Variable(xavier_init(n_input, hidden_1))
     b1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2), seed=seed)
+    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
     mean_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2), seed=seed)
+    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2))
     logvar_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1), seed=seed)
+    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1))
     db1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    dw2 = tf.Variable(xavier_init(hidden_1, n_input), seed=seed)
+    dw2 = tf.Variable(xavier_init(hidden_1, n_input))
     db2 = tf.Variable(tf.zeros([n_input, ]))
 
     l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
@@ -235,7 +236,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
             # not sure why this line is here, it's for something with validation, but we can keep it as a comment
 
         if epoch % display == 0:
-            print(f"Epoch {epoch}, Cost = {cost})
+            print(f"Epoch {epoch}, Cost = {cost}")
 
     print('Training finished!!!')
     end_time = time()
@@ -256,7 +257,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
         # single_panel_data is the data from the files, but only from one panel at a time, NOT merged
         # first the file is read, the final column is deleted (don't know why), then it is normalized and PCA is applied
         # Not sure why we must import scaler and pca to do this, when those are fitted with the merged train data
-        single_panel_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_Features.csv", header=None).values.transpose()
+        single_panel_data = pd.read_csv(dir_root + "\concatenated_" + freq + "_" + j + "_HLB_FT_Reduced.csv", header=None).values.transpose()
         single_panel_data = np.delete(single_panel_data, -1, axis=1)
 
         # Then, the train HI is calculated for each panel individually and appended to the array z_train
@@ -314,10 +315,11 @@ space = [
 # I'm not 100% sure how this works, but apparently it maps the parameters from objective to the gp.minimize below
 @use_named_args(space)
 
-# This function is the objective so what we want to minimize. That is the error (3/fitness).
+#  This function is the objective so what we want to minimize. That is the error (3/fitness).
 # We give it all these inputs so that we can run train_vae and calculate fitness
-def objective(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca):
-    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed)[1])
+def objective(**params):
+    print(params)
+    ftn, monotonicity, trendability, prognosability, error = fitness(train_vae(**params)[1])
     print("Error: ", error)
     return error
 
@@ -325,21 +327,12 @@ def objective(hidden_1, batch_size, learning_rate, epochs, train_data, test_data
 # As train_vae no longer uses global variables, there's now this objective_with_fixed_args function inside this function
 # Essentially it's the same as what it used to be except that now we must specify which inputs to optimize and which are fixed
 def hyperparameter_optimisation(n_calls, random_state=42):
-    fixed_args = {
-        'train_data': train_data,
-        'test_data': test_data,
-        'scaler': scaler,
-        'pca': pca
-    }
-    def objective_with_fixed_args(**params):
-        all_args = {**params, **fixed_args}
-        return objective(**all_args)
-
-    res_gp = gp_minimize(objective_with_fixed_args, space, n_calls=n_calls, random_state=random_state,
+    res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state,
                          callback=[print_progress])
     opt_parameters = [res_gp.x, res_gp.fun]
     print("Best parameters found: ", res_gp.x)
     return opt_parameters
+
 
 # This is what we will iterate over in 2 for loops, in this order.
 # So first: panel l103 freq 050, l103 100, l103 125, l103 150, l103 200, l103 250, l105 050, etc...
@@ -361,7 +354,7 @@ for panel in panels:
         # Note that here and a few lines below, we hardcode the name "HLB". This is to run the VAE on HLB data
         # When implementing VAE into main, this will need to be changed such that it's not hardcoded
         for i in tuple(x for x in panels if x != panel):
-            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_Features.csv")
+            filename = os.path.join(dir_root, f"concatenated_{freq}_{i}_HLB_FT_Reduced.csv")
             train_filenames.append(filename)
 
         # Create an empty entry in the dictionary for this fold (e.g. L103050_kHz)
@@ -378,7 +371,7 @@ for panel in panels:
 
         # Same as with train data. Read the filename, and delete the last column
         # Also hardcoded
-        test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_Features.csv")
+        test_filename = os.path.join(dir_root, f"concatenated_{freq}_{panel}_HLB_FT_Reduced.csv")
         test_data = pd.read_csv(test_filename, header=None).values.transpose()
         test_data = np.delete(test_data, -1, axis=1)
 
@@ -400,7 +393,7 @@ for panel in panels:
         # Determine the test and train HIs from the VAE model
         # [0][0] is hidden_1, [0][1] is batch_size, [0][2] is learning_rate and [0][3] is epochs
         health_indicators = train_vae(hyperparameters[0][0], hyperparameters[0][1],
-                                      hyperparameters[0][2], hyperparameters[0][3], train_data, test_data, scaler, pca, seed)
+                                      hyperparameters[0][2], hyperparameters[0][3])
 
         # fitness_all value (includes train panel), health_indicators[0] is z_all (all HIs, train+test)
         fitness_all = fitness(health_indicators[0])

@@ -21,7 +21,7 @@ import os
 # Reset any previous graph and set seed for reproducibility
 tf.compat.v1.reset_default_graph()
 tf.random.set_seed(42)
-dir_root = input("Enter directory of folder with data: ")
+#dir_root = input("Enter directory of folder with data: ")
 # C:\Users\pablo\Downloads\PZT Output folder
 def mergedata(filenames):
     flags = tuple([0])
@@ -363,7 +363,7 @@ def hyperparameter_optimisation(n_calls, random_state=42):
 # Example: Using the first few columns as one dataset and the rest as another
 #data1 = data[:, :1]  # First column as one dataset
 #data2 = data[:, 1:2]  # Second column as another dataset
-
+'''
 panels = ("L103", "L105", "L109", "L104", "L123")
 freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 resdict = {}
@@ -408,7 +408,7 @@ with open("results.csv", "w", newline="") as f:
     w = csv.DictWriter(f, resdict.keys())
     w.writeheader()
     w.writerow(resdict)
-
+'''
 
         # # Xavier initialization for weights
         # def xavier_init(fan_in, fan_out, constant=1):
