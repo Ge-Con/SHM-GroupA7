@@ -15,8 +15,10 @@ from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
 import Hyper as HYP
 import Hyper_save_parameters as HYPparameters
-from skopt.space import Real, Integer
-from skopt.utils import use_named_args
+import Hyper_save_HI as HYPresults
+import matplotlib as plt
+import tensorflow as tf
+import csv
 
 # Set options
 pd.set_option('display.max_columns', 15)
@@ -476,6 +478,10 @@ def hyperVAE(dir, vae_seed=42, concatenate=False):
 
         This function is a work in progress, VAE is currently run independently
     """
+    tf.compat.v1.reset_default_graph()
+    tf.random.set_seed(vae_seed)
+    np.random.seed(vae_seed)
+
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     panels = ("L103", "L105", "L109", "L104", "L123")
@@ -527,10 +533,10 @@ def hyperVAE(dir, vae_seed=42, concatenate=False):
                 vae_test_data = vae_pca.transform(vae_test_data)
 
                 hyperparameters = HYPparameters.hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
-                                                              vae_seed, file_type, panel, freq, csv_dir, n_calls=20)
+                                                              vae_seed, file_type, panel, freq, dir, n_calls=20)
                 HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
-def saveVAE(dir):
+def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
     """
         Run and save VAE HIs
     
@@ -540,7 +546,124 @@ def saveVAE(dir):
 
         This function is a work in progress, VAE is currently run independently
     """
-    pass
+
+    tf.compat.v1.reset_default_graph()
+    tf.random.set_seed(vae_seed)
+    np.random.seed(vae_seed)
+
+    panels = ("L103", "L105", "L109", "L104", "L123")
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
+    colors = ("b", "g", "y", "r", "m")
+
+    time_steps = 30
+    num_HIs = 5  # Number of rows in f_all_array
+    num_freqs = len(freqs)
+    num_panels = len(panels)
+
+    for file_type in filenames:
+        counter = 0
+        result_dictionary = {}
+        hyperparameters_df = pd.read_csv(dir + '/hyperparameters-opt-' + file_type + '.csv', index_col=0)
+        hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
+
+        for panel_idx, panel in enumerate(panels):
+            for freq_idx, freq in enumerate(freqs):
+
+                train_filenames = []
+
+                for i in tuple(x for x in panels if x != panel):
+                    filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
+                    train_filenames.append(filename)
+
+                result_dictionary[f"{panel}{freq}"] = []
+
+                counter += 1
+                print("Counter: ", counter)
+                print("Panel: ", panel)
+                print("Freq: ", freq)
+                print("SP Features: ", file_type)
+
+                vae_train_data, flags = HYPparameters.mergedata(train_filenames)
+                vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
+
+                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_FFT_Features.csv")
+                vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
+                vae_test_data = np.delete(vae_test_data, -1, axis=1)
+
+                vae_scaler = HYPparameters.StandardScaler()
+                vae_scaler.fit(vae_train_data)
+                vae_train_data = vae_scaler.transform(vae_train_data)
+                vae_test_data = vae_scaler.transform(vae_test_data)
+
+                vae_pca = HYPparameters.PCA(n_components=30)
+                vae_pca.fit(vae_train_data)
+                vae_train_data = vae_pca.transform(vae_train_data)
+                vae_test_data = vae_pca.transform(vae_test_data)
+
+                hyperparameters_str = hyperparameters_df.loc[freq, panel]
+                hyperparameters = eval(hyperparameters_str)
+
+                health_indicators = HYPparameters.train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                                              hyperparameters[0][2], hyperparameters[0][3], vae_train_data, vae_test_data,
+                                              vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir)
+
+                fitness_all = fitness(health_indicators[0])
+                print("Fitness all", fitness_all)
+
+                fitness_test = HYPparameters.test_fitness(health_indicators[2], health_indicators[1])
+                print("Fitness test", fitness_test)
+
+                result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test])
+
+                if save_graph:
+                    graph_hi_filename = f"HI_graph_{freq}_{panel}_{file_type}_seed_{vae_seed}"
+                    graph_hi_dir = os.path.join(dir, graph_hi_filename)
+
+                    fig = plt.figure()
+
+                    train_panels = [k for k in panels if k != panel]
+
+                    x = np.arange(0, health_indicators[2].shape[1], 1)
+                    x = x * (1 / (x.shape[0] - 1))
+                    x = x * 100
+
+                    for i, hi in enumerate(health_indicators[1]):
+                        plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train')
+
+                    for i, hi in enumerate(health_indicators[2]):
+                        plt.plot(x, hi, label=f'Sample {panels.index(panel) + 1}: Test')
+
+                    plt.xlabel('Lifetime (%)')
+                    plt.ylabel('Health Indicators')
+                    plt.title('Train and Test Health Indicators over Time')
+                    plt.legend()
+
+                    plt.savefig(graph_hi_dir)
+                    plt.close(fig)
+
+                fitness_test = (fitness_test)
+                fitness_all = (fitness_all)
+                HYPresults.store_hyperparameters(fitness_all, fitness_test, panel, freq, file_type, vae_seed, dir)
+
+                z_all_modified = np.array([scale_exact(row) for row in health_indicators[0][:num_HIs]])
+                z_all_modified = z_all_modified.reshape(num_HIs, time_steps)
+
+                # Assign z_all_modified to the correct position in hi_full_array
+                hi_full_array[panel_idx, freq_idx] = z_all_modified
+
+        if save_HI:
+            label = f"VAE_{file_type}_seed_{vae_seed}"
+            savedir = dir + '\\' + label
+            np.save(savedir, hi_full_array)
+
+        if save_graph:
+            HYPresults.plot_images(vae_seed, file_type, dir)
+
+        with open(f"results_{file_type}.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, result_dictionary.keys())
+            w.writeheader()
+            w.writerow(result_dictionary)
 
 def main_menu():
     """

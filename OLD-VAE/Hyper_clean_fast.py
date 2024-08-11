@@ -113,7 +113,7 @@ def store_hyperparameters(fitness_all, fitness_test, panel, freq, seed):
     df.loc[freq, panel] = str(fitness_all)
 
     # Save the dataframe back to the CSV
-    df.to_csv(filename_train)
+    df.to_csv(filename_all)
 
 def train_vae(hidden_1, batch_size, learning_rate, epochs, train_data, test_data, scaler, pca, seed):
    

@@ -58,7 +58,7 @@ def find_largest_array_size(array_list):
 
 def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
 
-    filename_opt = os.path.join(dir, file + "-hopt.csv")
+    filename_opt = os.path.join(dir, f"hyperparameters-opt-{file}.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
     freq = freq + "_kHz"
 
@@ -86,10 +86,12 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     n_input = vae_train_data.shape[1]  # Number of features
     hidden_2 = 1
     display = 50
+    tf.random.set_seed(vae_seed)
 
     # Xavier initialization for weights, as explained in Hyper_Qin_original.py
     def xavier_init(fan_in, fan_out, constant=1):
         global vae_seed
+        tf.random.set_seed(vae_seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
         return tf.random.uniform((fan_in, fan_out), minval=low, maxval=high, dtype=tf.float32)
