@@ -468,7 +468,7 @@ def saveDeepSAD(dir):
     plot_ds_images(dir, "HLB")
 
 
-def hyperVAE(dir, vae_seed=42, concatenate=False):
+def hyperVAE(dir, concatenate=False):
     """
         Optimise hyperparameters for VAE
 
@@ -478,6 +478,8 @@ def hyperVAE(dir, vae_seed=42, concatenate=False):
 
         This function is a work in progress, VAE is currently run independently
     """
+    global vae_seed
+
     tf.compat.v1.reset_default_graph()
     tf.random.set_seed(vae_seed)
     np.random.seed(vae_seed)
@@ -735,6 +737,7 @@ while True:
         savePCA(csv_dir)
     elif choice == '7':
         conc_choice = input("Concatenate files? Y/N: ")
+        vae_seed = int(input("Enter seed: "))
         if conc_choice == "Y" or conc_choice == "y":
             hyperVAE(csv_dir, concatenate=True)
 
