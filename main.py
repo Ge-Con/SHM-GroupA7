@@ -606,8 +606,8 @@ def saveVAE(dir, save_graph=True, save_HI=True):
                 hyperparameters = eval(hyperparameters_str)
 
                 health_indicators = HYPparameters.train_vae(hyperparameters[0][0], hyperparameters[0][1],
-                                              hyperparameters[0][2], hyperparameters[0][3], vae_train_data, vae_test_data,
-                                              vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir)
+                                              hyperparameters[0][2], hyperparameters[0][3], hyperparameters[0][4], hyperparameters[0][5], hyperparameters[0][6],
+                                                            vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir)
 
                 fitness_all = fitness(health_indicators[0])
                 print("Fitness all", fitness_all)

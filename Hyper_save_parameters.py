@@ -79,7 +79,7 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
+def train_vae(hidden_1, batch_size, learning_rate, reloss_coeff, klloss_coeff, moloss_coeff, epochs, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
     #global valid
     # commented, this is for validation data?
 
@@ -130,7 +130,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     klloss = -0.5 * tf.reduce_sum(1 + logvar - tf.square(mean) - tf.exp(logvar), 1)
     fealoss = DCloss(z, batch_size)
 
-    loss = tf.reduce_mean(0.1 * reloss + 0.6 * klloss + 10 * fealoss)
+    loss = tf.reduce_mean(reloss_coeff * reloss + klloss_coeff * klloss + moloss_coeff * fealoss)
 
     optm = tf.compat.v1.train.AdamOptimizer(learning_rate).minimize(loss)
 
@@ -234,15 +234,18 @@ space = [
     Integer(10, 100, name='hidden_1'),
     Integer(16, 128, name='batch_size'),
     Real(0.0001, 0.01, name='learning_rate'),
-    Integer(500, 10000, name='epochs')
+    Integer(500, 10000, name='epochs'),
+    Integer(0.05, 20, name='reloss_coeff'),
+    Integer(0.05, 20, name='klloss_coeff'),
+    Integer(0.05, 20, name='moloss_coeff')
 ]
 
 # Use the decorator to automatically convert parameters to keyword arguments
 @use_named_args(space)
-def objective(hidden_1, batch_size, learning_rate, epochs):
+def objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff):
     # Use the captured outer variables here
     health_indicators = train_vae(hidden_1, batch_size,
-                                  learning_rate, epochs, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir)
+                                  learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir)
     ftn, monotonicity, trendability, prognosability, error = fitness(health_indicators[1])
     print("Error: ", error)
     return error
@@ -255,14 +258,17 @@ def hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_p
         Integer(10, 100, name='hidden_1'),
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
-        Integer(500, 10000, name='epochs')
+        Integer(500, 10000, name='epochs'),
+        Integer(0.05, 20, name='reloss_coeff'),
+        Integer(0.05, 20, name='klloss_coeff'),
+        Integer(0.05, 20, name='moloss_coeff')
     ]
 
     # Define the objective function with named args
     @use_named_args(space)
-    def objective(hidden_1, batch_size, learning_rate, epochs):
+    def objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff):
         health_indicators = train_vae(hidden_1, batch_size,
-                                      learning_rate, epochs, vae_train_data, vae_test_data, vae_scaler, vae_pca,
+                                      learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca,
                                       vae_seed, file_type, panel, freq, csv_dir)
         ftn, monotonicity, trendability, prognosability, error = fitness(health_indicators[1])
         print("Error: ", error)
