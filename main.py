@@ -554,7 +554,7 @@ def saveVAE(dir, save_graph=True, save_HI=True):
 
     panels = ("L103", "L105", "L109", "L104", "L123")
     freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
-    filenames = ["HLB_FT_Reduced", "FFT_FT_Reduced"]
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     colors = ("b", "g", "y", "r", "m")
 
     time_steps = 30
