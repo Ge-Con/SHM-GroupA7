@@ -89,8 +89,7 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     tf.random.set_seed(vae_seed)
 
     # Xavier initialization for weights, as explained in Hyper_Qin_original.py
-    def xavier_init(fan_in, fan_out, constant=1):
-        global vae_seed
+    def xavier_init(fan_in, fan_out, vae_seed, constant=1):
         tf.random.set_seed(vae_seed)
         low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
         high = constant * np.sqrt(6.0 / (fan_in + fan_out))
@@ -102,19 +101,19 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     # Architecture and losses below as explained in Hyper_Qin_original.py
     x = tf.compat.v1.placeholder(tf.float32, [None, n_input])
 
-    w1 = tf.Variable(xavier_init(n_input, hidden_1))
+    w1 = tf.Variable(xavier_init(n_input, hidden_1, vae_seed))
     b1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2))
+    mean_w = tf.Variable(xavier_init(hidden_1, hidden_2, vae_seed))
     mean_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2))
+    logvar_w = tf.Variable(xavier_init(hidden_1, hidden_2, vae_seed))
     logvar_b = tf.Variable(tf.zeros([hidden_2, ]))
 
-    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1))
+    dw1 = tf.Variable(xavier_init(hidden_2, hidden_1, vae_seed))
     db1 = tf.Variable(tf.zeros([hidden_1, ]))
 
-    dw2 = tf.Variable(xavier_init(hidden_1, n_input))
+    dw2 = tf.Variable(xavier_init(hidden_1, n_input, vae_seed))
     db2 = tf.Variable(tf.zeros([n_input, ]))
 
     l1 = tf.nn.sigmoid(tf.matmul(x, w1) + b1)
@@ -122,7 +121,8 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     logvar = tf.matmul(l1, logvar_w) + logvar_b
     eps = tf.random.normal(tf.shape(logvar), 0, 1, dtype=tf.float32)
 
-    z = tf.multiply(tf.sqrt(tf.exp(logvar)), eps) + mean
+    std_dev = tf.sqrt(tf.exp(logvar))
+    z = tf.multiply(std_dev, eps) + mean
     l2 = tf.nn.sigmoid(tf.matmul(z, dw1) + db1)
     pred = tf.matmul(l2, dw2) + db2
 
@@ -160,12 +160,13 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
     end_time = time()
     print(f"Training time: {end_time - begin_time:.2f} seconds")
 
-    z_test = sess.run(z, feed_dict={x: vae_test_data})
+    std_dev_test, z_test = sess.run([std_dev, z], feed_dict={x: vae_test_data})
     z_test = z_test.transpose()
+    std_dev_test = std_dev_test.transpose()
 
     # In this variable the train HIs will be saved
     z_train = []
-
+    std_dev_train = []
     # This loops x over all panels EXCEPT the current test panel. j represents panel name
     for j in tuple(x for x in panels if x != panel):
 
@@ -174,26 +175,34 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
 
         single_panel_data = vae_scaler.transform(single_panel_data)
         single_panel_data = vae_pca.transform(single_panel_data)
-        z_train_individual = sess.run(z, feed_dict={x: single_panel_data})
+
+        std_dev_train_individual, z_train_individual = sess.run([std_dev, z], feed_dict={x: single_panel_data})
         z_train.append(z_train_individual)
+        std_dev_train.append(std_dev_train_individual)
 
 
     # Transpose
     for i in range(len(z_train)):
         z_train[i] = z_train[i].transpose()
+        std_dev_train[i] = std_dev_train[i].transpose()
 
     # We find the longest HI and interpolate the other HIs so that they all have matching lengths
-    max = find_largest_array_size(z_train)
+    max_size = find_largest_array_size(z_train)
     for i in range(len(z_train)):
-        if z_train[i].size < max:
+        if z_train[i].size < max_size:
 
             # The interpolation function is found for the shorter HI, and applied to arr_stretch. Then the shorter HI z_train[i] is updated
             interp_function = interp.interp1d(np.arange(z_train[i].size), z_train[i])
-            arr_stretch = interp_function(np.linspace(0, z_train[i].size - 1, max))
+            arr_stretch = interp_function(np.linspace(0, z_train[i].size - 1, max_size))
             z_train[i] = arr_stretch
+
+            interp_function_std = interp.interp1d(np.arange(std_dev_train[i].size), std_dev_train[i])
+            arr_stretch_std = interp_function_std(np.linspace(0, std_dev_train[i].size - 1, max_size))
+            std_dev_train[i] = arr_stretch_std
 
     # Vertically stack the HIs
     z_train = np.vstack(z_train)
+    std_dev_train = np.vstack(std_dev_train)
 
     # We do the same but to match the length of z_test with z_train
     if z_test.size != z_train.shape[1]:
@@ -201,13 +210,18 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, vae_train_data, vae_t
         arr_stretch = interp_function(np.linspace(0, z_test.size - 1, z_train.shape[1]))
         z_test = arr_stretch
 
+        interp_function_std = interp.interp1d(np.arange(std_dev_test.size), std_dev_test)
+        arr_stretch_std = interp_function_std(np.linspace(0, std_dev_test.size - 1, z_train.shape[1]))
+        std_dev_test = arr_stretch_std
+
     # Create an array that contains all HIs (train+test)
     z_all = np.append(z_train, z_test, axis = 0)
+    std_dev_all = np.append(std_dev_train, std_dev_test, axis = 0)
 
     # Close the TensorFlow session
     sess.close()
 
-    return [z_all, z_train, z_test]
+    return [z_all, z_train, z_test, std_dev_all, std_dev_train, std_dev_test]
 
 # Hyperparameter optimization
 

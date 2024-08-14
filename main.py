@@ -13,10 +13,10 @@ import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
-import Hyper as HYP
+from OLD_VAE import Hyper as HYP
 import Hyper_save_parameters as HYPparameters
 import Hyper_save_HI as HYPresults
-import matplotlib as plt
+from matplotlib import pyplot as plt
 import tensorflow as tf
 import csv
 
@@ -536,7 +536,7 @@ def hyperVAE(dir, vae_seed=42, concatenate=False):
                                                               vae_seed, file_type, panel, freq, dir, n_calls=20)
                 HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
-def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
+def saveVAE(dir, save_graph=True, save_HI=True):
     """
         Run and save VAE HIs
     
@@ -546,6 +546,7 @@ def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
 
         This function is a work in progress, VAE is currently run independently
     """
+    global vae_seed
 
     tf.compat.v1.reset_default_graph()
     tf.random.set_seed(vae_seed)
@@ -553,7 +554,7 @@ def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
 
     panels = ("L103", "L105", "L109", "L104", "L123")
     freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
-    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
+    filenames = ["HLB_FT_Reduced", "FFT_FT_Reduced"]
     colors = ("b", "g", "y", "r", "m")
 
     time_steps = 30
@@ -564,7 +565,7 @@ def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
     for file_type in filenames:
         counter = 0
         result_dictionary = {}
-        hyperparameters_df = pd.read_csv(dir + '/hyperparameters-opt-' + file_type + '.csv', index_col=0)
+        hyperparameters_df = pd.read_csv(os.path.join(dir, f'hyperparameters-opt-{file_type}.csv'), index_col=0)
         hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
 
         for panel_idx, panel in enumerate(panels):
@@ -587,7 +588,7 @@ def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
                 vae_train_data, flags = HYPparameters.mergedata(train_filenames)
                 vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
 
-                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_FFT_Features.csv")
+                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
                 vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
                 vae_test_data = np.delete(vae_test_data, -1, axis=1)
 
@@ -628,11 +629,11 @@ def saveVAE(dir, vae_seed=42, save_graph=True, save_HI=True):
                     x = x * (1 / (x.shape[0] - 1))
                     x = x * 100
 
-                    for i, hi in enumerate(health_indicators[1]):
-                        plt.plot(x, hi, label=f'Sample {panels.index(train_panels[i]) + 1}: Train')
+                    for i, (hi, std) in enumerate(zip(health_indicators[1], health_indicators[4])):
+                        plt.errorbar(x, hi, yerr=std, label=f'Sample {panels.index(train_panels[i]) + 1}: Train', color=f'C{i}', ecolor='blue', elinewidth=2, capsize=5)
 
-                    for i, hi in enumerate(health_indicators[2]):
-                        plt.plot(x, hi, label=f'Sample {panels.index(panel) + 1}: Test')
+                    for i, (hi, std) in enumerate(zip(health_indicators[2], health_indicators[5])):
+                        plt.errorbar(x, hi, yerr=std, label=f'Sample {panels.index(panel) + 1}: Test', color='red', ecolor='salmon', elinewidth=2, capsize=5)
 
                     plt.xlabel('Lifetime (%)')
                     plt.ylabel('Health Indicators')
@@ -740,7 +741,17 @@ while True:
         if conc_choice == "N" or conc_choice == "n":
             hyperVAE(csv_dir)
     elif choice == '8':
-        saveVAE(csv_dir)
+        save_graph_choice = input("Plot? Y/N: ")
+        save_HI_choice = input("Save HI file? (needed for ensemble model) Y/N: ")
+        vae_seed = int(input("Enter seed: "))
+        if save_graph_choice == "Y" or save_graph_choice == "y" and save_HI_choice == "Y" or save_HI_choice == "y":
+            saveVAE(csv_dir, save_graph=True, save_HI=True)
+        if save_graph_choice == "Y" or save_graph_choice == "y" and save_HI_choice == "N" or save_HI_choice == "n":
+            saveVAE(csv_dir, save_graph=True, save_HI=False)
+        if save_graph_choice == "N" or save_graph_choice == "n" and save_HI_choice == "Y" or save_HI_choice == "y":
+            saveVAE(csv_dir, save_graph=False, save_HI=True)
+        if save_graph_choice == "N" or save_graph_choice == "n" and save_HI_choice == "N" or save_HI_choice == "n":
+            saveVAE(csv_dir, save_graph=False, save_HI=False)
     elif choice == '9':
         hyperDeepSad(csv_dir)
     elif choice == '10':
