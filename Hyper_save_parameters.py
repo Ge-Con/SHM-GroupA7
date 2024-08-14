@@ -79,10 +79,9 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-def train_vae(hidden_1, batch_size, learning_rate, reloss_coeff, klloss_coeff, moloss_coeff, epochs, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
+def train_vae(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
     #global valid
     # commented, this is for validation data?
-
     n_input = vae_train_data.shape[1]  # Number of features
     hidden_2 = 1
     display = 50
@@ -243,7 +242,10 @@ space = [
 # Use the decorator to automatically convert parameters to keyword arguments
 @use_named_args(space)
 def objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff):
-    # Use the captured outer variables here
+    print(
+        f"Trying parameters: hidden_1={hidden_1}, batch_size={batch_size}, learning_rate={learning_rate}, "
+        f"epochs={epochs}, reloss_coeff={reloss_coeff}, klloss_coeff={klloss_coeff}, moloss_coeff={moloss_coeff}")
+
     health_indicators = train_vae(hidden_1, batch_size,
                                   learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir)
     ftn, monotonicity, trendability, prognosability, error = fitness(health_indicators[1])
@@ -259,14 +261,17 @@ def hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_p
         Integer(16, 128, name='batch_size'),
         Real(0.0001, 0.01, name='learning_rate'),
         Integer(500, 10000, name='epochs'),
-        Integer(0.05, 20, name='reloss_coeff'),
-        Integer(0.05, 20, name='klloss_coeff'),
-        Integer(0.05, 20, name='moloss_coeff')
+        Real(0.05, 20, name='reloss_coeff'),
+        Real(0.05, 20, name='klloss_coeff'),
+        Real(0.05, 20, name='moloss_coeff')
     ]
 
     # Define the objective function with named args
     @use_named_args(space)
     def objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff):
+        print(
+            f"Trying parameters: hidden_1={hidden_1}, batch_size={batch_size}, learning_rate={learning_rate}, "
+            f"epochs={epochs}, reloss_coeff={reloss_coeff}, klloss_coeff={klloss_coeff}, moloss_coeff={moloss_coeff}")
         health_indicators = train_vae(hidden_1, batch_size,
                                       learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca,
                                       vae_seed, file_type, panel, freq, csv_dir)
@@ -278,5 +283,6 @@ def hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_p
     res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = [res_gp.x, res_gp.fun]
     print("Best parameters found: ", res_gp.x)
+    print("Error of best parameters: ", res_gp.fun)
 
     return opt_parameters
