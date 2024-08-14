@@ -235,9 +235,9 @@ space = [
     Integer(16, 128, name='batch_size'),
     Real(0.0001, 0.01, name='learning_rate'),
     Integer(500, 10000, name='epochs'),
-    Integer(0.05, 20, name='reloss_coeff'),
-    Integer(0.05, 20, name='klloss_coeff'),
-    Integer(0.05, 20, name='moloss_coeff')
+    Real(0.05, 20, name='reloss_coeff'),
+    Real(0.05, 20, name='klloss_coeff'),
+    Real(0.05, 20, name='moloss_coeff')
 ]
 
 # Use the decorator to automatically convert parameters to keyword arguments
