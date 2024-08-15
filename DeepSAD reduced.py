@@ -54,11 +54,12 @@ class NeuralNet(nn.Module):
         # Create network layers
         self.fc1 = nn.Linear(size[0] * size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 128)
+        self.fc3 = nn.Linear(512, 256)
+        self.fce = nn.Linear(256, 128)
         self.fc4 = nn.Linear(128, 64)
         self.fc5 = nn.Linear(64, 16)
         # Create activation function
-        self.m = torch.nn.LeakyReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.01)
 
     def forward(self, x):
         x = torch.flatten(x, start_dim=0)  # Flatten matrix input
@@ -66,6 +67,7 @@ class NeuralNet(nn.Module):
         x = self.m(self.fc1(x))  # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
+        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
         # Reshape output to same as c
@@ -92,19 +94,21 @@ class NeuralNet_Decoder(nn.Module):
         # Create network layers
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
-        self.fc3 = nn.Linear(128, 512)
+        self.fc3 = nn.Linear(128, 256)
+        self.fce = nn.Linear(256, 512)
         self.fc4 = nn.Linear(512, 1024)
         self.fc5 = nn.Linear(1024, size[0] * size[1])
         # Create activation function
-        self.m = torch.nn.LeakyReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.01)
 
     def forward(self, x):
         x = torch.flatten(x)  # Flatten matrix input
         x = self.m(self.fc1(x))  # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
+        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
-        x = self.m(self.fc5(x))
+        x = self.fc5(x)
         x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
 
@@ -223,7 +227,10 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
                 loss_d = 0
-                losses = dist if target == 0 else eta * ((dist + eps) ** target)
+                if target == 0:
+                    losses = dist
+                else:
+                    losses = eta * ((dist + eps) ** (target))
 
                 if reg != 0:  # If we want to diversify
                     C = torch.matmul(Y.T, Y)  # Gram Matrix
@@ -231,6 +238,9 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
 
                 # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
+
+                #losses += (dist-(target-1)*-0.5)**2 #Fit to labels
+
                 loss += losses
                 n_batches += 1
 
@@ -253,10 +263,10 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
         - model (NeuralNet object): DeepSAD model
         - train_loader (DataLoader object): Data loader for training data and targets
         - learning_rate (float): Learning rate
-        - weight_decay (float): Factor to reduce LR by at milestones
+        - weight_decay (float): Factor for L2 regularisation
         - n_epochs (int): Number of epochs for training
         - lr_milestones (list): Epoch milestones to reduce learning rate
-        - gamma (float): Weighting of L2 regularisation
+        - gamma (float): Factor to reduce learning rate by at milestones
 
         Returns:
         - model (NeuralNet object): Trained neural network
@@ -385,11 +395,10 @@ def load_data(dir, filename):
         x_values = np.arange(1, teol + 1)
         health_indicators = ((x_values ** 2) / (teol ** 2)) * 2 - 1  # Equation scaled from -1 to 1
 
-        for i in range(int(len(labels) / 2)):  # Originally 5
+        for i in range(int(len(labels) / 8)):  # Originally 5
             labels[i] = health_indicators[-i - 1]  # Healthy
 
-        for i in range(
-                int(len(labels) / 2)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
+        for i in range(int(len(labels) / 8)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
             labels[-i - 1] = health_indicators[i]  # Unhealthy
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
@@ -411,19 +420,19 @@ def DeepSAD_train_run(dir, freq, file_name):
     """
 
     # Hyperparamters
-    batch_size = 20
+    batch_size = 100
     learning_rate_AE = 0.001
-    learning_rate = 0.0005
-    weight_decay = 1
-    weight_decay_AE = 1
+    learning_rate = 0.0001
+    weight_decay = 100
+    weight_decay_AE = 10
     n_epochs_AE = 10
     n_epochs = 100
     lr_milestones_AE = [8]  # Milestones when learning rate reduces
     lr_milestones = [20, 50, 70, 90]
     gamma = 0.1 # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
-    eta = 1  # Weighting of labelled datapoints
-    reg = 0.01  # Lambda - diversity weighting
+    eta = 10  # Weighting of labelled datapoints
+    reg = 0.0001  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
 
     global pass_dir
@@ -508,9 +517,9 @@ def DeepSAD_train_run(dir, freq, file_name):
 
         # Scale so on average starts at 0 and ends at 1 excluding test sample
         list = np.array(list)
-        av_start = np.mean(list[:, 0])
-        av_end = np.mean(list[:, -1])
-        list = (list - av_start) / av_end
+        #av_start = np.mean(list[:, 0])
+        #av_end = np.mean(list[:, -1])
+        #list = (list - av_start) / av_end
 
         # Plot and print fitness
         ftn, monotonicity, trendability, prognosability, error = fitness(list)
