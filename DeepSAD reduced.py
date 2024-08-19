@@ -55,9 +55,9 @@ class NeuralNet(nn.Module):
         self.fc1 = nn.Linear(size[0] * size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 256)
-        self.fce = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, 64)
-        self.fc5 = nn.Linear(64, 16)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, 64)
+        self.fc6 = nn.Linear(64, 16)
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -67,9 +67,9 @@ class NeuralNet(nn.Module):
         x = self.m(self.fc1(x))  # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
-        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
+        x = self.m(self.fc6(x))
         # Reshape output to same as c
         encoded = x.view(4, 4)
         return encoded
@@ -95,9 +95,9 @@ class NeuralNet_Decoder(nn.Module):
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 256)
-        self.fce = nn.Linear(256, 512)
-        self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, size[0] * size[1])
+        self.fc4 = nn.Linear(256, 512)
+        self.fc5 = nn.Linear(512, 1024)
+        self.fc6 = nn.Linear(1024, size[0] * size[1])
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -106,9 +106,9 @@ class NeuralNet_Decoder(nn.Module):
         x = self.m(self.fc1(x))  # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
-        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
-        x = self.fc5(x)
+        x = self.m(self.fc5(x))
+        x = self.fc6(x)
         x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
 
@@ -398,7 +398,7 @@ def load_data(dir, filename):
         for i in range(int(len(labels) / 8)):  # Originally 5
             labels[i] = health_indicators[-i - 1]  # Healthy
 
-        for i in range(int(len(labels) / 8)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
+        for i in range(int(len(labels) / 8)):  # Originally 3
             labels[-i - 1] = health_indicators[i]  # Unhealthy
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
@@ -592,12 +592,12 @@ HIs = np.empty((6), dtype=object)
 #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
 dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
 #dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
-filename = "FFT_FT_Reduced"
+filename = "HLB_FT_Reduced"
 
 for freq in range(len(frequencies)):
-    print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
+    print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
 # Save and plot results
 # save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
-plot_ds_images(dir, "FFT")
+plot_ds_images(dir, "HLB")
