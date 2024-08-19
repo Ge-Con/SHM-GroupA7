@@ -64,7 +64,7 @@ def eval_wae(merge):
     if merge:
 
         # Seeds used
-        files = ["42", "110", "120"]#, "130", "140"]    # 5 seeds for VAE, 3 for DeepSAD due to time
+        files = ["140"]#["42", "110", "120", "130", "140"]    # 5 seeds for VAE, 3 for DeepSAD due to time
 
         # Simple averaging repetitions
         storeHIs = np.empty((3), dtype=object)
