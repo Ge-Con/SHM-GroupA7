@@ -17,6 +17,7 @@ import matplotlib.image as mpimg
 # Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
 global pass_semi_targets
+global pass_train_samples
 global pass_fnwf
 global pass_dir
 
@@ -466,12 +467,15 @@ space = [
         Integer(100, 200, name='batch_size'),
         Real(0.0001, 0.001, name='learning_rate'),
         Integer(50, 200, name='n_epochs'),
+        Real(1, 100, name='weight_decay'),
+        Real(1, 100, name='eta'),
+        Real(0.001, 0.1, name='reg')
     ]
 
 
 @use_named_args(space)
 
-def objective(batch_size, learning_rate, n_epochs):
+def objective(batch_size, learning_rate, n_epochs, weight_decay, eta, reg):
     """
     Objective function for hyperparameter optimisation
 
@@ -484,15 +488,15 @@ def objective(batch_size, learning_rate, n_epochs):
 
     # Hyperparamters
     learning_rate_AE = 0.001
-    weight_decay = 100      #L2 weighting
+    #weight_decay = 100      #L2 weighting
     weight_decay_AE = 10    #L2 weighting
     n_epochs_AE = 10
     lr_milestones_AE = [8]  # Milestones when learning rate reduces
     lr_milestones = [20, 40, 60, 80]
     gamma = 0.1  # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
-    eta = 10  # Weighting of labelled datapoints
-    reg = 0.0001  # Lambda - diversity weighting
+    #eta = 10  # Weighting of labelled datapoints
+    #reg = 0.0001  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
 
     # Retrieve training data from global variables
@@ -512,9 +516,8 @@ def objective(batch_size, learning_rate, n_epochs):
     model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs, lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
 
     # Evaluate HIs of training data
-    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     list = []
-    for test_sample in samples:
+    for test_sample in pass_train_samples:
         test_data, temp_targets = load_data(os.path.join(pass_dir, test_sample), pass_fnwf)
 
         # Calculate HI at each state
@@ -537,13 +540,15 @@ def objective(batch_size, learning_rate, n_epochs):
 
 # print(objective([1, 2]))
 
-def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=ds_seed):
+def hyperparameter_optimisation(train_samples, train_data, semi_targets, n_calls, random_state=ds_seed):
 
     global pass_train_data
     global pass_semi_targets
+    global pass_train_samples
 
     pass_train_data = train_data
     pass_semi_targets = semi_targets
+    pass_train_samples = train_samples
 
     res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = res_gp.x
@@ -630,25 +635,24 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         # Hyperparameter optimisation
         if opt:
             pass_fnwf = file_name_with_freq
-            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
+            hps.append(hyperparameter_optimisation(temp_samples, train_data, semi_targets, n_calls=20))
         else:
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
-            optimized_params[2] = 20
 
             train_loader = DataLoader(train_dataset, batch_size=optimized_params[0], shuffle=True)
             
             # Create, pretrain and train a model
             model = NeuralNet(size)
             model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE, lr_milestones=lr_milestones_AE, gamma=gamma_AE)
-            model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs, lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
+            model, loss = train(model, train_loader, optimized_params[1], weight_decay=optimized_params[3], n_epochs=optimized_params[2], lr_milestones=lr_milestones, gamma=gamma, eta=optimized_params[4], eps=eps, reg=optimized_params[5])
 
             # Test for all panels
             # Load test sample data (targets not used)
             list = []
-            for test_sample in samples:
-                test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+            for eval_sample in samples:
+                test_data, temp_targets = load_data(os.path.join(dir, eval_sample), file_name_with_freq)
 
                 # Calculate HI at each state
                 current_result = []
@@ -658,6 +662,18 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
                 # Truncate (change to interpolation)
                 list.append(scale_exact(np.array(current_result)))
+
+            #Scale HIs by training data
+            templist = []
+            for i in range(6):
+                if i != sample_count:
+                    templist.append(list[i])
+            templist = np.array(templist)
+            list = np.array(list)
+            av_start = np.mean(templist[:, 0])
+            av_end = np.mean(templist[:, -1])
+            list = (list - av_start) / av_end
+
             results[sample_count] = np.array(list)
 
     if opt:
