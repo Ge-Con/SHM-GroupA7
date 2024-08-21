@@ -665,7 +665,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
             #Scale HIs by training data
             templist = []
-            for i in range(6):
+            for i in range(len(samples)):
                 if i != sample_count:
                     templist.append(list[i])
             templist = np.array(templist)
@@ -694,7 +694,7 @@ def plot_ds_images(dir, type):
     """
     
     # Define variables
-    filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
+    filedir = os.path.join(dir, f"DS_{type}_seed_{ds_seed}")
     nrows = 6
     ncols = 5
     panels = ("0", "1", "2", "3", "4")
@@ -705,7 +705,7 @@ def plot_ds_images(dir, type):
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"DeepSAD_{type}-{freq}-{panel} HIs.png"
+            filename = f"DeepSAD_{type}-{freq}-{panel}.png"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
