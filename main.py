@@ -424,7 +424,7 @@ def hyperDeepSad(dir):
     """
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    frequencies = ["150", "200", "250"]
+    frequencies = ["050", "100", "125", "150", "200", "250"]
     for file in filenames:
         for freq in frequencies:
             # Optimise hyperparameters

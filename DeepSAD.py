@@ -17,12 +17,13 @@ import matplotlib.image as mpimg
 # Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
 global pass_semi_targets
+global pass_train_samples
 global pass_fnwf
 global pass_dir
 
 # Random seed for repeatability
 global ds_seed
-ds_seed = 120
+ds_seed = 140
 torch.manual_seed(ds_seed)
 
 
@@ -55,13 +56,14 @@ class NeuralNet(nn.Module):
         self.size = size        # Set size to an attribute
 
         # Create network layers
-        self.fc1 = nn.Linear(size[0]*size[1], 1024)
+        self.fc1 = nn.Linear(size[0] * size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 128)
-        self.fc4 = nn.Linear(128, 64)
-        self.fc5 = nn.Linear(64, 16)
+        self.fc3 = nn.Linear(512, 256)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, 64)
+        self.fc6 = nn.Linear(64, 16)
         # Create activation function
-        self.m = torch.nn.LeakyReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.01)
 
     def forward(self, x):
         """
@@ -75,11 +77,12 @@ class NeuralNet(nn.Module):
         """
         x = torch.flatten(x, start_dim=0)    # Flatten matrix input
         x = x.to(next(self.parameters()).dtype) # Ensure tensor is of correct datatype
-        x = self.m(self.fc1(x)) # Forward pass through layers
+        x = self.m(self.fc1(x))  # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
+        x = self.m(self.fc6(x))
         # Reshape output to same as c
         encoded = x.view(4, 4)
         return encoded
@@ -113,12 +116,12 @@ class NeuralNet_Decoder(nn.Module):
         # Create network layers
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
-        self.fc3 = nn.Linear(128, 512)
-        self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, size[0]*size[1])
-
+        self.fc3 = nn.Linear(128, 256)
+        self.fc4 = nn.Linear(256, 512)
+        self.fc5 = nn.Linear(512, 1024)
+        self.fc6 = nn.Linear(1024, size[0] * size[1])
         # Create activation function
-        self.m = torch.nn.LeakyReLU(0.001)
+        self.m = torch.nn.LeakyReLU(0.01)
 
     def forward(self, x):
         """
@@ -131,12 +134,13 @@ class NeuralNet_Decoder(nn.Module):
             - x (2D numpy array): Network output
         """
 
-        x = torch.flatten(x)    # Flatten matrix input
-        x = self.m(self.fc1(x)) # Run through network layers
+        x = torch.flatten(x)  # Flatten matrix input
+        x = self.m(self.fc1(x))  # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
+        x = self.m(self.fc6(x))
         x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
 
@@ -257,7 +261,6 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
     model.train()
     for epoch in range(n_epochs):
         epoch_loss = 0.0
-        scheduler.step()
 
         for train_data, train_target in train_loader:
             loss = 0.0
@@ -275,22 +278,30 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                 Y = outputs - model.c
                 dist = torch.sum(Y ** 2)
                 loss_d = 0
+                if target == 0:
+                    losses = dist
+                else:
+                    losses = eta * ((dist + eps) ** (target))
+
                 if reg != 0:  # If we want to diversify
                     C = torch.matmul(Y.T, Y)  # Gram Matrix
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
-                losses = dist if target == 0 else eta * ((dist + eps) ** target)
 
                 # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
+
+                #losses += (dist-(target-1)*-0.5)**2 #Fit to labels
+
                 loss += losses
                 n_batches += 1
 
             # Finish off training the network
-            loss = loss/n_batches
+            loss = loss / n_batches
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
+        scheduler.step()
 
     return model, epoch_loss
 
@@ -408,12 +419,12 @@ def load_data(dir, filename):
     """
     data = None
     labels = None
-    first = True    # First sample flag
+    first = True  # First sample flag
 
     # Walk directory
     for root, dirs, files in os.walk(dir):
         for name in files:
-            if name == filename:    # If correct file to be included in training data
+            if name == filename:  # If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
                 # Set data and labels arrays to data from first sample
@@ -425,21 +436,20 @@ def load_data(dir, filename):
                 # Concatenate additional samples
                 else:
                     data = np.concatenate((data, [read_data]))
-                    labels = np.append(labels, 0)   # Default label is 0
+                    labels = np.append(labels, 0)  # Default label is 0
     if labels is not None and len(labels) > 0:
 
         # Add artificial labels
         teol = data.shape[0]
 
-        x_values = np.arange(1, teol +1)
-        health_indicators = ((x_values ** 2 ) / (teol ** 2))*2-1    # Equation scaled from -1 to 1
+        x_values = np.arange(1, teol + 1)
+        health_indicators = ((x_values ** 2) / (teol ** 2)) * 2 - 1  # Equation scaled from -1 to 1
 
-        for i in range(5):
-            labels[i] = health_indicators[-i-1] # Healthy
+        for i in range(int(len(labels) / 8)):  # Originally 5
+            labels[i] = health_indicators[-i - 1]  # Healthy
 
-        for i in range(3):
-            labels[-i-1] = health_indicators[i] # Unhealthy
-
+        for i in range(int(len(labels) / 8)):  # Originally 3
+            labels[-i - 1] = health_indicators[i]  # Unhealthy
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
@@ -456,13 +466,16 @@ def print_progress(res):
 space = [
         Integer(100, 200, name='batch_size'),
         Real(0.0001, 0.001, name='learning_rate'),
-        Integer(50, 200, name='epochs'),
+        Integer(50, 200, name='n_epochs'),
+        Real(1, 100, name='weight_decay'),
+        Real(1, 100, name='eta'),
+        Real(0.001, 0.1, name='reg')
     ]
 
 
 @use_named_args(space)
 
-def objective(batch_size, learning_rate, epochs):
+def objective(batch_size, learning_rate, n_epochs, weight_decay, eta, reg):
     """
     Objective function for hyperparameter optimisation
 
@@ -472,6 +485,19 @@ def objective(batch_size, learning_rate, epochs):
     Returns:
     - error (float): Fitness error to minimise
     """
+
+    # Hyperparamters
+    learning_rate_AE = 0.001
+    #weight_decay = 100      #L2 weighting
+    weight_decay_AE = 10    #L2 weighting
+    n_epochs_AE = 10
+    lr_milestones_AE = [8]  # Milestones when learning rate reduces
+    lr_milestones = [20, 40, 60, 80]
+    gamma = 0.1  # Factor to reduce LR by at milestones
+    gamma_AE = 0.1  # "
+    #eta = 10  # Weighting of labelled datapoints
+    #reg = 0.0001  # Lambda - diversity weighting
+    eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
 
     # Retrieve training data from global variables
     train_data = pass_train_data
@@ -486,13 +512,12 @@ def objective(batch_size, learning_rate, epochs):
     # Pretrain and train DeepSAD model
     train_dataset = TensorDataset(train_data, semi_targets)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    pretrain(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1)
-    trained_model, loss = train(model, train_loader, learning_rate, weight_decay=1, n_epochs=epochs, lr_milestones=[100, 200, 300, 400, 500, 600, 700, 800, 900], gamma=0.1, eta=1, eps=1e-6)
+    model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE, lr_milestones=lr_milestones_AE, gamma=gamma_AE)
+    model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs, lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
 
     # Evaluate HIs of training data
-    samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     list = []
-    for test_sample in samples:
+    for test_sample in pass_train_samples:
         test_data, temp_targets = load_data(os.path.join(pass_dir, test_sample), pass_fnwf)
 
         # Calculate HI at each state
@@ -515,14 +540,15 @@ def objective(batch_size, learning_rate, epochs):
 
 # print(objective([1, 2]))
 
-# Array with optimal parameters, eg for them [hidden_1, batch_size, learning_rate, epochs] = [50,58,0.01,10000]
-def hyperparameter_optimisation(train_data, semi_targets, n_calls, random_state=ds_seed):
+def hyperparameter_optimisation(train_samples, train_data, semi_targets, n_calls, random_state=ds_seed):
 
     global pass_train_data
     global pass_semi_targets
+    global pass_train_samples
 
     pass_train_data = train_data
     pass_semi_targets = semi_targets
+    pass_train_samples = train_samples
 
     res_gp = gp_minimize(objective, space, n_calls=n_calls, random_state=random_state, callback=[print_progress])
     opt_parameters = res_gp.x
@@ -544,18 +570,17 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     """
 
     # Hyperparamters
-    # learning_rate_AE = 0.001
-    # learning_rate = 0.00001
-    # weight_decay = 0.1
-    # n_epochs_AE = 10
-    # n_epochs = 15
-    # lr_milestones_AE = [20, 30, 40]  # Milestones when learning rate reduces
-    # lr_milestones = [5, 10, 50, 70, 90]
-    # gamma = 0.1    # Factor to reduce LR by at milestones
-    # gamma_AE = 0.1 # "
-    # eta = 3  # Weighting of labelled datapoints
-    # eps = 1 * 10 ** (-8)  # Very small number to prevent zero errors
-    # reg = 0.001  # Lambda - diversity weighting
+    learning_rate_AE = 0.001
+    weight_decay = 100      #L2 weighting
+    weight_decay_AE = 10    #L2 weighting
+    n_epochs_AE = 10
+    lr_milestones_AE = [8]  # Milestones when learning rate reduces
+    lr_milestones = [20, 40, 60, 80]
+    gamma = 0.1  # Factor to reduce LR by at milestones
+    gamma_AE = 0.1  # "
+    eta = 10  # Weighting of labelled datapoints
+    reg = 0.0001  # Lambda - diversity weighting
+    eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
 
     global pass_dir
     pass_dir = dir
@@ -610,26 +635,24 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         # Hyperparameter optimisation
         if opt:
             pass_fnwf = file_name_with_freq
-            hps.append(hyperparameter_optimisation(train_data, semi_targets, n_calls=10))
+            hps.append(hyperparameter_optimisation(temp_samples, train_data, semi_targets, n_calls=20))
         else:
             hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
-            optimized_params[2] = 20
 
             train_loader = DataLoader(train_dataset, batch_size=optimized_params[0], shuffle=True)
             
             # Create, pretrain and train a model
             model = NeuralNet(size)
-            model = pretrain(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30], gamma=0.1)
-            model, loss = train(model, train_loader, optimized_params[1], weight_decay=1e-5, n_epochs=optimized_params[2], lr_milestones=[10, 20, 30, 40], gamma=0.1, eta=1.0, eps=1e-6, reg=0.001)
-
+            model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE, lr_milestones=lr_milestones_AE, gamma=gamma_AE)
+            model, loss = train(model, train_loader, optimized_params[1], weight_decay=optimized_params[3], n_epochs=optimized_params[2], lr_milestones=lr_milestones, gamma=gamma, eta=optimized_params[4], eps=eps, reg=optimized_params[5])
 
             # Test for all panels
             # Load test sample data (targets not used)
             list = []
-            for test_sample in samples:
-                test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+            for eval_sample in samples:
+                test_data, temp_targets = load_data(os.path.join(dir, eval_sample), file_name_with_freq)
 
                 # Calculate HI at each state
                 current_result = []
@@ -639,6 +662,18 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
                 # Truncate (change to interpolation)
                 list.append(scale_exact(np.array(current_result)))
+
+            #Scale HIs by training data
+            templist = []
+            for i in range(len(samples)):
+                if i != sample_count:
+                    templist.append(list[i])
+            templist = np.array(templist)
+            list = np.array(list)
+            av_start = np.mean(templist[:, 0])
+            av_end = np.mean(templist[:, -1])
+            list = (list - av_start) / av_end
+
             results[sample_count] = np.array(list)
 
     if opt:
@@ -659,7 +694,7 @@ def plot_ds_images(dir, type):
     """
     
     # Define variables
-    filedir = os.path.join(dir, f"big_VAE_graph_seed_{ds_seed}")
+    filedir = os.path.join(dir, f"DS_{type}_seed_{ds_seed}")
     nrows = 6
     ncols = 5
     panels = ("0", "1", "2", "3", "4")
@@ -670,7 +705,7 @@ def plot_ds_images(dir, type):
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"DeepSAD_{type}-{freq}-{panel} HIs.png"
+            filename = f"DeepSAD_{type}-{freq}-{panel}.png"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
