@@ -420,19 +420,19 @@ def DeepSAD_train_run(dir, freq, file_name):
     """
 
     # Hyperparamters
-    batch_size = 100
+    batch_size = 30
     learning_rate_AE = 0.001
     learning_rate = 0.0001
-    weight_decay = 100
-    weight_decay_AE = 10
+    weight_decay = 1
+    weight_decay_AE = 1
     n_epochs_AE = 10
     n_epochs = 100
     lr_milestones_AE = [8]  # Milestones when learning rate reduces
     lr_milestones = [20, 50, 70, 90]
     gamma = 0.1 # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
-    eta = 10  # Weighting of labelled datapoints
-    reg = 0.0001  # Lambda - diversity weighting
+    eta = 1  # Weighting of labelled datapoints
+    reg = 0.01  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
 
     global pass_dir
@@ -590,8 +590,8 @@ def plot_ds_images(dir, type):
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
 #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-#dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
+#dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+#dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
