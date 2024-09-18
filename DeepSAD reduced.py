@@ -55,9 +55,9 @@ class NeuralNet(nn.Module):
         self.fc1 = nn.Linear(size[0] * size[1], 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 256)
-        self.fce = nn.Linear(256, 128)
-        self.fc4 = nn.Linear(128, 64)
-        self.fc5 = nn.Linear(64, 16)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, 64)
+        self.fc6 = nn.Linear(64, 16)
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -67,9 +67,9 @@ class NeuralNet(nn.Module):
         x = self.m(self.fc1(x))  # Forward pass through layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
-        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
         x = self.m(self.fc5(x))
+        x = self.m(self.fc6(x))
         # Reshape output to same as c
         encoded = x.view(4, 4)
         return encoded
@@ -95,9 +95,9 @@ class NeuralNet_Decoder(nn.Module):
         self.fc1 = nn.Linear(16, 64)
         self.fc2 = nn.Linear(64, 128)
         self.fc3 = nn.Linear(128, 256)
-        self.fce = nn.Linear(256, 512)
-        self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, size[0] * size[1])
+        self.fc4 = nn.Linear(256, 512)
+        self.fc5 = nn.Linear(512, 1024)
+        self.fc6 = nn.Linear(1024, size[0] * size[1])
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -106,9 +106,9 @@ class NeuralNet_Decoder(nn.Module):
         x = self.m(self.fc1(x))  # Run through network layers
         x = self.m(self.fc2(x))
         x = self.m(self.fc3(x))
-        x = self.m(self.fce(x))
         x = self.m(self.fc4(x))
-        x = self.fc5(x)
+        x = self.m(self.fc5(x))
+        x = self.fc6(x)
         x = x.view(-1, self.size[0], self.size[1])  # Reconstruct matrix of original data dimenions
         return x
 
@@ -355,13 +355,14 @@ def embed(X, model):
     return y
 
 
-def load_data(dir, filename):
+def load_data(dir, filename, ignore):
     """
         Loads data from CSV files
 
         Parameters:
         - dir (string): Root directory of train/test data
         - filename (string): file name for train/test data
+        - ignore (int): number of time steps from end to disregard
 
         Returns:
          - data (2D numpy array): list of training data vectors
@@ -387,7 +388,12 @@ def load_data(dir, filename):
                 else:
                     data = np.concatenate((data, [read_data]))
                     labels = np.append(labels, 0)  # Default label is 0
+
     if labels is not None and len(labels) > 0:
+
+        if ignore != 0:
+            data = data[0:-1 * ignore]
+            labels = labels[0:-1 * ignore]
 
         # Add artificial labels
         teol = data.shape[0]
@@ -398,7 +404,7 @@ def load_data(dir, filename):
         for i in range(int(len(labels) / 8)):  # Originally 5
             labels[i] = health_indicators[-i - 1]  # Healthy
 
-        for i in range(int(len(labels) / 8)):  # Originally 3 #This rounds down so TODO: check what happens to the middle value
+        for i in range(int(len(labels) / 8)):  # Originally 3
             labels[-i - 1] = health_indicators[i]  # Unhealthy
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
@@ -420,20 +426,22 @@ def DeepSAD_train_run(dir, freq, file_name):
     """
 
     # Hyperparamters
-    batch_size = 30
+    batch_size = 100
     learning_rate_AE = 0.001
-    learning_rate = 0.0001
-    weight_decay = 1
-    weight_decay_AE = 1
+    learning_rate = 0.01
+    weight_decay = 10
+    weight_decay_AE = 100
     n_epochs_AE = 10
     n_epochs = 100
     lr_milestones_AE = [8]  # Milestones when learning rate reduces
-    lr_milestones = [20, 50, 70, 90]
+    lr_milestones = [20, 40, 60, 80]
     gamma = 0.1 # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
-    eta = 1  # Weighting of labelled datapoints
+    eta = 10  # Weighting of labelled datapoints
     reg = 0.01  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
+
+    ignore = 0  #Number of timesteps from end to ignore
 
     global pass_dir
     pass_dir = dir
@@ -444,7 +452,7 @@ def DeepSAD_train_run(dir, freq, file_name):
 
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
     # Initialise results matrix
-    results = np.empty((5, 5, 30))
+    results = np.empty((5, 5, 30-ignore))
     hps = []
     global pass_fnwf
     # Loop for each sample as test data
@@ -462,7 +470,7 @@ def DeepSAD_train_run(dir, freq, file_name):
             sample = temp_samples[count]
 
             # Load training sample
-            temp_data, temp_targets = load_data(os.path.join(dir, sample), file_name_with_freq)
+            temp_data, temp_targets = load_data(os.path.join(dir, sample), file_name_with_freq, ignore)
 
             # Create new arrays for training data and targets
             if first:
@@ -503,7 +511,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         # Load test sample data (targets not used)
         list = []
         for test_sample in samples:
-            test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq)
+            test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq, ignore)
             test_data = (test_data - normal_mn) / normal_sd  # Normalise using test statistics
 
             # Calculate HI at each state
@@ -513,7 +521,7 @@ def DeepSAD_train_run(dir, freq, file_name):
                 current_result.append(embed(data, model).item())
 
             # Interpolate
-            list.append(scale_exact(np.array(current_result)))
+            list.append(scale_exact(np.array(current_result), 30-ignore))
 
         # Scale so on average starts at 0 and ends at 1 excluding test sample
         list = np.array(list)
@@ -590,8 +598,8 @@ def plot_ds_images(dir, type):
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
 #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-#dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-#dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
+dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+#dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
@@ -600,4 +608,4 @@ for freq in range(len(frequencies)):
 # Save and plot results
 # save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
-plot_ds_images(dir, "FFT")
+plot_ds_images(dir, "HLB")

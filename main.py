@@ -424,7 +424,7 @@ def hyperDeepSad(dir):
     """
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    frequencies = ["150", "200", "250"]
+    frequencies = ["050", "100", "125", "150", "200", "250"]
     for file in filenames:
         for freq in frequencies:
             # Optimise hyperparameters
@@ -535,7 +535,7 @@ def hyperVAE(dir, concatenate=False):
                 vae_test_data = vae_pca.transform(vae_test_data)
 
                 hyperparameters = HYPparameters.hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
-                                                              vae_seed, file_type, panel, freq, dir, n_calls=20)
+                                                              vae_seed, file_type, panel, freq, dir, n_calls=40)
                 HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
 def saveVAE(dir, save_graph=True, save_HI=True):

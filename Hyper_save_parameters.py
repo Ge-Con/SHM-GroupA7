@@ -60,7 +60,8 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
 
     filename_opt = os.path.join(dir, f"hyperparameters-opt-{file}.csv")
     freqs = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
-    freq = freq + "_kHz"
+    if not freq.endswith("_kHz"):
+        freq = freq + "_kHz"
 
     # Create an empty dataframe with frequencies as the index if the file does not exist
     if not os.path.exists(filename_opt):
