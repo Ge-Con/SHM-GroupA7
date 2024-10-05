@@ -538,7 +538,7 @@ def hyperVAE(dir, concatenate=False):
                                                               vae_seed, file_type, panel, freq, dir, n_calls=40)
                 HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
-def saveVAE(dir, save_graph=True, save_HI=True):
+def saveVAE(dir, save_graph=True, save_HI=True, valid=False):
     """
         Run and save VAE HIs
     
@@ -579,6 +579,10 @@ def saveVAE(dir, save_graph=True, save_HI=True):
                     filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
                     train_filenames.append(filename)
 
+                if valid:
+                    valid_panel = panels[panel_idx-1]
+                    train_filenames.pop(valid_panel)
+
                 result_dictionary[f"{panel}{freq}"] = []
 
                 counter += 1
@@ -594,22 +598,36 @@ def saveVAE(dir, save_graph=True, save_HI=True):
                 vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
                 vae_test_data = np.delete(vae_test_data, -1, axis=1)
 
+                if valid:
+                    valid_filename = os.path.join(dir, f"concatenated_{freq}_{valid_panel}_{file_type}.csv")
+                    vae_valid_data = pd.read_csv(valid_filename, header=None).values.transpose()
+                    vae_valid_data = np.delete(vae_valid_data, -1, axis=1)
+
                 vae_scaler = HYPparameters.StandardScaler()
                 vae_scaler.fit(vae_train_data)
                 vae_train_data = vae_scaler.transform(vae_train_data)
                 vae_test_data = vae_scaler.transform(vae_test_data)
+                if valid:
+                    vae_valid_data = vae_scaler.transform(vae_valid_data)
 
                 vae_pca = HYPparameters.PCA(n_components=30)
                 vae_pca.fit(vae_train_data)
                 vae_train_data = vae_pca.transform(vae_train_data)
                 vae_test_data = vae_pca.transform(vae_test_data)
+                if valid:
+                    vae_valid_data = vae_pca.transform(vae_valid_data)
 
                 hyperparameters_str = hyperparameters_df.loc[freq, panel]
                 hyperparameters = eval(hyperparameters_str)
 
-                health_indicators = HYPparameters.train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                if valid:
+                    health_indicators = HYPparameters.train_vae(hyperparameters[0][0], hyperparameters[0][1],
                                               hyperparameters[0][2], hyperparameters[0][3], hyperparameters[0][4], hyperparameters[0][5], hyperparameters[0][6],
-                                                            vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir)
+                                                            vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir, valid=valid, valid_data=vae_valid_data)
+                else:
+                    health_indicators = HYPparameters.train_vae(hyperparameters[0][0], hyperparameters[0][1],
+                                              hyperparameters[0][2], hyperparameters[0][3], hyperparameters[0][4], hyperparameters[0][5], hyperparameters[0][6],
+                                                            vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, dir, valid=valid, valid_data=None)
 
                 fitness_all = fitness(health_indicators[0])
                 print("Fitness all", fitness_all)
@@ -617,7 +635,13 @@ def saveVAE(dir, save_graph=True, save_HI=True):
                 fitness_test = HYPparameters.test_fitness(health_indicators[2], health_indicators[1])
                 print("Fitness test", fitness_test)
 
-                result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test])
+                if valid:
+                    fitness_valid = HYPparameters.test_fitness(health_indicators[6], health_indicators[1])
+                    print("Fitness valid", fitness_valid)
+                    result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test, fitness_valid])
+
+                else:
+                    result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test])
 
                 if save_graph:
                     graph_hi_filename = f"HI_graph_{freq}_{panel}_{file_type}_seed_{vae_seed}"
@@ -631,11 +655,14 @@ def saveVAE(dir, save_graph=True, save_HI=True):
                     x = x * (1 / (x.shape[0] - 1))
                     x = x * 100
 
-                    for i, (hi, std) in enumerate(zip(health_indicators[1], health_indicators[4])):
-                        plt.errorbar(x, hi, yerr=std, label=f'Sample {panels.index(train_panels[i]) + 1}: Train', color=f'C{i}', ecolor='blue', elinewidth=2, capsize=5)
+                    for i in range(len(train_panels)):
+                        hi = health_indicators[1][i]
+                        std_dev = health_indicators[4][i]
 
-                    for i, (hi, std) in enumerate(zip(health_indicators[2], health_indicators[5])):
-                        plt.errorbar(x, hi, yerr=std, label=f'Sample {panels.index(panel) + 1}: Test', color='red', ecolor='salmon', elinewidth=2, capsize=5)
+                        plt.errorbar(x, hi, yerr=std_dev, label=f'Sample {i + 1}: Train', color=f'C{i}', ecolor='blue', elinewidth=2, capsize=5)
+
+                    plt.errorbar(x, health_indicators[2][0], yerr=health_indicators[5][0], label=f'Sample {panels.index(panel) + 1}: Test', color='red', ecolor='salmon', elinewidth=2, capsize=5)
+                    plt.errorbar(x, health_indicators[6][0], yerr=health_indicators[7][0], label=f'Sample {panels.index(valid_panel) + 1}: Validation', color='purple', ecolor='cyan', elinewidth=2, capsize=5)
 
                     plt.xlabel('Lifetime (%)')
                     plt.ylabel('Health Indicators')
@@ -647,6 +674,8 @@ def saveVAE(dir, save_graph=True, save_HI=True):
 
                 fitness_test = (fitness_test)
                 fitness_all = (fitness_all)
+                if valid:
+                    fitness_valid = (fitness_valid)
                 HYPresults.store_hyperparameters(fitness_all, fitness_test, panel, freq, file_type, vae_seed, dir)
 
                 z_all_modified = np.array([scale_exact(row) for row in health_indicators[0][:num_HIs]])
@@ -746,15 +775,28 @@ while True:
     elif choice == '8':
         save_graph_choice = input("Plot? Y/N: ")
         save_HI_choice = input("Save HI file? (needed for ensemble model) Y/N: ")
+        valid_choice = input("Validation? Y/N: ")
         vae_seed = int(input("Enter seed: "))
         if save_graph_choice == "Y" or save_graph_choice == "y" and save_HI_choice == "Y" or save_HI_choice == "y":
-            saveVAE(csv_dir, save_graph=True, save_HI=True)
+            if valid_choice == "Y" or valid_choice == "y":
+                saveVAE(csv_dir, save_graph=True, save_HI=True, valid=True)
+            else:
+                saveVAE(csv_dir, save_graph=True, save_HI=True, valid=False)
         if save_graph_choice == "Y" or save_graph_choice == "y" and save_HI_choice == "N" or save_HI_choice == "n":
-            saveVAE(csv_dir, save_graph=True, save_HI=False)
+            if valid_choice == "Y" or valid_choice == "y":
+                saveVAE(csv_dir, save_graph=True, save_HI=False, valid=True)
+            else:
+                saveVAE(csv_dir, save_graph=True, save_HI=False, valid=False)
         if save_graph_choice == "N" or save_graph_choice == "n" and save_HI_choice == "Y" or save_HI_choice == "y":
-            saveVAE(csv_dir, save_graph=False, save_HI=True)
+            if valid_choice == "Y" or valid_choice == "y":
+                saveVAE(csv_dir, save_graph=False, save_HI=True, valid=True)
+            else:
+                saveVAE(csv_dir, save_graph=False, save_HI=True, valid=False)
         if save_graph_choice == "N" or save_graph_choice == "n" and save_HI_choice == "N" or save_HI_choice == "n":
-            saveVAE(csv_dir, save_graph=False, save_HI=False)
+            if valid_choice == "Y" or valid_choice == "y":
+                saveVAE(csv_dir, save_graph=False, save_HI=False, valid=True)
+            else:
+                saveVAE(csv_dir, save_graph=False, save_HI=False, valid=False)
     elif choice == '9':
         hyperDeepSad(csv_dir)
     elif choice == '10':
