@@ -518,6 +518,23 @@ def DeepSAD_train_run(dir, freq, file_name):
         model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs,
                             lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
 
+        # Assuming 'model' is your trained NeuralNet
+        fc1_weights = model.fc1.weight.data  # Get weights for the first layer
+        print(fc1_weights)  # Prints out the weights
+
+        # To see the shape of the weights
+        print(fc1_weights.shape)  # This gives you a (1024, input_size) tensor
+
+        # Optional: visualize the weights using a heatmap
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(fc1_weights.cpu().numpy(), cmap="viridis", cbar=True)
+        plt.title("Weights of the First Layer (fc1)")
+        plt.show()
+
+
         # Test for all panels
         # Load test sample data (targets not used)
         list = []
@@ -610,7 +627,7 @@ def plot_ds_images(dir, type):
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
 #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+dir = "CSV-FFT-HLB-Reduced"
 #dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
 filename = "FFT_FT_Reduced"
 
