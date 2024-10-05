@@ -80,13 +80,14 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-def train_vae(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
-    #global valid
-    # commented, this is for validation data?
+def train_vae(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir, valid = False, valid_data):
+
     n_input = vae_train_data.shape[1]  # Number of features
     hidden_2 = 1
     display = 50
     tf.random.set_seed(vae_seed)
+    patience = 50    #early stopping criteria
+    best_validation_loss = float('inf')  # Initialize with infinity
 
     # Xavier initialization for weights, as explained in Hyper_Qin_original.py
     def xavier_init(fan_in, fan_out, vae_seed, constant=1):
@@ -150,11 +151,26 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_
         for i in range(num_batch):
             batch_xs = vae_train_data[i * batch_size:(i + 1) * batch_size]
             _, cost = sess.run([optm, loss], feed_dict={x: batch_xs})
-            #validation_loss = sess.run(loss, feed_dict={x: valid})
-            # not sure why this line is here, it's for something with validation, but we can keep it as a comment
 
-        #if epoch % display == 0:
-        #    print(f"Epoch {epoch}, Cost = {cost}")
+            if valid:
+                validation_loss = sess.run(loss, feed_dict={x: valid_data})
+
+                # Early stopping condition
+                if validation_loss < best_validation_loss * 0.995 and validation_loss > best_validation_loss:
+                    best_validation_loss = validation_loss
+                    patience_counter = 0  # Reset patience counter if we have an improvement
+                else:
+                    patience_counter += 1  # Increment if no improvement
+
+                if patience_counter >= patience:
+                    print(f"Early stopping at epoch {epoch} with validation loss: {validation_loss}")
+                    break
+
+        if epoch % display == 0:
+            if valid:
+                print(f"Epoch {epoch}, Cost = {cost}, validation loss = {validation_loss}")
+            else:
+                print(f"Epoch {epoch}, Cost = {cost}")
 
     print('Training finished!!!')
     end_time = time()
@@ -214,14 +230,36 @@ def train_vae(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_
         arr_stretch_std = interp_function_std(np.linspace(0, std_dev_test.size - 1, z_train.shape[1]))
         std_dev_test = arr_stretch_std
 
+    if valid:
+        std_dev_valid, z_valid = sess.run([std_dev, z], feed_dict={x: valid_data})
+        z_valid = z_valid.transpose()
+        std_dev_valid = std_dev_valid.transpose()
+
+        if z_valid.size != z_train.shape[1]:
+            interp_function = interp.interp1d(np.arange(z_valid.size), z_valid)
+            arr_stretch = interp_function(np.linspace(0, z_valid.size - 1, z_train.shape[1]))
+            z_valid = arr_stretch
+
+            interp_function_std = interp.interp1d(np.arange(std_dev_valid.size), std_dev_valid)
+            arr_stretch_std = interp_function_std(np.linspace(0, std_dev_valid.size - 1, z_train.shape[1]))
+            std_dev_valid = arr_stretch_std
+
     # Create an array that contains all HIs (train+test)
     z_all = np.append(z_train, z_test, axis = 0)
     std_dev_all = np.append(std_dev_train, std_dev_test, axis = 0)
 
+    if valid:
+        z_all = np.append(z_all, z_valid, axis=0)
+        std_dev_all = np.append(std_dev_all, std_dev_valid, axis=0)
+
     # Close the TensorFlow session
     sess.close()
 
-    return [z_all, z_train, z_test, std_dev_all, std_dev_train, std_dev_test]
+    if valid:
+        return [z_all, z_train, z_test, std_dev_all, std_dev_train, std_dev_test, z_valid, std_dev_valid]
+
+    else:
+        return [z_all, z_train, z_test, std_dev_all, std_dev_train, std_dev_test]
 
 # Hyperparameter optimization
 
