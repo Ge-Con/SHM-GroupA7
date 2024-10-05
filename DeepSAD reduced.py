@@ -58,12 +58,12 @@ class NeuralNet(nn.Module):
         self.size = size  # Set size to an attribute
 
         # Create network layers
-        self.fc1 = nn.Linear(size[0] * size[1], 1024)
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
-        self.fc4 = nn.Linear(256, 128)
-        self.fc5 = nn.Linear(128, 64)
-        self.fc6 = nn.Linear(64, 16)
+        self.fc1 = nn.Linear(size[0] * size[1], 512) #1024
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(128, 64)
+        self.fc5 = nn.Linear(64, 32)
+        self.fc6 = nn.Linear(32, 16)
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -98,12 +98,12 @@ class NeuralNet_Decoder(nn.Module):
         super().__init__()  # Initialise parent torch module
         self.size = size  # Set size to an attribute
         # Create network layers
-        self.fc1 = nn.Linear(16, 64)
-        self.fc2 = nn.Linear(64, 128)
-        self.fc3 = nn.Linear(128, 256)
-        self.fc4 = nn.Linear(256, 512)
-        self.fc5 = nn.Linear(512, 1024)
-        self.fc6 = nn.Linear(1024, size[0] * size[1])
+        self.fc1 = nn.Linear(16, 32)
+        self.fc2 = nn.Linear(32, 64)
+        self.fc3 = nn.Linear(64, 128)
+        self.fc4 = nn.Linear(128, 256)
+        self.fc5 = nn.Linear(256, 512)
+        self.fc6 = nn.Linear(512, size[0] * size[1])
         # Create activation function
         self.m = torch.nn.LeakyReLU(0.01)
 
@@ -518,21 +518,12 @@ def DeepSAD_train_run(dir, freq, file_name):
         model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs,
                             lr_milestones=lr_milestones, gamma=gamma, eta=eta, eps=eps, reg=reg)
 
-        # Assuming 'model' is your trained NeuralNet
-        fc1_weights = model.fc1.weight.data  # Get weights for the first layer
-        print(fc1_weights)  # Prints out the weights
-
-        # To see the shape of the weights
-        print(fc1_weights.shape)  # This gives you a (1024, input_size) tensor
-
-        # Optional: visualize the weights using a heatmap
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(fc1_weights.cpu().numpy(), cmap="viridis", cbar=True)
-        plt.title("Weights of the First Layer (fc1)")
-        plt.show()
+        # Display first layer heatmap
+        # fc1_weights = model.fc1.weight.data
+        # plt.figure(figsize=(10, 8))
+        # sns.heatmap(fc1_weights.cpu().numpy(), cmap="viridis", cbar=True)
+        # plt.title("Weights of the First Layer (fc1)")
+        # plt.show()
 
 
         # Test for all panels
@@ -627,8 +618,9 @@ def plot_ds_images(dir, type):
 frequencies = ["050", "100", "125", "150", "200", "250"]
 HIs = np.empty((6), dtype=object)
 #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-dir = "CSV-FFT-HLB-Reduced"
+#dir = "CSV-FFT-HLB-Reduced"
 #dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
+dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
 filename = "FFT_FT_Reduced"
 
 for freq in range(len(frequencies)):
