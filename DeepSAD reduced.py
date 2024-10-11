@@ -10,7 +10,7 @@ from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from Interpolating import scale_exact
-from prognosticcriteria_v2 import fitness
+from prognosticcriteria_v2 import fitness, test_fitness
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import Graphs
@@ -242,7 +242,6 @@ def train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_milesto
                     C = torch.matmul(Y.T, Y)  # Gram Matrix
                     loss_d = -torch.log(torch.det(C)) + torch.trace(C)  # Diversity loss contribution
 
-                # Originally: losses = torch.where(semi_targets[index] == 0, dist, eta * ((dist + eps) ** semi_targets[index]))
                 losses += reg * loss_d
 
                 #losses += (dist-(target-1)*-0.5)**2 #Fit to labels
@@ -434,24 +433,32 @@ def DeepSAD_train_run(dir, freq, file_name):
         - results (2D numpy array): 5x30 Array of health indicators with state for each panel
     """
 
-    # Hyperparamters
-    batch_size = 100
-    learning_rate_AE = 0.001
-    learning_rate = 0.001
-    weight_decay = 10
-    weight_decay_AE = 100
-    n_epochs_AE = 10
-    n_epochs = 100
-    lr_milestones_AE = [8]  # Milestones when learning rate reduces
-    lr_milestones = [20, 40, 60, 80]
+    ### Hyperparamters ###
+    #Fixed/background
+    lr_milestones_AE = []#[8]  # Milestones when learning rate reduces
+    lr_milestones = []#[20, 40, 60, 80]
     gamma = 0.1 # Factor to reduce LR by at milestones
     gamma_AE = 0.1  # "
-    eta = 100  # Weighting of labelled datapoints
-    reg = 0.01  # Lambda - diversity weighting
     eps = 1 * 10 ** (-6)  # Very small number to prevent zero errors
-    labelled_fraction = 0.125   # Labelled points from each end (so max 0.5)
 
-    ignore = 0  #Number of timesteps from end to ignore
+    #Training
+    batch_size = 128 # Include in HPO   - 50 to 150 (128 from paper)
+    learning_rate_AE = 0.0005 # Include in HPO - 0.0001 to 0.001 (0.0005)
+    learning_rate = 0.0005 # Include in HPO - 0.0001 to 0.001 (0.0005)
+    n_epochs_AE = 10 # Include in HPO - 5 to 20 (10)
+    n_epochs = 100 # Include in HPO   - 50 to 200 (100)
+
+    #Loss function
+    weight_decay = 10  # Nu | From paper - 1 or 10, doesn't make much difference
+    weight_decay_AE = weight_decay  # Keep it the same
+    eta = 10  # Weighting of LABELLED datapoints (unlabelled weighting 1)
+    reg = 0.001  # Lambda - diversity weighting (from paper)
+
+    #Additional (to do with labels, not in original model)
+    labelled_fraction = 0.25  # Labelled points from each end (so strictly < 0.5) | Don't include in HPO? Do not set below 0.1. Very little difference in results from 0.25 up to 0.5
+                            # Keep well below 0.5 to maintain gap in the middle to enable us to use straight line labels
+    ignore = 0  #Number of timesteps from end to ignore - leave at 0, anything else was bad
+
 
     global pass_dir
     pass_dir = dir
@@ -550,9 +557,10 @@ def DeepSAD_train_run(dir, freq, file_name):
         list = (list - av_start) / av_end
 
         # Plot and print fitness
-        ftn, monotonicity, trendability, prognosability, error = fitness(list)
-        print("Fitness:", ftn)
-        print("Mo:", monotonicity, "| Tr:", trendability, "| Pr:", prognosability)
+        ftn = fitness(list)
+        testftn = test_fitness([list[sample_count]], list)
+        print("F-test:", testftn[0], "| Mo:", testftn[1], "| Tr:", testftn[2], "| Pr:", testftn[3])
+        print("F-all: ", ftn[0], "| Mo:", ftn[1], "| Tr:", ftn[2], "| Pr:", ftn[3])
         Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
 
         results[sample_count] = list
@@ -621,12 +629,13 @@ HIs = np.empty((6), dtype=object)
 #dir = "CSV-FFT-HLB-Reduced"
 #dir = "/Users/cornelie/Desktop/DeepSAD_run_DATA"
 dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-filename = "FFT_FT_Reduced"
+type = "FFT"
+filename = "_FT_Reduced"
 
 for freq in range(len(frequencies)):
-    print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
-    HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], filename)
+    print(f"Processing frequency: {frequencies[freq]} kHz for " + type)
+    HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], type + filename)
 # Save and plot results
 # save_evaluation(np.array(HIs), "DeepSAD
 # ", dir, filename)
-plot_ds_images(dir, "FFT")
+plot_ds_images(dir, type)

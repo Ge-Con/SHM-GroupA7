@@ -148,3 +148,12 @@ def fitness(X, Mo_a=1, Tr_b=1, Pr_c=1):
     error = (Mo_a + Tr_b + Pr_c) / ftn
     #print("Error: ", error)
     return ftn, monotonicity, trendability, prognosability, error
+
+def test_fitness(test_HI, X):
+    test_HI = test_HI[0]
+    monotonicity = Mo_single(test_HI)
+    trendability = Tr(np.vstack([test_HI, X]))
+    prognosability = Pr_single(test_HI, X)
+    fitness_test = (monotonicity + trendability + prognosability), monotonicity, trendability , prognosability
+
+    return fitness_test

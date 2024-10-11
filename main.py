@@ -7,7 +7,7 @@ import os
 import extract_features
 import PCA
 from Signal_Processing import Data_Preprocess
-from prognosticcriteria_v2 import fitness
+from prognosticcriteria_v2 import fitness, test_fitness
 from DeepSAD import DeepSAD_train_run, plot_ds_images
 import Graphs
 import SP_save as SP
@@ -632,11 +632,11 @@ def saveVAE(dir, save_graph=True, save_HI=True, valid=False):
                 fitness_all = fitness(health_indicators[0])
                 print("Fitness all", fitness_all)
 
-                fitness_test = HYPparameters.test_fitness(health_indicators[2], health_indicators[1])
+                fitness_test = test_fitness(health_indicators[2], health_indicators[1])
                 print("Fitness test", fitness_test)
 
                 if valid:
-                    fitness_valid = HYPparameters.test_fitness(health_indicators[6], health_indicators[1])
+                    fitness_valid = test_fitness(health_indicators[6], health_indicators[1])
                     print("Fitness valid", fitness_valid)
                     result_dictionary[f"{panel}{freq}"].append([fitness_all, fitness_test, fitness_valid])
 

@@ -36,14 +36,6 @@ def DCloss(feature, batch_size):
         s += tf.pow(feature[i] - tf.constant(10, dtype=tf.float32) - tf.random.normal([1], 0, 1) - feature[i - 1], 2)
     return s
 
-def test_fitness(test_HI, X):
-    test_HI = test_HI[0]
-    monotonicity = Mo_single(test_HI)
-    trendability = Tr(np.vstack([test_HI, X]))
-    prognosability = Pr_single(test_HI, X)
-    fitness_test = (monotonicity + trendability + prognosability), monotonicity, trendability , prognosability
-
-    return fitness_test
 
 def find_largest_array_size(array_list):
     max_size = 0
