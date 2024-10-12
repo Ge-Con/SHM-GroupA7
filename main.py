@@ -662,7 +662,8 @@ def saveVAE(dir, save_graph=True, save_HI=True, valid=False):
                         plt.errorbar(x, hi, yerr=std_dev, label=f'Sample {i + 1}: Train', color=f'C{i}', ecolor='blue', elinewidth=2, capsize=5)
 
                     plt.errorbar(x, health_indicators[2][0], yerr=health_indicators[5][0], label=f'Sample {panels.index(panel) + 1}: Test', color='red', ecolor='salmon', elinewidth=2, capsize=5)
-                    plt.errorbar(x, health_indicators[6][0], yerr=health_indicators[7][0], label=f'Sample {panels.index(valid_panel) + 1}: Validation', color='purple', ecolor='cyan', elinewidth=2, capsize=5)
+                    if valid:
+                        plt.errorbar(x, health_indicators[6][0], yerr=health_indicators[7][0], label=f'Sample {panels.index(valid_panel) + 1}: Validation', color='purple', ecolor='cyan', elinewidth=2, capsize=5)
 
                     plt.xlabel('Lifetime (%)')
                     plt.ylabel('Health Indicators')
