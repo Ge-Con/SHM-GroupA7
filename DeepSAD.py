@@ -637,7 +637,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             pass_fnwf = file_name_with_freq
             hps.append(hyperparameter_optimisation(temp_samples, train_data, semi_targets, n_calls=20))
         else:
-            hyperparameters_df = pd.read_csv(dir + '\\' + file_name + "-hopt.csv", index_col=0)
+            hyperparameters_df = pd.read_csv(os.path.join(dir, file_name + "-hopt.csv"), index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
 
