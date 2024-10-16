@@ -407,13 +407,17 @@ def hyperDeepSad(dir):
         - dir (str): CSV root folder directory
         Returns: None
     """
+
+    # List frequencies, filenames and samples
+    frequencies = ["050", "100", "125", "150", "200", "250"]
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    frequencies = ["050", "100", "125", "150", "200", "250"]
+
+    # Optimise hyperparameters for all files and frequencies
     for file in filenames:
         for freq in frequencies:
-            # Optimise hyperparameters
             params = DeepSAD_train_run(dir, freq, file, True)
+
             # Save to external file
             for sample in range(5):
                 HYP.simple_store_hyperparameters(params[sample], file, samples[sample], freq, dir)
@@ -421,33 +425,36 @@ def hyperDeepSad(dir):
 
 def saveDeepSAD(dir):
     """
-        Run and save DeepSAD HIs
+        Generate and save DeepSAD HIs
 
         Parameters:
         - dir (str): CSV root folder directory
         Returns: None
     """
 
+    # List frequencies and filenames
     frequencies = ["050", "100", "125", "150", "200", "250"]
     filename_FFT = "FFT_FT_Reduced"
-    filename_HLB = "HLB_FT_Reduced"    # No need for .csv
+    filename_HLB = "HLB_FT_Reduced"
 
     # Initialise HI arrays
     HIs_FFT = np.empty((6), dtype=object)
     HIs_HLB = np.empty((6), dtype=object)
 
-    # FFT features for each frequency
+    # Generate HIs for all frequencies from FFT features
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
         HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
+
     # Save and plot results
     save_evaluation(np.array(HIs_FFT), "DeepSAD_FFT", dir, filename_FFT)
     plot_ds_images(dir, "FFT")
 
-    # Hilbert features for each frequency
+    # Generate HIs for all frequencies from Hilbert features
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
         HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
+
     # Save and plot results
     save_evaluation(np.array(HIs_HLB), "DeepSAD_HLB", dir, filename_HLB)
     plot_ds_images(dir, "HLB")
@@ -463,66 +470,74 @@ def hyperVAE(dir, concatenate=False):
 
         This function is a work in progress, VAE is currently run independently
     """
+    # Connect global variable for seed
     global vae_seed
 
+    # Set random seeds
     tf.compat.v1.reset_default_graph()
     tf.random.set_seed(vae_seed)
     np.random.seed(vae_seed)
 
+    # List frequencies, filenames and samples
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
-    panels = ("L103", "L105", "L109", "L104", "L123")
-    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
 
-    # Concatenate input files ready for VAE
+    #TODO: why is this different to samples
+    panels = ("L103", "L105", "L109", "L104", "L123")
+
+    # Concatenate input files
     if concatenate:
         for panel in samples:
             for file in filenames:
                 process_csv_files(dir, panel, file)
-    # Optimise hyperparameters
+
+    # Optimise hyperparameters for VAE
     for file_type in filenames:
         counter = 0
         for panel in panels:
             for freq in freqs:
 
+                # Create list of file paths
                 train_filenames = []
-
                 for i in tuple(x for x in panels if x != panel):
                     filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
                     train_filenames.append(filename)
 
+                #Output progress
                 counter += 1
                 print("Counter: ", counter)
                 print("Panel: ", panel)
                 print("Freq: ", freq)
                 print("SP Features: ", file_type)
 
+                #TODO: This is concerning, especially because it's commented here but not for the test data
                 # For va                vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)e_train_data, create the merged file with all 4 panels, delete the last column. I don't know why we delete the last column though
                 vae_train_data, flags = HYPparameters.mergedata(train_filenames)
 
-                # Same as with train data. Read the filename, and delete the last column
-                # Also hardcoded
+                # Read test data
                 test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
                 vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
                 vae_test_data = np.delete(vae_test_data, -1, axis=1)
 
-                # Normalizing the train and test data, scaled with vae_train_data
+                # Normalize the train and test data, with respect to the train data
                 vae_scaler = HYPparameters.StandardScaler()
                 vae_scaler.fit(vae_train_data)
                 vae_train_data = vae_scaler.transform(vae_train_data)
                 vae_test_data = vae_scaler.transform(vae_test_data)
 
-                # Applying PCA to the train and test data, fit with vae_train_data
+                # Apply PCA to the train and test data, fit to the train data
                 vae_pca = HYPparameters.PCA(n_components=30)
                 vae_pca.fit(vae_train_data)
                 vae_train_data = vae_pca.transform(vae_train_data)
                 vae_test_data = vae_pca.transform(vae_test_data)
 
+                # Perform hyperparameter optimisation and save todo how are they saved
                 hyperparameters = HYPparameters.hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
                                                               vae_seed, file_type, panel, freq, dir, n_calls=40)
                 HYPparameters.simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
 
-def saveVAE(dir, save_graph=True, save_HI=True, valid=False):
+def saveVAE(dir, save_graph=True, save_HI=True, valid=False):   #todo: remove validation if not working, then get rid of the options as well
     """
         Run and save VAE HIs
     
@@ -532,22 +547,27 @@ def saveVAE(dir, save_graph=True, save_HI=True, valid=False):
 
         This function is a work in progress, VAE is currently run independently
     """
+
+    # Connect global variable for seed
     global vae_seed
 
+    # Set random seeds
     tf.compat.v1.reset_default_graph()
     tf.random.set_seed(vae_seed)
     np.random.seed(vae_seed)
 
-    panels = ("L103", "L105", "L109", "L104", "L123")
+    # List frequencies, filenames and samples
     freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
-    colors = ("b", "g", "y", "r", "m")
+    panels = ("L103", "L105", "L109", "L104", "L123")
 
+    # Determine dimensions of data
     time_steps = 30
-    num_HIs = 5  # Number of rows in f_all_array
+    num_HIs = 5
     num_freqs = len(freqs)
     num_panels = len(panels)
 
+    #todo bahaha no I think Pablo needs to do this
     for file_type in filenames:
         counter = 0
         result_dictionary = {}
@@ -689,6 +709,8 @@ def main_menu():
         Parameters: None
         Returns: None
     """
+
+    # Output options for menu
     print("\n---")
     print("Welcome! Please choose a signal processing method: ")
     print("0. Exit")
@@ -715,6 +737,8 @@ def extract_matlab():
         Parameters: None
         Returns: None
     """
+
+    # Convert .mat files to .csv
     folder_path = input("Enter the folder path of the Matlab files: ")
     Data_Preprocess.matToCsv(folder_path)
     print("Done")
@@ -725,39 +749,59 @@ csv_dir = input("Enter the folder path of the CSV files: ")
 
 # Main program loop
 while True:
+
+    # Display menu options and input selection
     main_menu()
     choice = input("Enter your choice: ")
 
+    # Perform corresponding action
+    # Quit program
     if choice == '0':
         print("Exiting...")
         quit()
+
+    # Convert PZT files to CSV
     elif choice == '1':
         extract_matlab()
+
+    # Execute signal processing transformations on data
     elif choice == '2':
         SP.saveFFT(csv_dir)
         SP.saveEMD(csv_dir)
         SP.saveHilbert(csv_dir)
         SP.saveSTFT(csv_dir)
+
+    # Extract all statistical features and average across different paths
     elif choice == '3':
         saveFeatures(csv_dir)
         AverageFeatures(csv_dir)
+
+    # Extract and save reduced features only
     elif choice == '4':
         FFT_HLB_Reduced_Feat(csv_dir)
         SP.saveFFTHLB(csv_dir)
+
+    # Apply prognostic criteria to features
     elif choice == '5':
         features = retrieve_features(csv_dir)
         save_evaluation(features, "Features", csv_dir)
+
+    #todo: should we get rid of PCA here
     elif choice == '6':
         savePCA(csv_dir)
+
+    # Optimise hyperparameters for VAE
     elif choice == '7':
         conc_choice = input("Concatenate files? Y/N: ")
         vae_seed = int(input("Enter seed: "))
-        if conc_choice == "Y" or conc_choice == "y":
+        if conc_choice.upper == "Y":
             hyperVAE(csv_dir, concatenate=True)
-
-        if conc_choice == "N" or conc_choice == "n":
+        elif conc_choice.upper == "N":
             hyperVAE(csv_dir)
+
+    # Execute VAE and apply prognostic criteria
     elif choice == '8':
+        #todo: just delete all this. Always plot graph and save HIs, decide whether validation or not
         save_graph_choice = input("Plot? Y/N: ")
         save_HI_choice = input("Save HI file? (needed for ensemble model) Y/N: ")
         valid_choice = input("Validation? Y/N: ")
@@ -782,9 +826,15 @@ while True:
                 saveVAE(csv_dir, save_graph=False, save_HI=False, valid=True)
             else:
                 saveVAE(csv_dir, save_graph=False, save_HI=False, valid=False)
+
+    # Optimise hyperparameters for DeepSAD
     elif choice == '9':
         hyperDeepSad(csv_dir)
+
+    # Execute DeepSAD and apply prognostic criteria
     elif choice == '10':
         saveDeepSAD(csv_dir)
+
+    # In case of invalid input
     else:
         print("Invalid choice. Please select a valid option.")
