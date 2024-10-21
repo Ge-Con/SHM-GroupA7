@@ -21,6 +21,12 @@ global pass_train_samples
 global pass_fnwf
 global pass_dir
 
+if torch.cuda.is_available():
+    print("The code will run on GPU.")
+else:
+    print("The code will run on CPU. ")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # Random seed for repeatability
 global ds_seed
 ds_seed = 140
