@@ -26,12 +26,6 @@ global pass_semi_targets
 global pass_fnwf
 global pass_dir
 
-if torch.cuda.is_available():
-    print("The code will run on GPU.")
-else:
-    print("The code will run on CPU. ")
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 # Random seed for repeatability
 global ds_seed
 ds_seed = 120
@@ -328,9 +322,7 @@ def pretrain(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
 
     # Create and train autoencoder
     ae_model = NeuralNet_Autoencoder(model.size)
-    ae_model.to(device)
     ae_model = AE_train(ae_model, train_loader, learning_rate, weight_decay, n_epochs, lr_milestones, gamma)
-    ae_model.to(device)
 
     # Create dictionaries to store network states
     model_dict = model.state_dict()
@@ -519,7 +511,6 @@ def DeepSAD_train_run(dir, freq, file_name):
 
         # Create, pretrain and train a model
         model = NeuralNet(size)
-        model.to(device)
         model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE,
                          lr_milestones=lr_milestones_AE, gamma=gamma_AE)
         model, loss = train(model, train_loader, learning_rate, weight_decay=weight_decay, n_epochs=n_epochs,
