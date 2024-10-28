@@ -8,7 +8,7 @@ import extract_features
 import PCA
 from Signal_Processing import Data_Preprocess
 from prognosticcriteria_v2 import fitness, test_fitness
-from DeepSAD import DeepSAD_train_run, plot_ds_images
+from DeepSAD_reduced import DeepSAD_train_run, plot_ds_images
 import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
@@ -296,9 +296,11 @@ def save_evaluation(features, label, dir, files_used=[""]):
 
     # Create unique save directory for HIs
     count = 1
-    savedir = dir + '\\' + label
+    # savedir = dir + '\\' + label
+    savedir = os.path.join(dir, label)
     while os.path.exists(savedir + '.npy'):
-        savedir = dir + '\\' + label + str(count)
+        # savedir = dir + '\\' + label + str(count)
+        savedir = os.path.join(dir, label + str(count))
         count += 1
 
     # Save HIs to .npy file for use by weighted average ensemble (WAE)
@@ -434,8 +436,10 @@ def saveDeepSAD(dir):
 
     # List frequencies and filenames
     frequencies = ["050", "100", "125", "150", "200", "250"]
-    filename_FFT = "FFT_FT_Reduced"
-    filename_HLB = "HLB_FT_Reduced"
+    types = ["FFT", "HLB"]
+    filename = "_FT_Reduced"
+    # filename_FFT = "FFT_FT_Reduced"
+    # filename_HLB = "HLB_FT_Reduced"
 
     # Initialise HI arrays
     HIs_FFT = np.empty((6), dtype=object)
@@ -444,19 +448,19 @@ def saveDeepSAD(dir):
     # Generate HIs for all frequencies from FFT features
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for FFT")
-        HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_FFT)
+        HIs_FFT[freq] = DeepSAD_train_run(dir, frequencies[freq], "FFT" + filename)
 
     # Save and plot results
-    save_evaluation(np.array(HIs_FFT), "DeepSAD_FFT", dir, filename_FFT)
+    save_evaluation(np.array(HIs_FFT), "DeepSAD_FFT", dir, filename)
     plot_ds_images(dir, "FFT")
 
     # Generate HIs for all frequencies from Hilbert features
     for freq in range(len(frequencies)):
         print(f"Processing frequency: {frequencies[freq]} kHz for HLB")
-        HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], filename_HLB)
+        HIs_HLB[freq] = DeepSAD_train_run(dir, frequencies[freq], "HLB" + filename)
 
     # Save and plot results
-    save_evaluation(np.array(HIs_HLB), "DeepSAD_HLB", dir, filename_HLB)
+    save_evaluation(np.array(HIs_HLB), "DeepSAD_HLB", dir, filename)
     plot_ds_images(dir, "HLB")
 
 
@@ -834,7 +838,9 @@ while True:
     # Execute DeepSAD and apply prognostic criteria
     elif choice == '10':
         saveDeepSAD(csv_dir)
+        print("DeepSAD is completed for FFT and HLB")
 
     # In case of invalid input
     else:
         print("Invalid choice. Please select a valid option.")
+

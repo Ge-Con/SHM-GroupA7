@@ -614,19 +614,19 @@ def plot_ds_images(dir, type):
     plt.savefig(filedir)
 
 
-frequencies = ["050", "100", "125", "150", "200", "250"]
-HIs = np.empty((6), dtype=object)
-#dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-#dir = "CSV-FFT-HLB-Reduced"
-#dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
-dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-type = "FFT"
-filename = "_FT_Reduced"
-
-for freq in range(len(frequencies)):
-    print(f"Processing frequency: {frequencies[freq]} kHz for " + type)
-    HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], type + filename)
-# Save and plot results
-# save_evaluation(np.array(HIs), "DeepSAD
-# ", dir, filename)
-plot_ds_images(dir, type)
+# frequencies = ["050", "100", "125", "150", "200", "250"]
+# HIs = np.empty((6), dtype=object)
+# #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
+# #dir = "CSV-FFT-HLB-Reduced"
+# dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
+# #dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+# type = "FFT"
+# filename = "_FT_Reduced"
+#
+# for freq in range(len(frequencies)):
+#     print(f"Processing frequency: {frequencies[freq]} kHz for " + type)
+#     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], type + filename)
+# # Save and plot results
+# # save_evaluation(np.array(HIs), "DeepSAD
+# # ", dir, filename)
+# plot_ds_images(dir, type)
