@@ -13,7 +13,8 @@ from Interpolating import scale_exact
 from prognosticcriteria_v2 import fitness, test_fitness
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import Graphs
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 # Suppress warnings - please comment out if doing any troubleshooting or changes to the model
 import warnings
@@ -493,9 +494,14 @@ def DeepSAD_train_run(dir, freq, file_name):
                 arr_targets = np.concatenate((arr_targets, temp_targets))
 
         # Normalise training data
-        normal_mn = np.mean(arr_data, axis=0)  # Check this is the correct axis
+        normal_mn = np.mean(arr_data, axis=0)
         normal_sd = np.std(arr_data, axis=0)
-        arr_data = (arr_data - normal_mn) / normal_sd
+        scaled_data = (arr_data - normal_mn) / normal_sd
+
+        #PCA
+        #pca = PCA(n_components=0.95)
+        #pca.fit(scaled_data)
+        #arr_data = pca.transform(scaled_data)
 
         # Convert to pytorch tensors
         train_data = torch.tensor(arr_data)
@@ -530,6 +536,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         for test_sample in samples:
             test_data, temp_targets = load_data(os.path.join(dir, test_sample), file_name_with_freq, labelled_fraction, ignore)
             test_data = (test_data - normal_mn) / normal_sd  # Normalise using test statistics
+            #test_data = pca.transform(test_data)
 
             # Calculate HI at each state
             current_result = []
@@ -552,7 +559,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         testftn = test_fitness([list[sample_count]], list)
         print("F-test:", testftn[0], "| Mo:", testftn[1], "| Tr:", testftn[2], "| Pr:", testftn[3])
         print("F-all: ", ftn[0], "| Mo:", ftn[1], "| Tr:", ftn[2], "| Pr:", ftn[3])
-        Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
+        #Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
 
         results[sample_count] = list
 
@@ -613,20 +620,18 @@ def plot_ds_images(dir, type):
     plt.tight_layout()
     plt.savefig(filedir)
 
-
-# frequencies = ["050", "100", "125", "150", "200", "250"]
-# HIs = np.empty((6), dtype=object)
-# #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
-# #dir = "CSV-FFT-HLB-Reduced"
-# dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
-# #dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-# type = "FFT"
-# filename = "_FT_Reduced"
-#
-# for freq in range(len(frequencies)):
-#     print(f"Processing frequency: {frequencies[freq]} kHz for " + type)
-#     HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], type + filename)
-# # Save and plot results
-# # save_evaluation(np.array(HIs), "DeepSAD
-# # ", dir, filename)
-# plot_ds_images(dir, type)
+if True:
+    frequencies = ["050", "100", "125", "150", "200", "250"]
+    HIs = np.empty((6), dtype=object)
+    #dir = "C:\\Users\\geort\\Desktop\\CSV-FFT-HLB-Reduced 2"
+    #dir = "CSV-FFT-HLB-Reduced"
+    #dir = "/Users/cornelie/Desktop/CSV-FFT-HLB-Reduced"
+    dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+    type = "FFT"
+    filename = "_FT_Reduced"
+    for freq in range(len(frequencies)):
+         print(f"Processing frequency: {frequencies[freq]} kHz for " + type)
+         HIs[freq] = DeepSAD_train_run(dir, frequencies[freq], type + filename)
+     # Save and plot results
+    #save_evaluation(np.array(HIs), "DeepSAD", dir, filename)
+    #plot_ds_images(dir, type)
