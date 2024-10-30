@@ -496,7 +496,7 @@ def DeepSAD_train_run(dir, freq, file_name):
         # Normalise training data
         normal_mn = np.mean(arr_data, axis=0)
         normal_sd = np.std(arr_data, axis=0)
-        scaled_data = (arr_data - normal_mn) / normal_sd
+        arr_data = (arr_data - normal_mn) / normal_sd
 
         #PCA
         #pca = PCA(n_components=0.95)
