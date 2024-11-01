@@ -8,9 +8,11 @@ from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from prognosticcriteria_v2 import fitness
 import os
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 # List panels
-panels = ("L103", "L105", "L109", "L104", "L123")
+panels = ("L103", "L104", "L105", "L109", "L123")
 
 def VAE_merge_data(train_filenames):
     """
@@ -465,3 +467,69 @@ def VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, v
     print("Error of best parameters: ", res_gp.fun)
 
     return opt_parameters
+
+def VAE_optimize_hyperparameters(dir):
+    """
+    Run VAE hyperparameter optimization main loop
+
+    Parameters:
+        - dir (str): Directory containing data
+    Returns: None
+    """
+    # Connect global variable for seed
+    global vae_seed
+
+    # Set random seeds
+    tf.compat.v1.reset_default_graph()
+    tf.random.set_seed(vae_seed)
+    np.random.seed(vae_seed)
+
+    # List frequencies, filenames and samples. Panels is included for simplicity of filenames after concatenation
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
+    panels = ("L103", "L104", "L105", "L109", "L123")
+    
+    # Hyperparameter optimization loop for all folds: iterate over FFT/HLB data, test panel and frequencies
+    for file_type in filenames:
+        counter = 0
+        for panel in panels:
+            for freq in freqs:
+
+                # Create list of file paths
+                train_filenames = []
+                for i in tuple(x for x in panels if x != panel):
+                    filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
+                    train_filenames.append(filename)
+
+                #Output progress
+                counter += 1
+                print("Counter: ", counter)
+                print("Panel: ", panel)
+                print("Freq: ", freq)
+                print("SP Features: ", file_type)
+
+                # Merge train data and delete last column
+                vae_train_data = VAE_merge_data(train_filenames)
+                vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
+
+                # Read test data
+                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
+                vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
+                vae_test_data = np.delete(vae_test_data, -1, axis=1)
+
+                # Normalize the train and test data, with respect to the train data
+                vae_scaler = StandardScaler()
+                vae_scaler.fit(vae_train_data)
+                vae_train_data = vae_scaler.transform(vae_train_data)
+                vae_test_data = vae_scaler.transform(vae_test_data)
+
+                # Apply PCA to the train and test data, fit to the train data
+                vae_pca = PCA(n_components=30)
+                vae_pca.fit(vae_train_data)
+                vae_train_data = vae_pca.transform(vae_train_data)
+                vae_test_data = vae_pca.transform(vae_test_data)
+
+                # Perform hyperparameter optimisation and save to a CSV
+                hyperparameters = VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
+                                                              vae_seed, file_type, panel, freq, dir, n_calls=40)
+                simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
