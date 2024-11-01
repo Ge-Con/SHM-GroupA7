@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import os
+import tensorflow as tf
 
 # Import modules
 import extract_features
@@ -13,10 +14,7 @@ import Graphs
 import SP_save as SP
 from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
-from OLD_VAE import Hyper as HYP
-from VAE_save_hyperparameters import VAE_optimize_hyperparameters
-from VAE_save_HI import VAE_train_run
-import tensorflow as tf
+from VAE import VAE_optimize_hyperparameters, VAE_train_run, simple_store_hyperparameters
 
 # Set options
 pd.set_option('display.max_columns', 15)
@@ -420,7 +418,7 @@ def hyperDeepSad(dir):
 
             # Save to external file
             for sample in range(5):
-                HYP.simple_store_hyperparameters(params[sample], file, samples[sample], freq, dir)
+                simple_store_hyperparameters(params[sample], file, samples[sample], freq, dir)
 
 
 def saveDeepSAD(dir):
