@@ -6,7 +6,7 @@ import scipy.interpolate as interp
 from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
-from prognosticcriteria_v2 import fitness, test_fitness
+from Prognostic_criteria import fitness, test_fitness
 import os
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler

@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import emd
+import EMD
 
 #general explanation
 # 1.

@@ -1,5 +1,5 @@
 import numpy as np
-from prognosticcriteria_v2 import fitness, Mo_single, Tr, Pr_single
+from Prognostic_criteria import fitness, Mo_single, Tr, Pr_single
 import pandas as pd
 import os
 

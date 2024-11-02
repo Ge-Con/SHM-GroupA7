@@ -1,6 +1,6 @@
 import pandas as pd
 import os
-from Signal_Processing import fft, stft, emdfinal, hilbert
+from Signal_Processing import FFT, STFT, EMD, Hilbert
 
 """
     Signal Processing

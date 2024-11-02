@@ -5,13 +5,11 @@ import os
 import tensorflow as tf
 
 # Import modules
-import extract_features
 import PCA
-from Signal_Processing import Data_Preprocess
-from prognosticcriteria_v2 import fitness
-from DeepSAD_reduced import DeepSAD_train_run, plot_ds_images
+from Signal_Processing import Transforms as SP
+from Prognostic_criteria import fitness
+from DeepSAD import DeepSAD_train_run, plot_ds_images
 import Graphs
-import SP_save as SP
 from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
 from VAE import VAE_optimize_hyperparameters, VAE_train_run, simple_store_hyperparameters
