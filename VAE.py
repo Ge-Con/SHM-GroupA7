@@ -6,17 +6,13 @@ import scipy.interpolate as interp
 from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
-from Prognostic_criteria import fitness, test_fitness
+from Prognostic_criteria import fitness, test_fitness, scale_exact
 import os
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import csv
-from Interpolating import scale_exact
-
-# List panels
-panels = ("L103", "L104", "L105", "L109", "L123")
 
 def VAE_merge_data(train_filenames):
     """
@@ -36,6 +32,33 @@ def VAE_merge_data(train_filenames):
             data = pd.concat([data, pd.read_csv(train_filenames[i+1])], axis = 1)
     data = data.transpose()
     return data
+
+def VAE_process_csv_files(base_dir, panel, type):
+    # Define the sample filenames you're expecting in each folder
+    for freq in ["050", "100", "125", "150", "200", "250"]:
+    # Recursively traverse all directories and subdirectories
+        full_matrix = []
+        for root, dirs, files in os.walk(base_dir + "\\" + panel):
+            for name in files:
+                if name.endswith(f'{freq}kHz_{type}.csv'):
+                    df0 = pd.read_csv(os.path.join(root, name))
+                    concatenated_column = pd.concat([df0[col] for col in df0.columns], ignore_index=True)
+                    # Add concatenated column to respective index (with respect to timestep) in full_matrix
+                    full_matrix.append(concatenated_column)
+        if panel.endswith("03"):
+            panel = "L103"
+        if panel.endswith("04"):
+            panel = "L104"
+        if panel.endswith("05"):
+            panel = "L105"
+        if panel.endswith("09"):
+            panel = "L109"
+        if panel.endswith("23"):
+            panel = "L123"
+        result_df = pd.DataFrame(full_matrix).T
+        output_file_path = os.path.join(base_dir, f"concatenated_{freq}_kHz_{panel}_{type}.csv")
+        result_df.to_csv(output_file_path, index=False)
+        print(type + ": " + panel + " " + freq + "kHz complete")
 
 def VAE_DCloss(feature, batch_size):
     """
@@ -448,7 +471,7 @@ def VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, v
     # Use the decorator to automatically convert parameters to keyword arguments
     @use_named_args(space)
 
-    # Same objective function as before
+    # Same objective function as before, defined here again, couldn't get it to work otherwise for some reason?
     def VAE_objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff):
         print(
             f"Trying parameters: hidden_1={hidden_1}, batch_size={batch_size}, learning_rate={learning_rate}, "

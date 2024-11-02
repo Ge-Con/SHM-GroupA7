@@ -9,8 +9,7 @@ import copy
 from skopt import gp_minimize
 from skopt.space import Real, Integer
 from skopt.utils import use_named_args
-from Interpolating import scale_exact
-from Prognostic_criteria import fitness
+from Prognostic_criteria import fitness, scale_exact
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 

@@ -3,6 +3,7 @@ import math
 from sklearn.preprocessing import Normalizer
 from scipy.stats import pearsonr
 from scipy.signal import resample_poly
+from scipy.interpolate import interp1d
 
 def Pr(X):
     """

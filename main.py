@@ -6,12 +6,10 @@ import tensorflow as tf
 
 # Import modules
 from Signal_Processing import Transforms as SP
-from Prognostic_criteria import fitness
+from Prognostic_criteria import fitness, scale_exact
 from DeepSAD import DeepSAD_train_run, plot_ds_images
 import Graphs
-from Interpolating import scale_exact
-from Data_concatenation import process_csv_files
-from VAE import VAE_optimize_hyperparameters, VAE_train_run, simple_store_hyperparameters
+from VAE import VAE_optimize_hyperparameters, VAE_train_run, VAE_process_csv_files, simple_store_hyperparameters
 from WAE import eval_wae
 
 # Set options
@@ -400,7 +398,7 @@ def hyperVAE(dir, concatenate=False):
     if concatenate:
         for panel in samples:
             for file in filenames:
-                process_csv_files(dir, panel, file)
+                VAE_process_csv_files(dir, panel, file)
 
     # Optimise hyperparameters for VAE
     VAE_optimize_hyperparameters(dir)
