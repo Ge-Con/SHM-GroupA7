@@ -157,3 +157,11 @@ def test_fitness(test_HI, X):
     fitness_test = (monotonicity + trendability + prognosability), monotonicity, trendability , prognosability
 
     return fitness_test
+
+def scale_exact(HI_list, minimum=30):
+    if HI_list.size > minimum:  # If the size is greater than the minimum
+        arr_interp = interp1d(np.arange(HI_list.size), HI_list)  # Create an interpolation function
+        arr_compress = arr_interp(np.linspace(0, HI_list.size - 1, minimum))  # Compress to the minimum size
+    else:
+        arr_compress = HI_list
+    return np.array(arr_compress)
