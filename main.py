@@ -5,7 +5,6 @@ import os
 import tensorflow as tf
 
 # Import modules
-import PCA
 from Signal_Processing import Transforms as SP
 from Prognostic_criteria import fitness
 from DeepSAD import DeepSAD_train_run, plot_ds_images
@@ -13,6 +12,7 @@ import Graphs
 from Interpolating import scale_exact
 from Data_concatenation import process_csv_files
 from VAE import VAE_optimize_hyperparameters, VAE_train_run, simple_store_hyperparameters
+from WAE import eval_wae
 
 # Set options
 pd.set_option('display.max_columns', 15)
@@ -190,88 +190,6 @@ def AverageFeatures(rootdir):
             if meanfeatures[freq_index] is not None:
                 csv_file_path = os.path.join(dir, freq + "kHz_MF.csv")  # MF = Mean Features
                 pd.DataFrame(meanfeatures[freq_index]).to_csv(csv_file_path, index=False)
-'''
-#
-# def correlateFeatures(rootdir):
-#     """
-#         Correlates extracted average features, saving correlation matrix and reduced feature matrices.
-#         This is no longer used in the framework, but is kept for completeness.
-#
-#         Parameters:
-#             rootdir(str): The directory path containing CSV files
-#         Returns: None
-#     """
-#
-#     frequencies = ["050", "100", "125", "150", "200", "250"]
-#     samples = ["PZT-CSV-L1-03", "PZT-CSV-L1-04", "PZT-CSV-L1-05", "PZT-CSV-L1-09", "PZT-CSV-L1-23"]
-#
-#     # Walk folders of each sample in turn
-#     for sample in samples:
-#         dir = rootdir + "\\" + sample
-#
-#         # Read All Features for each state and calculate Mean Features
-#         print("Reading Files: " + sample)
-#         meanfeatures = np.empty((6), dtype=object)
-#         for root, dirs, files in os.walk(dir):
-#             for name in files:
-#                 if name.endswith("kHz_AF.csv"):
-#                     data = np.array(pd.read_csv(os.path.join(root, name)))
-#                     data = np.mean(data, axis=1)
-#                     if str(type(meanfeatures[frequencies.index(name[:3])])) == "<class 'NoneType'>":    # First to be added
-#                         meanfeatures[frequencies.index(name[:3])] = np.array([data])
-#                     else:   # Concatenate subsequent entries
-#                         meanfeatures[frequencies.index(name[:3])] = np.concatenate((meanfeatures[frequencies.index(name[:3])], np.array([data])))
-#
-#         # Correlate mean features
-#         print("Correlating Features:...")
-#         alldelete = np.empty((6), dtype=object)
-#         for freq in frequencies:
-#             csv_file_path = os.path.join(dir, freq + "kHz_MF.csv") # MF = Mean Features
-#             # Read mean features from file
-#             pd.DataFrame(meanfeatures[frequencies.index(freq)]).to_csv(csv_file_path, index=False)
-#
-#             #Use feature_correlation to return the correlation matrix, reduced matrix and features deleted
-#             correlation_matrix, features, to_delete = extract_features.feature_correlation(meanfeatures[frequencies.index(freq)])
-#
-#             #Save all to files
-#             alldelete[frequencies.index(freq)] = to_delete
-#             csv_file_path = os.path.join(dir, freq + "kHz_CF.csv") # CM = Correlated feature matrix
-#             pd.DataFrame(correlation_matrix).to_csv(csv_file_path, index=False)
-#             csv_file_path = os.path.join(dir, freq + "kHz_RF.csv") # RF = Remainder features
-#             pd.DataFrame(features).to_csv(csv_file_path, index=False)
-#
-#         # Save lists of deleted features for inspection
-#         csv_file_path = os.path.join(dir, "DF.csv") # DF = Deleted features
-#         pd.DataFrame(alldelete).to_csv(csv_file_path, index=False)
-#
-'''
-def savePCA(dir): #Calculates and saves 1 principle component PCA
-    """
-        Execute and save PCA
-
-        Parameters:
-            dir(str): The directory path containing CSV files
-        Returns: None
-    """
-
-    # Number of principal components to be calculated - change as desired
-    pcs_upto = 3
-
-    # File types for input
-    filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]            # No .csv
-    output = np.zeros((6, pcs_upto * len(filenames), 5, 5, 30)) # 6 frequencies, n PCs, 5 folds, 5 test panels, 30 states
-
-    # Execute PCA on each file and on each PC
-    for file in range(len(filenames)):
-        for pc in range(pcs_upto):
-            # Temporarily store the result before saving to correct locations in output array
-            tempout = PCA.doPCA_multiple_Campaigns(dir, filenames[file], pc+1)
-            for freq in range(6):
-                output[freq][pc+file*pcs_upto] = tempout[freq]
-
-    # Save and graph HIs
-    labels = np.array(["Sample 1", "Sample 2", "Sample 3", "Sample 4", "Sample 5"])
-    save_evaluation(np.array(output), "PCA", dir, labels)
 
 
 def save_evaluation(features, label, dir, files_used=[""]):
@@ -523,11 +441,11 @@ def main_menu():
     print("5. Evaluate all feature HIs (Requires MF.csv in directory)")
     print("")
     print("From FFT & Hilbert, raw & features:")
-    print("6. Execute and evaluate PCA")
-    print("7. Train VAE hyperparameters (and concatenate data if necessary)")
-    print("8. Execute and evaluate VAE")
-    print("9. Train DeepSAD hyperparameters")
-    print("10. Execute and evaluate DeepSAD")
+    print("6. Train VAE hyperparameters (and concatenate data if necessary)")
+    print("7. Execute and evaluate VAE")
+    print("8. Train DeepSAD hyperparameters")
+    print("9. Execute and evaluate DeepSAD")
+    print("10. Execute WAE")
 
 
 def extract_matlab():
@@ -586,12 +504,8 @@ while True:
         features = retrieve_features(csv_dir)
         save_evaluation(features, "Features", csv_dir)
 
-    #todo: should we get rid of PCA here
-    elif choice == '6':
-        savePCA(csv_dir)
-
     # Optimise hyperparameters for VAE
-    elif choice == '7':
+    elif choice == '6':
         conc_choice = input("Concatenate files? Y/N: ")
         vae_seed = int(input("Enter seed: "))
         if conc_choice.upper == "Y":
@@ -600,18 +514,21 @@ while True:
             hyperVAE(csv_dir)
 
     # Execute VAE and apply prognostic criteria
-    elif choice == '8':
+    elif choice == '7':
         vae_seed = int(input("Enter seed: "))
         saveVAE(csv_dir)
 
     # Optimise hyperparameters for DeepSAD
-    elif choice == '9':
+    elif choice == '8':
         hyperDeepSad(csv_dir)
 
     # Execute DeepSAD and apply prognostic criteria
-    elif choice == '10':
+    elif choice == '9':
         saveDeepSAD(csv_dir)
         print("DeepSAD is completed for FFT and HLB")
+
+    elif choice == '10':
+        eval_wae(csv_dir) #todo: Make separate for FFT and HLB
 
     # In case of invalid input
     else:
