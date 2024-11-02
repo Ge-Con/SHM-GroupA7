@@ -34,17 +34,40 @@ def VAE_merge_data(train_filenames):
     return data
 
 def VAE_process_csv_files(base_dir, panel, type):
-    # Define the sample filenames you're expecting in each folder
+    """
+    Concatenate CSV files
+
+    Parameters:
+        - base_dir (list): Base directory with panel data
+        - panel (str): Identifier for panel number
+        - type (str): Identifier for FFT or HLB data
+    Returns: None
+    """
+    # Iterate over the frequencies that correspond to the filenames
     for freq in ["050", "100", "125", "150", "200", "250"]:
-    # Recursively traverse all directories and subdirectories
+
+        # Initialize empty list to collect files
         full_matrix = []
+
+        # Traverse directories and subdirectories for given panel
         for root, dirs, files in os.walk(base_dir + "\\" + panel):
+
+            # Loop for each file
             for name in files:
+
+                # If filename matches
                 if name.endswith(f'{freq}kHz_{type}.csv'):
+
+                    # Load file
                     df0 = pd.read_csv(os.path.join(root, name))
+
+                    # Concatenate all columns of file into one column
                     concatenated_column = pd.concat([df0[col] for col in df0.columns], ignore_index=True)
-                    # Add concatenated column to respective index (with respect to timestep) in full_matrix
+
+                    # Append concatenated column to full_matrix
                     full_matrix.append(concatenated_column)
+
+        # Map panel identifiers to full panel name for output filename
         if panel.endswith("03"):
             panel = "L103"
         if panel.endswith("04"):
@@ -55,8 +78,14 @@ def VAE_process_csv_files(base_dir, panel, type):
             panel = "L109"
         if panel.endswith("23"):
             panel = "L123"
+
+        # Create a transposed DataFrame for the output
         result_df = pd.DataFrame(full_matrix).T
+
+        # Create a filepath to save the CSV
         output_file_path = os.path.join(base_dir, f"concatenated_{freq}_kHz_{panel}_{type}.csv")
+
+        # Save to a CSV and output completion message
         result_df.to_csv(output_file_path, index=False)
         print(type + ": " + panel + " " + freq + "kHz complete")
 
@@ -837,3 +866,19 @@ def VAE_train_run(dir):
             w = csv.DictWriter(f, result_dictionary.keys())
             w.writeheader()
             w.writerow(result_dictionary)
+
+def VAE_HPC():
+    """
+    Function used to run VAE model on a High Performance Computing machine
+
+    Parameters: None
+    Returns: None
+    """
+    csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
+    vae_seed = 42
+    choice = 1
+
+    if choice == 1:
+        VAE_optimize_hyperparameters(csv_dir)
+    elif choice == 2:
+        VAE_train_run(csv_dir)

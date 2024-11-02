@@ -7,37 +7,72 @@ from scipy.interpolate import interp1d
 
 def Pr(X):
     """
-    This function calculates the prognosability value for a set of HIs.
-    Input 'X':  matrix of all extracted HIs (m rows x n columns),
-    where one row represents one HI and columns represent timesteps
-    Output 'prognosability': scalar, prognosability value for set of HIs,
-    ranges from 0 to 1
+    Calculate prognosability score for a set of HIs
+
+    Parameters:
+        - X (numpy.ndarray): List of all extracted HIs, shape (m rows x n columns). Each row represents one HI
+    Returns:
+        - prognosability (float): Prognosability score for given set of HIs
     """
+    # Compute M as the number of HIs, and Nfeatures as the number of timesteps
     M = len(X)
     Nfeatures = X.shape[1]
+
+    # Initialize top and bottom of fraction in prognosability formula to zero
     top = np.zeros((M, Nfeatures))
     bottom = np.zeros((M, Nfeatures))
 
+    # Iterate over each HI
     for j in range(M):
+
+        # Set row in top to the final HI value for current HI
         top[j, :] = X[j, -1]
+
+        # Compute absolute difference between initial and final values for current HI
         bottom[j, :] = np.abs(X[j, 0] - X[j, -1])
 
+    # Compute prognosability score with formula
     prognosability = np.exp(-np.std(top) / np.mean(bottom))
 
     return prognosability
 
 def Pr_single(test_HIs, HIs):
+    """
+    Test prognosability function: calculate prognosability score for a single HI against a set of reference HIs
+
+    Parameters:
+        - test_HIs (numpy.ndarray): Array containing test HIs
+        - HIs (numpy.ndarray): Array containing train HIs for reference, where each row represents a single HI
+    Returns:
+        - prognosability (float): Prognosability score for test HI
+    """
+    # Compute test HI value at final timestep
     x_t = test_HIs[-1]
+
+    # Initialize deviation_basis to 0
     deviation_basis = 0
+
+    # Compute the sum of the final timestep values for the train HIs
     for i in range(HIs.shape[0]):
         deviation_basis += HIs[i, -1]
+
+    # Take the absolute of the average value
     deviation_basis = abs(deviation_basis/HIs.shape[0])
+
+    # Initialize scaling_factor to 0
     scaling_factor = 0
+
+    # Compute the sum of the absolute change between initial and final train HI values
     for i in range(HIs.shape[0]):
         scaling_factor += abs(HIs[i, 0] - HIs[i, -1])
+
+    # Update to include test HI
     scaling_factor += abs(test_HIs[0] - test_HIs[-1])
+
+    # Take the absolute of the average value
     scaling_factor = scaling_factor/(HIs.shape[0]+1)
 
+    # Compute test prognosability score using its formula
     prognosability = np.exp(-abs((x_t-deviation_basis)) / scaling_factor)
 
     return prognosability
