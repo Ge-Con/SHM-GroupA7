@@ -1,46 +1,38 @@
 import numpy as np
-from Prognostic_criteria import fitness, Mo_single, Tr, Pr_single
 import pandas as pd
 import os
 
-def test_fitness(HIs, test_HI):
-    """
-        Calculate test fitness score
-        
-        Parameters:
-        - HIs (2D np array): Matrix of HIs
-        - test_HI (1D np array): List of HI for test panel
-        
-        Returns:
-        - fitness (float): F-test score
-    """
-    
-    monotonicity = Mo_single(HIs)
-    trendability = Tr(np.vstack([HIs, test_HI]))
-    prognosability = Pr_single(HIs, test_HI)
-    
-    return monotonicity + trendability + prognosability
+from Prognostic_criteria import fitness, test_fitness
+from Graphs import HI_graph
 
-def wae(HIs):
+def wae(HIs, filepath, name):
     """
         Calculate Weighted Average Ensemble HIs
 
         Parameters:
         - HIs (2D np array): Matrix of HIs
+        - filepath (string): Directory to save HI graph
+        - name (string): Name for HI graph
 
         Returns:
         - newHIs (1D np array): Fused HIs
     """
 
-    num = HIs.shape[0]
-    #Array of 6 HIs
-    w = np.zeros((num))
-    for run in range(num):
-        w[run] = fitness(HIs[run])[0]
-    w = w/np.sum(w)
+    freqs = HIs.shape[0]
+
+    # Weights are equal to fitness scores
+    weights = np.zeros((freqs))
+    for run in range(freqs):
+        weights[run] = fitness(HIs[run])[0]
+    weights = weights/np.sum(weights)
+
+    # New HIs for each of 5 samples
     newHIs = np.zeros((5, 30))
-    for run in range(num):
-        newHIs += w[run] * HIs[run]
+    for run in range(freqs):
+        newHIs += weights[run] * HIs[run]
+
+    # Save plot and return weighted HIs
+    HI_graph(newHIs, filepath, "WAE_" + name)
     return newHIs
 
 
@@ -59,59 +51,64 @@ def eval_wae(filepath, type):
     """
 
     # Seeds used
-    files = ["140"]#["42", "110", "120", "130", "140"]    # 5 seeds for VAE, 3 for DeepSAD due to time
+    seeds = ["42", "110", "120", "130", "140"]
     print("Ensure .npy filenames end with '_n', where n is from 1 to the number of seeds used")
     print("\te.g. DeepSAD_FFT_1.npy")
     print("\tThis should match the number of seeds given in WAE.py")
-    print("\tNumber of seeds given: " + str(len(files)))
+    print("\tNumber of seeds given: " + str(len(seeds)))
 
+    # Repetitions are the same HIs generated with different seeds
     # Simple averaging repetitions
-    storeHIs = np.empty((len(files)), dtype=object)
-    for repetition in range(len(files)):
+    HIs = np.empty((len(seeds)), dtype=object)
+    for repetition in range(len(seeds)):
         print("Repetition " + str(repetition+1))
-        filename = "DeepSAD_" + type + "_" + files[repetition] + ".npy"
-        storeHIs[repetition] = np.load(filepath + "\\" + filename, allow_pickle=True)
+        filename = "DeepSAD_" + type + "_" + seeds[repetition] + ".npy"
+        HIs[repetition] = np.load(filepath + "\\" + filename, allow_pickle=True)
 
-    # Define arrays for mean and standard deviation of HIs and fitness scores
-    meanHIs = np.mean(storeHIs, axis=0)
-    #stdHIs = np.std(storeHIs, axis=0)
+    # Define arrays for mean and standard deviation of HIs and fitness scores between seeds
+    meanHIs = np.mean(HIs, axis=0)
+    stdHIs = np.std(HIs, axis=0)
+
     meanfit = np.empty((6, 5))
-    #stdfit = np.empty((6, 5))
+    stdfit = np.empty((6, 5))
 
+    # Calculate fitness scores of HIs simple averaged across different seeds
     # Calculate F-all scores between repetitions
     for fold in range(5):
         for freq in range(6):
             meanfit[freq, fold] = fitness(meanHIs[freq][fold])[0]
             #stdfit[freq, fold] = meanfit[freq][fold] - fitness(meanHIs[freq][fold]+stdHIs[freq][fold])[0]
+            #TODO: Fix std deviation once we have data
 
     #Save to CSVs
-    pd.DataFrame(meanfit).to_csv(os.path.join(filepath, "meanfit" + type + ".csv"), index=False)
-    #pd.DataFrame(meanfit).to_csv(os.path.join(dir, "stdfit.csv"), index=False)
+    pd.DataFrame(meanfit).to_csv(os.path.join(filepath, "meanfit_" + type + ".csv"), index=False)
+    pd.DataFrame(stdfit).to_csv(os.path.join(filepath, "stdfit_" + type + ".csv"), index=False)
 
     # Repeat for F-test scores
     print("F-test:")
-    tmeanfit = np.empty((6, 5))
-    #tstdfit = np.empty((5, 6))
+    testMeanfit = np.empty((6, 5))
+    testStdfit = np.empty((6, 5))
 
     for fold in range(5):
         for freq in range(6):
-            tmeanfit[freq, fold] = test_fitness(meanHIs[freq][fold][fold], meanHIs[freq][fold])
-            #tstdfit[freq, fold] = tmeanfit[freq, fold] - test_fitness(meanHIs[freq, fold, fold] + stdHIs[freq, fold, fold], meanHIs[freq, fold] + stdHIs[freq, fold])[0]
-    pd.DataFrame(tmeanfit).to_csv(os.path.join(filepath, "test-meanfit" + type + ".csv"), index=False)
-    #pd.DataFrame(meanfit).to_csv(os.path.join(dir, "tstdfit.csv"), index=False)
+            testMeanfit[freq, fold] = test_fitness(meanHIs[freq][fold], meanHIs[freq][fold][fold])
+            #testStdfit[freq, fold] = testMeanfit[freq, fold] - test_fitness(meanHIs[freq, fold, fold] + stdHIs[freq, fold, fold], meanHIs[freq, fold] + stdHIs[freq, fold])[0]
+    pd.DataFrame(testMeanfit).to_csv(os.path.join(filepath, "test_meanfit_" + type + ".csv"), index=False)
+    pd.DataFrame(testStdfit).to_csv(os.path.join(filepath, "test_stdfit_" + type + ".csv"), index=False)
 
-    # Carry out and save WAE between folds for F-all
-    newHIses = []
+
+    # Carry out and save WAE F-all fitness between frequencies
+    waeHIs = []
     for fold in range(5):
         print("-> Fold " + str(fold))
-        newHIs = wae(meanHIs[:][fold])  # Average repetitions
-        newHIses.append(fitness(newHIs)[0])
-    pd.DataFrame(newHIses).to_csv(os.path.join(filepath, "weighted" + type + ".csv"), index=False)
+        waeHI = wae(meanHIs[:][fold], filepath, type)  # Average repetitions
+        waeHIs.append(fitness(waeHI)[0])
+    pd.DataFrame(waeHIs).to_csv(os.path.join(filepath, "weighted_" + type + ".csv"), index=False)
 
-    # Carry out and save WAE between folds for F-test
-    newHIses = []
+    # Carry out and save WAE F-test fitness between frequencies
+    waeHIs = []
     for fold in range(5):
         print("-> Fold " + str(fold))
-        newHIs = wae(meanHIs[:][fold])  # Average repetitions
-        newHIses.append(test_fitness(newHIs[fold], newHIs))
-    pd.DataFrame(newHIses).to_csv(os.path.join(filepath, "test-weighted" + type + ".csv"), index=False)
+        waeHI = wae(meanHIs[:][fold], filepath, type)  # Average repetitions
+        waeHIs.append(test_fitness(waeHI[fold], waeHI))
+    pd.DataFrame(waeHIs).to_csv(os.path.join(filepath, "test_weighted_" + type + ".csv"), index=False)

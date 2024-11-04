@@ -1,16 +1,16 @@
 # Import external libraries
 import pandas as pd
 import numpy as np
-import os
 import tensorflow as tf
+import os
 
 # Import modules
 from Signal_Processing import Transforms as SP
 from Prognostic_criteria import fitness, scale_exact
 from DeepSAD import DeepSAD_train_run, plot_ds_images
-import Graphs
 from VAE import VAE_optimize_hyperparameters, VAE_train_run, VAE_process_csv_files, simple_store_hyperparameters
 from WAE import eval_wae
+import Graphs
 
 # Set options
 pd.set_option('display.max_columns', 15)
