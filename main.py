@@ -1,16 +1,16 @@
 # Import external libraries
 import pandas as pd
 import numpy as np
-import os
 import tensorflow as tf
+import os
 
 # Import modules
 from Signal_Processing import Transforms as SP
 from Prognostic_criteria import fitness, scale_exact
 from DeepSAD import DeepSAD_train_run, plot_ds_images
-import Graphs
 from VAE import VAE_optimize_hyperparameters, VAE_train_run, VAE_process_csv_files, simple_store_hyperparameters
 from WAE import eval_wae
+import Graphs
 
 # Set options
 pd.set_option('display.max_columns', 15)
@@ -222,6 +222,7 @@ def save_evaluation(features, label, dir, files_used=[""]):
         for i in range(features.shape[1]):
             criteria.append(save_evaluation(features[:, i], label + " framework " + str(i+1), dir, files_used))
         return criteria
+    #TODO: Check if this is actually used
 
     #Else(features.ndim < 4)
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -443,6 +444,8 @@ def main_menu():
     print("7. Execute and evaluate VAE")
     print("8. Train DeepSAD hyperparameters")
     print("9. Execute and evaluate DeepSAD")
+    print("Steps 6-9 must be carried out for different random seeds")
+    print("")
     print("10. Execute WAE")
 
 
@@ -526,7 +529,8 @@ while True:
         print("DeepSAD is completed for FFT and HLB")
 
     elif choice == '10':
-        eval_wae(csv_dir) #todo: Make separate for FFT and HLB
+        eval_wae(csv_dir, "FFT")
+        eval_wae(csv_dir, "HLB")
 
     # In case of invalid input
     else:
