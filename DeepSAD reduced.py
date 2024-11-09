@@ -6,18 +6,15 @@ import numpy as np
 import pandas as pd
 import os
 import copy
-from skopt import gp_minimize
-from skopt.space import Real, Integer
-from skopt.utils import use_named_args
-from Interpolating import scale_exact
-from prognosticcriteria_v2 import fitness, test_fitness
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+
+from Prognostic_criteria import fitness, scale_exact, test_fitness
 import Graphs
 
 # Suppress warnings - please comment out if doing any troubleshooting or changes to the model
 import warnings
-warnings.filterwarnings('ignore')
+#warnings.filterwarnings('ignore')
 
 # Global variables necessary for passing data other than parameters during hyperparameter optimisation
 global pass_train_data
@@ -27,7 +24,7 @@ global pass_dir
 
 # Random seed for repeatability
 global ds_seed
-ds_seed = 120
+ds_seed = 52
 torch.manual_seed(ds_seed)
 
 
@@ -372,7 +369,10 @@ def load_data(dir, filename, labelled_fraction, ignore):
 
     # Walk directory
     for root, dirs, files in os.walk(dir):
+        print(f"Checking directory: {root}")
         for name in files:
+            print(f"Found file: {name}")
+            
             if name == filename:  # If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
