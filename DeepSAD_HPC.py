@@ -764,7 +764,7 @@ def plot_ds_images(dir, type):
     for i, freq in enumerate(freqs):
         for j, panel in enumerate(panels):
             # Generate the filename
-            filename = f"DeepSAD_{type}-{freq}-{panel}.png"
+            filename = f"HI_graph_{freq}_{j}_{type}_seed_{ds_seed}"
 
             # Check if the file exists
             if os.path.exists(os.path.join(dir, filename)):
