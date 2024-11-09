@@ -625,14 +625,27 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     # print(f"Training with directory: {dir}, frequency: {freq}, filename: {file_name_with_freq}")
 
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    frequencies = ["050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz"]
     # Initialise results matrix
     results = np.empty((5, 5, 30))
     hps = []
     global pass_fnwf
     # Loop for each sample as test data
+    if opt:
+        filename_opt = os.path.join(dir, f"hyperparameters-opt-{file_name}.csv")
+        if not os.path.exists(filename_opt):
+            hyperparameters_df = pd.DataFrame(index=frequencies, columns=samples)
+
+        else:
+            hyperparameters_df = pd.read_csv(filename_opt, index_col=0)
+
     for sample_count in range(len(samples)):
-        print("--- ", freq, "kHz, Sample ", sample_count+1, " as test ---")
         test_sample = samples[sample_count]
+        if opt:
+            if pd.notna(hyperparameters_df.loc[f'{freq}_kHz', test_sample]):
+                print(f"Skipping fold {test_sample}-{freq} for file type {file_name} as it's already optimized.")
+                continue
+        print("--- ", freq, "kHz, Sample ", sample_count+1, " as test, (sample ", test_sample, ") ---")
 
         # Make new list of samples excluding test data
         temp_samples = copy.deepcopy(samples)
@@ -675,9 +688,9 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
         # Hyperparameter optimisation
         if opt:
             pass_fnwf = file_name_with_freq
-            hps.append(hyperparameter_optimisation(temp_samples, train_data, semi_targets, n_calls=20, random_state=ds_seed))
+            simple_store_hyperparameters(hyperparameter_optimisation(temp_samples, train_data, semi_targets, n_calls=20, random_state=ds_seed), file_name, samples[sample_count], freq, dir)
         else:
-            hyperparameters_df = pd.read_csv(os.path.join(dir, file_name + "-hopt.csv"), index_col=0)
+            hyperparameters_df = pd.read_csv(os.path.join(dir, f"hyperparameters-opt-{file_name}.csv"), index_col=0)
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
 
@@ -685,8 +698,11 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             
             # Create, pretrain and train a model
             model = NeuralNet(size)
-            model = pretrain(model, train_loader, learning_rate_AE, weight_decay=weight_decay_AE, n_epochs=n_epochs_AE, lr_milestones=lr_milestones_AE, gamma=gamma_AE)
-            model, loss = train(model, train_loader, optimized_params[1], weight_decay=optimized_params[3], n_epochs=optimized_params[2], lr_milestones=lr_milestones, gamma=gamma, eta=optimized_params[4], eps=eps, reg=optimized_params[5])
+            model = pretrain(model, train_loader, optimized_params[1], weight_decay=weight_decay_AE,
+                             n_epochs=optimized_params[3], lr_milestones=lr_milestones_AE, gamma=gamma_AE)
+            model, loss = train(model, train_loader, optimized_params[2], weight_decay=weight_decay,
+                                n_epochs=optimized_params[4], lr_milestones=lr_milestones, gamma=gamma, eta=eta,
+                                eps=eps, reg=reg)
 
             # Test for all panels
             # Load test sample data (targets not used)
@@ -784,13 +800,12 @@ def save_evaluation(features, label, dir):
         criteria (3D np array): Results of prognostic criteria with 4 types of criteria, 6 frequencies, and n features.
     """
 
-    # Create unique save directory for HIs
-    count = 1
-    # savedir = dir + '\\' + label
-    savedir = os.path.join(dir, label)
-    while os.path.exists(savedir + '.npy'):
-        # savedir = dir + '\\' + label + str(count)
-        savedir = os.path.join(dir, label + str(count))
+
+    # Ensure the file doesn't exist before saving
+    savedir = os.path.join(dir, label + str(count) + '_seed_' + str(ds_seed) + '.npy')
+    count = 1  # Or initialize count to your preferred starting point
+    while os.path.exists(savedir):
+        savedir = os.path.join(dir, label + str(count) + '_seed_' + str(ds_seed) + '.npy')
         count += 1
 
     # Save HIs to .npy file for use by weighted average ensemble (WAE)
@@ -835,14 +850,14 @@ def DeepSAD_HPC():
     Parameters: None
     Returns: None
     """
-    #csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
-    csv_dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+    #csv_dir = r"C:\Users\pablo\OneDrive\Escritorio\DeepSAD\PZT-FFT-HLB"
+    csv_dir = r"/zhome/ed/c/212206/DeepSAD/PZT-FFT-HLB"
+    print(csv_dir)
 
     global ds_seed
-    ds_seed = 42 #52, 62, 72, 82
     torch.manual_seed(ds_seed)
 
-    optimise = True
+    optimise = False
 
     # List frequencies, filenames and samples
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -857,8 +872,8 @@ def DeepSAD_HPC():
                 params = DeepSAD_train_run(csv_dir, freq, file, True)
 
                 # Save to external file
-                for sample in range(5):
-                    simple_store_hyperparameters(params[sample], file, samples[sample], freq, csv_dir)
+                #for sample in range(5):
+                #    simple_store_hyperparameters(params[sample], file, samples[sample], freq, csv_dir)
 
     else:
         HIs = [np.empty((6), dtype=object), np.empty((6), dtype=object)]
@@ -876,5 +891,5 @@ def DeepSAD_HPC():
 
         save_evaluation(np.array(HIs[1]), "DeepSAD_HLB", csv_dir)
         plot_ds_images(csv_dir, "HLB")
-
+ds_seed = 52 #52, 62, 72, 82
 DeepSAD_HPC()
