@@ -12,7 +12,7 @@ from skopt.utils import use_named_args
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-from Prognostic_criteria import fitness, scale_exact
+from Prognostic_criteria import fitness, scale_exact, test_fitness
 from VAE import simple_store_hyperparameters
 import Graphs
 
@@ -727,6 +727,12 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             av_end = np.mean(np.concatenate((list[:sample_count, -1], list[sample_count:, -1])))
             list = (list - av_start) / av_end
 
+            ftn = fitness(list)
+            testftn = test_fitness([list[sample_count]], list)
+            print("F-test:", testftn[0], "| Mo:", testftn[1], "| Tr:", testftn[2], "| Pr:", testftn[3])
+            print("F-all: ", ftn[0], "| Mo:", ftn[1], "| Tr:", ftn[2], "| Pr:", ftn[3])
+            Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
+
             results[sample_count] = list
 
     if opt:
@@ -851,7 +857,9 @@ def DeepSAD_HPC():
     Returns: None
     """
     #csv_dir = r"C:\Users\pablo\OneDrive\Escritorio\DeepSAD\PZT-FFT-HLB"
-    csv_dir = r"/zhome/ed/c/212206/DeepSAD/PZT-FFT-HLB"
+    #csv_dir = r"/zhome/ed/c/212206/DeepSAD/PZT-FFT-HLB"
+    csv_dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
+
     print(csv_dir)
 
     global ds_seed
