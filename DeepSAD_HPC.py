@@ -339,7 +339,6 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
     model.train()
     for epoch in range(n_epochs):
 
-        scheduler.step()
         epoch_loss = 0.0
 
         for train_data, train_target in train_loader:
@@ -359,6 +358,8 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss = loss / n_batches
             loss.backward()
             optimizer.step()
+            scheduler.step()
+            
             epoch_loss += loss.item()
     return model
 

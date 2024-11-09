@@ -276,7 +276,6 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
     model.train()
     for epoch in range(n_epochs):
 
-        scheduler.step()
         epoch_loss = 0.0
 
         for train_data, train_target in train_loader:
@@ -296,6 +295,8 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss = loss / n_batches
             loss.backward()
             optimizer.step()
+            scheduler.step()
+
             epoch_loss += loss.item()
     return model
 
@@ -369,10 +370,10 @@ def load_data(dir, filename, labelled_fraction, ignore):
 
     # Walk directory
     for root, dirs, files in os.walk(dir):
-        print(f"Checking directory: {root}")
+        #print(f"Checking directory: {root}")
         for name in files:
-            print(f"Found file: {name}")
-            
+            #print(f"Found file: {name}")
+
             if name == filename:  # If correct file to be included in training data
                 read_data = np.array(pd.read_csv(os.path.join(root, name)))
 
