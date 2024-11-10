@@ -250,7 +250,8 @@ def test_fitness(test_HI, X):
         - fitness_test (float): Fitness score for test HI
     """
     # Extract a single test HI from test_HI if it contains more than one
-    test_HI = test_HI[0]
+    if test_HI.ndim > 1:
+        test_HI = test_HI[0]
 
     # Compute the 3 prognostic criteria scores for a single (test) HI, with Mo_single and Pr_single functions
     monotonicity = Mo_single(test_HI)

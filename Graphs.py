@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import matplotlib.image as mpimg
 
-def HI_graph(X, dir="", name=""):
+def HI_graph(X, dir="", name="", legend=True):
     #Graph of HI against cycles
     #X is numpy list of HI at different states, & name is root to save at
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
@@ -13,9 +15,18 @@ def HI_graph(X, dir="", name=""):
             plt.plot(cycles, X[sample], label="Sample "+str(sample+1) + ": Test")
         else:
             plt.plot(cycles, X[sample], label="Sample " + str(sample+1) + ": Train")
-    plt.legend()
-    plt.xlabel('Lifetime (%)')
-    plt.ylabel('HI')
+    if legend:
+        plt.legend()
+        font = 12
+        plt.rcParams["xtick.labelsize"] = 10
+        plt.rcParams["ytick.labelsize"] = 10
+    else:
+        font = 20
+        plt.rcParams["xtick.labelsize"] = 18
+        plt.rcParams["ytick.labelsize"] = 18
+    plt.xlabel('Lifetime (%)', fontsize=font)
+    plt.ylabel('HI', fontsize=font)
+    plt.tight_layout()
     if dir != "" and name != "":
         plt.savefig(dir + "\\" + name)
     else:
@@ -41,5 +52,70 @@ def criteria_chart(features, Mo, Pr, Tr, dir="", name=""):
         plt.show()
     plt.close()
 
-#criteria_chart(np.array(["f1", "f2", "f3"]), np.array([1, 2, 3]), np.array([2, 4, 6]), np.array([1, 2, 3]))
-#HI_graph(np.array([1, 2, 3, 4, 5]))
+
+def big_plot(dir, type, transform):
+    """
+        Assemble grid of HI graphs
+
+        Parameters:
+        - dir (str): Directory of HI graphs
+        - type (string): "DeepSAD" or "VAE"
+        - transform (string): "FFT" or "HLB"
+
+        Returns: None
+    """
+
+    # Define variables
+    panels = ("0", "1", "2", "3", "4")
+    freqs = ("050", "100", "125", "150", "200", "250")
+
+    nrows = len(freqs)+1
+    ncols = len(panels)
+    fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
+
+    # For each frequency and panel
+    for i, freq in enumerate(freqs):
+        for j, panel in enumerate(panels):
+            # Generate the filename
+            filename = f"{freq}kHz_{type}_{transform}_{j}.png"
+
+            # Check if the file exists
+            if os.path.exists(os.path.join(dir, filename)):
+                # Load the image
+                img = mpimg.imread(os.path.join(dir, filename))
+
+                # Display the image in the corresponding subplot
+                axs[i, j].imshow(img)
+                axs[i, j].axis('off')  # Hide the axes
+            else:
+                # If the image does not exist, print a warning and leave the subplot blank
+                axs[i, j].text(0.5, 0.5, 'Image not found', ha='center', va='center', fontsize=12, color='red')
+                axs[i, j].axis('off')
+
+    # WAE results
+    for j, panel in enumerate(panels):
+        filename = f"WAE_{type}_{transform}_{j}.png"
+        if os.path.exists(os.path.join(dir, filename)):
+            img = mpimg.imread(os.path.join(dir, filename))
+            axs[-1, j].imshow(img)
+            axs[-1, j].axis('off')
+
+        else:
+            axs[-1, j].text(0.5, 0.5, 'Image not found', ha='center', va='center', fontsize=12, color='red')
+            axs[-1, j].axis('off')
+
+    # Redefine freqs to include kHz
+    freqs = ("050 kHz", "100 kHz", "125 kHz", "150 kHz", "200 kHz", "250 kHz")
+
+    # Add row labels
+    for ax, row in zip(axs[:, 0], freqs):
+        ax.annotate(f'{row}', (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold', fontsize=40)
+    axs[-1, 0].annotate("All", (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold', fontsize=40)
+
+    # Add column labels
+    for ax, col in zip(axs[0], panels):
+        ax.annotate(f'Test Sample {panels.index(col) + 1}', (0.5, 1), xycoords='axes fraction', ha='center', fontweight='bold', fontsize=40)
+
+    # Adjust spacing between subplots and save
+    plt.tight_layout()
+    plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}"))

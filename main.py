@@ -529,8 +529,8 @@ while True:
         print("DeepSAD is completed for FFT and HLB")
 
     elif choice == '10':
-        eval_wae(csv_dir, "FFT")
-        eval_wae(csv_dir, "HLB")
+        eval_wae(csv_dir, "DeepSAD", "FFT")
+        eval_wae(csv_dir, "DeepSAD", "HLB")
 
     # In case of invalid input
     else:

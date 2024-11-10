@@ -359,7 +359,7 @@ def AE_train(model, train_loader, learning_rate, weight_decay, n_epochs, lr_mile
             loss.backward()
             optimizer.step()
             scheduler.step()
-            
+
             epoch_loss += loss.item()
     return model
 
@@ -695,7 +695,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             hyperparameters_str = hyperparameters_df.loc[freq+"_kHz", samples[sample_count]]
             optimized_params = eval(hyperparameters_str)
 
-            train_loader = DataLoader(train_dataset, batch_size=optimized_params[0], shuffle=True)
+            train_loader = DataLoader(train_dataset, batch_size=int(optimized_params[0]), shuffle=True)
             
             # Create, pretrain and train a model
             model = NeuralNet(size)
@@ -732,7 +732,7 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
             testftn = test_fitness([list[sample_count]], list)
             print("F-test:", testftn[0], "| Mo:", testftn[1], "| Tr:", testftn[2], "| Pr:", testftn[3])
             print("F-all: ", ftn[0], "| Mo:", ftn[1], "| Tr:", ftn[2], "| Pr:", ftn[3])
-            Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
+            #Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
 
             results[sample_count] = list
 
@@ -741,57 +741,6 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
     else:
         return results
 
-
-def plot_ds_images(dir, type):
-    """
-        Assemble grid of HI graphs
-        
-        Parameters:
-        - dir (str): Directory of HI graph images
-        - type (str): Seed of HIs generated
-        
-        Returns: None
-    """
-    
-    # Define variables
-    filedir = os.path.join(dir, f"DS_{type}_seed_{ds_seed}")
-    nrows = 6
-    ncols = 5
-    panels = ("0", "1", "2", "3", "4")
-    freqs = ("050", "100", "125", "150", "200", "250")
-    fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
-
-    # For each frequency and panel
-    for i, freq in enumerate(freqs):
-        for j, panel in enumerate(panels):
-            # Generate the filename
-            filename = f"HI_graph_{freq}_{j}_{type}_seed_{ds_seed}"
-
-            # Check if the file exists
-            if os.path.exists(os.path.join(dir, filename)):
-                # Load the image
-                img = mpimg.imread(os.path.join(dir, filename))
-
-                # Display the image in the corresponding subplot
-                axs[i, j].imshow(img)
-                axs[i, j].axis('off')  # Hide the axes
-            else:
-                # If the image does not exist, print a warning and leave the subplot blank
-                axs[i, j].text(0.5, 0.5, 'Image not found', ha='center', va='center', fontsize=12, color='red')
-                axs[i, j].axis('off')
-    freqs = ("050 kHz", "100 kHz", "125 kHz", "150 kHz", "200 kHz", "250 kHz")
-
-    # Add row labels
-    for ax, row in zip(axs[:, 0], freqs):
-        ax.annotate(f'{row}', (-0.1, 0.5), xycoords = 'axes fraction', rotation = 90, va = 'center', fontweight = 'bold', fontsize = 40)
-
-    # Add column labels
-    for ax, col in zip(axs[0], panels):
-        ax.annotate(f'Test Sample {panels.index(col)+1}', (0.5, 1), xycoords = 'axes fraction', ha = 'center', fontweight = 'bold', fontsize = 40)
-
-    # Adjust spacing between subplots and save
-    plt.tight_layout()
-    plt.savefig(filedir)
 
 def save_evaluation(features, label, dir):
     """
@@ -807,13 +756,7 @@ def save_evaluation(features, label, dir):
         criteria (3D np array): Results of prognostic criteria with 4 types of criteria, 6 frequencies, and n features.
     """
 
-
-    # Ensure the file doesn't exist before saving
-    savedir = os.path.join(dir, label + str(count) + '_seed_' + str(ds_seed) + '.npy')
-    count = 1  # Or initialize count to your preferred starting point
-    while os.path.exists(savedir):
-        savedir = os.path.join(dir, label + str(count) + '_seed_' + str(ds_seed) + '.npy')
-        count += 1
+    savedir = os.path.join(dir, label + '_seed_' + str(ds_seed) + '.npy')
 
     # Save HIs to .npy file for use by weighted average ensemble (WAE)
     np.save(savedir, features)
@@ -896,9 +839,10 @@ def DeepSAD_HPC():
 
         # Save and plot results
         save_evaluation(np.array(HIs[0]), "DeepSAD_FFT", csv_dir)
-        plot_ds_images(csv_dir, "FFT")
-
         save_evaluation(np.array(HIs[1]), "DeepSAD_HLB", csv_dir)
-        plot_ds_images(csv_dir, "HLB")
-ds_seed = 52 #52, 62, 72, 82
-DeepSAD_HPC()
+
+
+for repeats in [42, 52, 62, 72, 82]:
+    global ds_seed
+    ds_seed = repeats
+    DeepSAD_HPC()
