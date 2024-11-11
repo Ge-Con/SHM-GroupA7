@@ -56,13 +56,23 @@ def eval_wae(filepath, type, transform):
     seeds = ("42", "52", "62", "72", "82")
     freqs = ("050", "100", "125", "150", "200", "250")
 
-    # Repetitions are the same HIs generated with different seeds
-    # Simple averaging repetitions
-    HIs = []
-    for repetition in range(len(seeds)):
-        filename = f"{type}_{transform}_seed_{seeds[repetition]}.npy"
-        HIs.append(np.load(os.path.join(filepath, filename), allow_pickle=True))
-    HIs = np.stack(HIs)
+    if type == "VAE":
+        HIs = []
+        for repetition in range(len(seeds)):
+            filename = f"{type}_{transform}_seed_{seeds[repetition]}.npy"
+            HI = np.load(os.path.join(filepath, filename), allow_pickle=True)
+            HI = HI.transpose(1, 0, 2, 3)
+            HIs.append(HI)
+        HIs = np.stack(HIs)
+
+    else:
+        # Repetitions are the same HIs generated with different seeds
+        # Simple averaging repetitions
+        HIs = []
+        for repetition in range(len(seeds)):
+            filename = f"{type}_{transform}_seed_{seeds[repetition]}.npy"
+            HIs.append(np.load(os.path.join(filepath, filename), allow_pickle=True))
+        HIs = np.stack(HIs)
 
     meanHIs = []
     stdHIs = []
@@ -116,6 +126,6 @@ def eval_wae(filepath, type, transform):
 
     big_plot(filepath, type, transform)
 
-csv_dir = "C:\\Users\\Jamie\\Documents\\Uni\\Year 2\\Q3+4\\Project\\CSV-FFT-HLB-Reduced"
-eval_wae(csv_dir, "DeepSAD", "FFT")
-eval_wae(csv_dir, "DeepSAD", "HLB")
+csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
+eval_wae(csv_dir, "VAE", "FFT")
+eval_wae(csv_dir, "VAE", "HLB")
