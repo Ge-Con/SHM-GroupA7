@@ -105,7 +105,7 @@ def eval_wae(filepath, type, transform):
     for fold in range(foldnum):
         waeHI = wae(meanHIs[:][fold], filepath, f"WAE_{type}_{transform}_{fold}")
         waeFit.append(fitness(waeHI))
-    pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
+    pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
 
     # Carry out and save WAE F-test fitness between frequencies
     waeFit = []
