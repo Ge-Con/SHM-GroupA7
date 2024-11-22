@@ -52,10 +52,14 @@ def eval_wae(filepath, type, transform):
         Returns: None
     """
 
+    big_plot(filepath, type, transform)
+    return
+
     # Seeds used
     seeds = ("42", "52", "62", "72", "82")
     freqs = ("050", "100", "125", "150", "200", "250")
 
+    print("Loading " + type)
     if type == "VAE":
         HIs = []
         for repetition in range(len(seeds)):
@@ -88,6 +92,7 @@ def eval_wae(filepath, type, transform):
 
     # Calculate fitness scores of HIs simple averaged across different seeds
     # Calculate F-all scores between repetitions
+    print("- Averaging between folds")
     for freq in range(freqnum):
         for fold in range(foldnum):
             HI_graph(meanHIs[freq][fold], filepath, f"{freqs[freq]}kHz_{type}_{transform}_{fold}", False)
@@ -111,6 +116,7 @@ def eval_wae(filepath, type, transform):
 
 
     # Carry out and save WAE F-all fitness between frequencies
+    print("- WAE between frequencies")
     waeFit = []
     for fold in range(foldnum):
         waeHI = wae(meanHIs[:][fold], filepath, f"WAE_{type}_{transform}_{fold}")
@@ -124,8 +130,10 @@ def eval_wae(filepath, type, transform):
         waeFit.append(test_fitness(waeHI[fold], waeHI))
     pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
 
+    print("- Plotting")
     big_plot(filepath, type, transform)
 
-csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
-eval_wae(csv_dir, "VAE", "FFT")
-eval_wae(csv_dir, "VAE", "HLB")
+#csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
+csv_dir = r"C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\CSV-FFT-HLB-Reduced"
+eval_wae(csv_dir, "DeepSAD", "FFT")
+eval_wae(csv_dir, "DeepSAD", "HLB")

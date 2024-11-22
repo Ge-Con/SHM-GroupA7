@@ -2,19 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import matplotlib.image as mpimg
+from matplotlib.lines import Line2D
 
 def HI_graph(X, dir="", name="", legend=True):
     #Graph of HI against cycles
     #X is numpy list of HI at different states, & name is root to save at
+
     samples = ["PZT-FFT-HLB-L1-03", "PZT-FFT-HLB-L1-04", "PZT-FFT-HLB-L1-05", "PZT-FFT-HLB-L1-09", "PZT-FFT-HLB-L1-23"]
+    markers = ['o', 's', '^', 'D', 'X']
+    colours = ['purple', 'blue', 'red', 'green', 'orange']
+
     plt.figure()
     for sample in range(len(X)):
         states = np.arange(len(X[sample]))
         cycles = states/30*100
         if str(sample) == str(name[-1]) or samples[sample] == name[:-7]:
-            plt.plot(cycles, X[sample], label="Sample "+str(sample+1) + ": Test")
+            plt.plot(cycles, X[sample], marker=markers[sample], color=colours[sample], label="Sample "+str(sample+1) + ": Test")
         else:
-            plt.plot(cycles, X[sample], label="Sample " + str(sample+1) + ": Train")
+            plt.plot(cycles, X[sample], marker=markers[sample], color=colours[sample], label="Sample " + str(sample+1) + ": Train")
     if legend:
         plt.legend()
         font = 12
@@ -69,9 +74,14 @@ def big_plot(dir, type, transform):
     panels = ("0", "1", "2", "3", "4")
     freqs = ("050", "100", "125", "150", "200", "250")
 
+    markers = ['o', 's', '^', 'D', 'X']
+    colours = ['purple', 'blue', 'red', 'green', 'orange']
+    labels = ['Sample 1', 'Sample 2', 'Sample 3', 'Sample 4', 'Sample 5']
+    legend_data = [Line2D([0], [0], marker=marker, color=colour, markerfacecolor=colour, markersize=10, label=label) for marker, colour, label in zip(markers, colours, labels)]
+
     nrows = len(freqs)+1
     ncols = len(panels)
-    fig, axs = plt.subplots(nrows, ncols, figsize=(40, 35))  # Adjusted figure size
+    fig, axs = plt.subplots(nrows, ncols, figsize=(37, 40))  # Adjusted figure size
 
     # For each frequency and panel
     for i, freq in enumerate(freqs):
@@ -114,8 +124,12 @@ def big_plot(dir, type, transform):
 
     # Add column labels
     for ax, col in zip(axs[0], panels):
-        ax.annotate(f'Test Sample {panels.index(col) + 1}', (0.5, 1), xycoords='axes fraction', ha='center', fontweight='bold', fontsize=40)
+        ax.annotate(f'    Test Sample {panels.index(col) + 1}', (0.5, 1), xycoords='axes fraction', ha='center', fontweight='bold', fontsize=40)
+
+    fig.legend(handles=legend_data, loc="center", bbox_to_anchor=(0.5, 0.03), ncol=5, fontsize=40)
 
     # Adjust spacing between subplots and save
-    plt.tight_layout()
+    # plt.tight_layout()
+    plt.subplots_adjust(left=0.0, right=1.01, top=0.98, bottom=0.05, hspace=-0.03, wspace=-0.2)
+
     plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}"))
