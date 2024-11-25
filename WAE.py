@@ -24,7 +24,7 @@ def wae(HIs, filepath, name, fold):
     # Weights are equal to fitness scores
     weights = np.zeros((freqs))
     for run in range(freqs):
-        weights[run] = fitness(np.concatenate((HIs[run][:][:fold], HIs[run][:][fold:])))[0]
+        weights[run] = fitness(np.concatenate((HIs[run][:][:fold], HIs[run][:][fold+1:])))[0]
     weights = weights/np.sum(weights)
 
     # New HIs for each of 5 samples
