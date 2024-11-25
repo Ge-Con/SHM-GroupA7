@@ -13,6 +13,10 @@ def HI_graph(X, dir="", name="", legend=True):
     colours = ['purple', 'blue', 'red', 'green', 'orange']
 
     plt.figure()
+    font = 20
+    plt.rcParams["xtick.labelsize"] = 18
+    plt.rcParams["ytick.labelsize"] = 18
+
     for sample in range(len(X)):
         states = np.arange(len(X[sample]))
         cycles = states/30*100
@@ -22,13 +26,7 @@ def HI_graph(X, dir="", name="", legend=True):
             plt.plot(cycles, X[sample], marker=markers[sample], color=colours[sample], label="Sample " + str(sample+1) + ": Train")
     if legend:
         plt.legend()
-        font = 12
-        plt.rcParams["xtick.labelsize"] = 10
-        plt.rcParams["ytick.labelsize"] = 10
-    else:
-        font = 20
-        plt.rcParams["xtick.labelsize"] = 18
-        plt.rcParams["ytick.labelsize"] = 18
+
     plt.xlabel('Lifetime (%)', fontsize=font)
     plt.ylabel('HI', fontsize=font)
     plt.tight_layout()
@@ -132,4 +130,4 @@ def big_plot(dir, type, transform):
     # plt.tight_layout()
     plt.subplots_adjust(left=0.0, right=1.01, top=0.98, bottom=0.05, hspace=-0.03, wspace=-0.2)
 
-    plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}"))
+    plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}.pdf"))

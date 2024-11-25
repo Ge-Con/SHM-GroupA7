@@ -6,7 +6,7 @@ import Graphs
 from Prognostic_criteria import fitness, test_fitness
 from Graphs import HI_graph, big_plot
 
-def wae(HIs, filepath, name):
+def wae(HIs, filepath, name, fold):
     """
         Calculate Weighted Average Ensemble HIs
 
@@ -24,7 +24,7 @@ def wae(HIs, filepath, name):
     # Weights are equal to fitness scores
     weights = np.zeros((freqs))
     for run in range(freqs):
-        weights[run] = fitness(HIs[run])[0]
+        weights[run] = fitness(np.concatenate((HIs[run][:][:fold], HIs[run][:][fold:])))[0]
     weights = weights/np.sum(weights)
 
     # New HIs for each of 5 samples
@@ -33,7 +33,7 @@ def wae(HIs, filepath, name):
         newHIs += weights[run] * HIs[run]
 
     # Save plot and return weighted HIs
-    HI_graph(newHIs, filepath, name, False)
+    HI_graph(newHIs, filepath, name, True)
     return newHIs
 
 
@@ -51,9 +51,6 @@ def eval_wae(filepath, type, transform):
 
         Returns: None
     """
-
-    big_plot(filepath, type, transform)
-    return
 
     # Seeds used
     seeds = ("42", "52", "62", "72", "82")
@@ -118,16 +115,12 @@ def eval_wae(filepath, type, transform):
     # Carry out and save WAE F-all fitness between frequencies
     print("- WAE between frequencies")
     waeFit = []
-    for fold in range(foldnum):
-        waeHI = wae(meanHIs[:][fold], filepath, f"WAE_{type}_{transform}_{fold}")
-        waeFit.append(fitness(waeHI))
-    pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
-
-    # Carry out and save WAE F-test fitness between frequencies
     waeFit = []
     for fold in range(foldnum):
-        waeHI = wae(meanHIs[:][fold], filepath, f"WAE_{type}_{transform}_{fold}")
+        waeHI = wae(meanHIs[:][fold], filepath, f"WAE_{type}_{transform}_{fold}", fold)
+        waeFit.append(fitness(waeHI))
         waeFit.append(test_fitness(waeHI[fold], waeHI))
+    pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
     pd.DataFrame(waeFit).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
 
     print("- Plotting")

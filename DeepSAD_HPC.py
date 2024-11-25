@@ -725,11 +725,12 @@ def DeepSAD_train_run(dir, freq, file_name, opt=False):
 
             # Scale so on average starts at 0 and ends at 1, excluding test sample
             av_start = np.mean(np.concatenate((list[:sample_count, 0], list[sample_count:, 0])))
+            list = list - av_start
             av_end = np.mean(np.concatenate((list[:sample_count, -1], list[sample_count:, -1])))
-            list = (list - av_start) / av_end
+            list = list/av_end
 
             ftn = fitness(list)
-            testftn = test_fitness([list[sample_count]], list)
+            testftn = test_fitness(list[sample_count], list)
             print("F-test:", testftn[0], "| Mo:", testftn[1], "| Tr:", testftn[2], "| Pr:", testftn[3])
             print("F-all: ", ftn[0], "| Mo:", ftn[1], "| Tr:", ftn[2], "| Pr:", ftn[3])
             #Graphs.HI_graph(list, dir, samples[sample_count] + " " + freq + "kHz")
