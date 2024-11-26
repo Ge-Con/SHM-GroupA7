@@ -131,8 +131,8 @@ def eval_wae(filepath, type, transform):
         waeTestFit.append(test_fitness(waeHI[fold], waeHI)[0])
         waeTestStdFit.append(abs(test_fitness(waeSumHI[fold], waeSumHI)[0]-waeTestFit[fold]))
         
-    pd.DataFrame(np.stack((waeFit, waeStdFit), axis=1)).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
-    pd.DataFrame(np.stack((waeTestFit, waeTestStdFit), axis=1)).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
+    pd.DataFrame(np.stack((waeFit, waeStdFit), axis=0)).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
+    pd.DataFrame(np.stack((waeTestFit, waeTestStdFit), axis=0)).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
 
     print("- Plotting")
     big_plot(filepath, type, transform)
