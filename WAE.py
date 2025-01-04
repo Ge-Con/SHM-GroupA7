@@ -25,7 +25,7 @@ def wae(HIs, fold, filepath = "", name = ""):
     # Weights are equal to fitness scores
     weights = np.zeros((freqnum))
     for freq in range(freqnum):
-        weights[freq] = fitness(np.concatenate((HIs[freq][:][:fold], HIs[freq][:][fold+1:])))[0]
+        weights[freq] = fitness(np.concatenate((HIs[freq, :fold], HIs[freq, fold+1:])))[0]
     weights = weights/np.sum(weights)
 
     # New HIs for each of 5 samples
@@ -62,7 +62,7 @@ def eval_wae(filepath, type, transform):
     repnum = len(seeds)
 
     # Load HI data
-    print("Loading " + type)
+    print(f"Loading {type} - {transform}")
     if type == "VAE":
         HIs = []
         for rep in range(repnum):
@@ -75,15 +75,21 @@ def eval_wae(filepath, type, transform):
         HIs = []
         for rep in range(repnum):
             filename = f"{type}_{transform}_seed_{seeds[rep]}.npy"
-            HI = np.load(os.path.join(filepath, filename), allow_pickle=True)
-            HIs.append(HI.transpose(1, 0, 2, 3))
+            HI = np.stack(np.load(os.path.join(filepath, filename), allow_pickle=True))
+            HIs.append(HI)
         HIs = np.stack(HIs)
+        HIs.transpose(0, 2, 1, 3, 4)    # Repetition, frequency, fold, specimen, HIs
 
     # Determine dimensions
     freqnum = HIs.shape[1]
-    foldnum = HIs[0][0].shape[0]
+    foldnum = HIs[0, 0].shape[0]
+
+    # print(HIs.shape)
+    # print(freqnum)
+    # print(foldnum)
 
     # Calculate mean and standard deviation of fitness scores
+    print("- Fitness")
     fall = np.empty((repnum, freqnum, foldnum))
     ftest = np.empty((repnum, freqnum, foldnum))
     mean_fall = np.empty((freqnum, foldnum))
@@ -93,12 +99,12 @@ def eval_wae(filepath, type, transform):
     for fold in range(foldnum):
         for freq in range(freqnum):
             for rep in range(repnum):
-                fall[rep][freq][fold] = fitness(HIs[rep][freq][fold])
-                ftest[rep][freq][fold] = test_fitness(HIs[rep][freq][fold][fold], np.concatenate(HIs[rep][freq][fold][:fold], HIs[rep][freq][fold][fold+1:]))
-            mean_fall[freq][fold] = np.mean(fall[:][freq][fold])
-            std_fall[freq][fold] = np.std(fall[:][freq][fold])
-            mean_ftest[freq][fold] = np.mean(ftest[:][freq][fold])
-            std_ftest[freq][fold] = np.std(ftest[:][freq][fold])
+                fall[rep, freq, fold] = fitness(HIs[rep, freq, fold])[0]
+                ftest[rep, freq, fold] = test_fitness(HIs[rep, freq, fold, fold], np.concatenate((HIs[rep, freq, fold, :fold], HIs[rep, freq, fold, fold+1:])))[0]
+            mean_fall[freq, fold] = np.mean(fall[:, freq, fold])
+            std_fall[freq, fold] = np.std(fall[:, freq, fold])
+            mean_ftest[freq, fold] = np.mean(ftest[:, freq, fold])
+            std_ftest[freq, fold] = np.std(ftest[:, freq, fold])
 
     pd.DataFrame(mean_fall).to_csv(os.path.join(filepath, f"meanfit_{type}_{transform}.csv"), index=False)
     pd.DataFrame(std_fall).to_csv(os.path.join(filepath, f"stdfit_{type}_{transform}.csv"), index=False)
@@ -106,7 +112,7 @@ def eval_wae(filepath, type, transform):
     pd.DataFrame(mean_ftest).to_csv(os.path.join(filepath, f"test_meanfit_{type}_{transform}.csv"), index=False)
     pd.DataFrame(std_ftest).to_csv(os.path.join(filepath, f"test_stdfit_{type}_{transform}.csv"), index=False)
 
-
+    print("- WAE")
     # Apply WAE to fuse frequencies within each fold
     wae_HIs = np.empty((repnum, foldnum), dtype=object)
     wae_fall = np.empty((repnum, foldnum))
@@ -117,25 +123,26 @@ def eval_wae(filepath, type, transform):
     std_wae_ftest = np.empty((foldnum))
     for fold in range(foldnum):
         for rep in range(repnum):
-            wae_HIs[rep][fold] = wae(HIs[rep][:][fold], fold, filepath, f"WAE_{type}_{transform}_{fold}")
-            wae_fall[rep][fold] = fitness(wae_HIs[rep][fold])
-            wae_ftest[rep][fold] = test_fitness(wae_HIs[rep][fold][fold], np.concatenate(wae_HIs[rep][fold][:fold], wae_HIs[rep][fold][fold+1:]))
-        mean_wae_fall[fold] = np.mean(wae_fall[:][fold])
-        std_wae_fall[fold] = np.std(wae_fall[:][fold])
-        mean_wae_ftest[fold] = np.mean(wae_ftest[:][fold])
-        std_wae_ftest[fold] = np.std(wae_ftest[:][fold])
+            wae_HIs[rep, fold] = wae(HIs[rep, :, fold], fold, filepath, f"WAE_{type}_{transform}_{fold}")
+    for fold in range(foldnum):
+        for rep in range(repnum):
+            wae_fall[rep, fold] = fitness(wae_HIs[rep, fold])[0]
+            wae_ftest[rep, fold] = test_fitness(wae_HIs[rep, fold][fold], np.concatenate((wae_HIs[rep, fold][:fold], wae_HIs[rep, fold][fold+1:])))[0]
+        mean_wae_fall[fold] = np.mean(wae_fall[:, fold])
+        std_wae_fall[fold] = np.std(wae_fall[:, fold])
+        mean_wae_ftest[fold] = np.mean(wae_ftest[:, fold])
+        std_wae_ftest[fold] = np.std(wae_ftest[:, fold])
 
     pd.DataFrame(np.stack((mean_wae_fall, std_wae_fall), axis=0)).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
     pd.DataFrame(np.stack((mean_wae_ftest, std_wae_ftest), axis=0)).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
 
-    # Calculate and save fitness scores for each frequency and fused
-    for freq in range(freqnum):
 
     # Plot HI graphs
     print("- Plotting")
-    fold = 1
+    rep = 1
     for freq in range(freqnum):
-        HI_graph(HIs[freq][fold], filepath, f"{freqs[freq]}kHz_{type}_{transform}_{fold}", False)
+        for fold in range(foldnum):
+            HI_graph(HIs[rep, freq, fold], filepath, f"{freqs[freq]}kHz_{type}_{transform}_{fold}", False)
     big_plot(filepath, type, transform)
 
 #csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
