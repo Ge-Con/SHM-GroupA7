@@ -131,3 +131,4 @@ def big_plot(dir, type, transform):
     plt.subplots_adjust(left=0.0, right=1.01, top=0.98, bottom=0.05, hspace=-0.03, wspace=-0.2)
 
     plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}.pdf"))
+    plt.savefig(os.path.join(dir, f"BigPlot_{type}_{transform}.png"))

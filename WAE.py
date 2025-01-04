@@ -39,8 +39,6 @@ def wae(HIs, fold, filepath = "", name = ""):
     return newHIs
 
 
-#print("Files must be 5D - 6 frequencies, n repetitions, 5 folds, 5 panels of 30 HIs")
-
 def eval_wae(filepath, type, transform):
     """
         Execute and evaluate mean HIs and weighted average ensemble learning for HIs
@@ -67,26 +65,22 @@ def eval_wae(filepath, type, transform):
         HIs = []
         for rep in range(repnum):
             filename = f"{type}_{transform}_seed_{seeds[rep]}.npy"
-            HI = np.load(os.path.join(filepath, filename), allow_pickle=True)
-            HIs.append(HI)
+            HIs.append(np.load(os.path.join(filepath, filename), allow_pickle=True))
         HIs = np.stack(HIs)
 
     else:
         HIs = []
         for rep in range(repnum):
             filename = f"{type}_{transform}_seed_{seeds[rep]}.npy"
-            HI = np.stack(np.load(os.path.join(filepath, filename), allow_pickle=True))
-            HIs.append(HI)
+            HIs.append(np.stack(np.load(os.path.join(filepath, filename), allow_pickle=True)))
         HIs = np.stack(HIs)
-        HIs.transpose(0, 2, 1, 3, 4)    # Repetition, frequency, fold, specimen, HIs
+
+    # Data should now be: [Repetition, frequency, fold, specimen, HIs]
 
     # Determine dimensions
     freqnum = HIs.shape[1]
-    foldnum = HIs[0, 0].shape[0]
-
+    foldnum = HIs.shape[2]
     # print(HIs.shape)
-    # print(freqnum)
-    # print(foldnum)
 
     # Calculate mean and standard deviation of fitness scores
     print("- Fitness")

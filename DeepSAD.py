@@ -824,10 +824,6 @@ def DeepSAD_HPC():
             for freq in frequencies:
                 params = DeepSAD_train_run(csv_dir, freq, file, True)
 
-                # Save to external file
-                #for sample in range(5):
-                #    simple_store_hyperparameters(params[sample], file, samples[sample], freq, csv_dir)
-
     else:
         HIs = [np.empty((6), dtype=object), np.empty((6), dtype=object)]
 
