@@ -193,7 +193,9 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
     # Save the dataframe back to the CSV
     df.to_csv(filename_opt)
 
-def VAE_train(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir):
+def VAE_train(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler,
+              #vae_pca,
+              vae_seed, file_type, panel, freq, csv_dir):
     """
     Store hyperparameters in a CSV file
 
@@ -378,7 +380,7 @@ def VAE_train(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, klloss_
 
         # Standardize data and apply PCA
         single_panel_data = vae_scaler.transform(single_panel_data)
-        single_panel_data = vae_pca.transform(single_panel_data)
+        #single_panel_data = vae_pca.transform(single_panel_data)
 
         # Run session to compute individual train panel HI, using current panel's data as input for the placeholder
         std_dev_train_individual, z_train_individual = sess.run([std_dev, z], feed_dict={x: single_panel_data})
@@ -513,7 +515,9 @@ def VAE_objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, kll
 
     # Train VAE and obtain HIs
     health_indicators = VAE_train(hidden_1, batch_size,
-                                  learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir)
+                                  learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler,
+                                  #vae_pca,
+                                  vae_seed, file_type, panel, freq, csv_dir)
 
     # Compute fitness and prognostic criteria on train HIs
     ftn, monotonicity, trendability, prognosability, error = fitness(health_indicators[1])
@@ -524,7 +528,9 @@ def VAE_objective(hidden_1, batch_size, learning_rate, epochs, reloss_coeff, kll
     return error
 
 
-def VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca, vae_seed, file_type, panel, freq, csv_dir, n_calls,
+def VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler,
+                                    #vae_pca,
+                                    vae_seed, file_type, panel, freq, csv_dir, n_calls,
                                 random_state=42):
     """
     Optimize VAE hyperparameters using gp_minimize, a Gaussian process-based minimization algorithm
@@ -573,7 +579,8 @@ def VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, v
             f"Trying parameters: hidden_1={hidden_1}, batch_size={batch_size}, learning_rate={learning_rate}, "
             f"epochs={epochs}, reloss_coeff={reloss_coeff}, klloss_coeff={klloss_coeff}, moloss_coeff={moloss_coeff}")
         health_indicators = VAE_train(hidden_1, batch_size,
-                                      learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler, vae_pca,
+                                      learning_rate, epochs, reloss_coeff, klloss_coeff, moloss_coeff, vae_train_data, vae_test_data, vae_scaler,
+                                      #vae_pca,
                                       vae_seed, file_type, panel, freq, csv_dir)
         ftn, monotonicity, trendability, prognosability, error = fitness(health_indicators[1])
         print("Error: ", error)
@@ -785,14 +792,15 @@ def VAE_optimize_hyperparameters(dir, n_calls_per_fold):
                 vae_test_data = vae_scaler.transform(vae_test_data)
 
                 # Apply PCA to the train and test data, fit to the train data
-                vae_pca = PCA(n_components=30)
-                vae_pca.fit(vae_train_data)
-                vae_train_data = vae_pca.transform(vae_train_data)
-                vae_test_data = vae_pca.transform(vae_test_data)
+                #vae_pca = PCA(n_components=30)
+                #vae_pca.fit(vae_train_data)
+                #vae_train_data = vae_pca.transform(vae_train_data)
+                #vae_test_data = vae_pca.transform(vae_test_data)
 
                 # Perform hyperparameter optimisation and save to a CSV
-                hyperparameters = VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
-                                                              vae_seed, file_type, panel, freq, dir, n_calls=n_calls_per_fold)
+                hyperparameters = VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler,
+                                                                  #vae_pca,
+                                                            vae_seed, file_type, panel, freq, dir, n_calls=n_calls_per_fold)
                 simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
                 print(f"Optimized fold {panel}-{freq} for file type {file_type}.")
 
@@ -865,10 +873,10 @@ def VAE_train_run(dir):
                 vae_test_data = vae_scaler.transform(vae_test_data)
 
                 # Apply PCA to the train and test data, fit to the train data
-                vae_pca = PCA(n_components=30)
-                vae_pca.fit(vae_train_data)
-                vae_train_data = vae_pca.transform(vae_train_data)
-                vae_test_data = vae_pca.transform(vae_test_data)
+                #vae_pca = PCA(n_components=30)
+                #vae_pca.fit(vae_train_data)
+                #vae_train_data = vae_pca.transform(vae_train_data)
+                #vae_test_data = vae_pca.transform(vae_test_data)
 
                 # Convert hyperparameter dataframe
                 hyperparameters_str = hyperparameters_df.loc[freq, panel]
@@ -879,7 +887,8 @@ def VAE_train_run(dir):
                                               hyperparameters[0][2], hyperparameters[0][3],
                                               hyperparameters[0][4],
                                               hyperparameters[0][5], hyperparameters[0][6],
-                                              vae_train_data, vae_test_data, vae_scaler, vae_pca,
+                                              vae_train_data, vae_test_data, vae_scaler,
+                                              #vae_pca,
                                               vae_seed,
                                               file_type, panel, freq, dir)
 
@@ -991,6 +1000,7 @@ def VAE_HPC():
         VAE_train_run(csv_dir)
 
 def VAE_single_fold(n_calls_per_fold):
+    print(f"[VAE_single_fold] Function called")
     """
     Run VAE hyperparameter optimization and training for one combination of panel and frequency only.
 
@@ -1003,7 +1013,7 @@ def VAE_single_fold(n_calls_per_fold):
     global vae_seed
 
     #dir = os.path.join('.', 'VAE_Ultimate_New')
-    dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
+    dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2_NO_PCA"
 
     # Set random seeds
     tf.compat.v1.reset_default_graph()
@@ -1012,7 +1022,7 @@ def VAE_single_fold(n_calls_per_fold):
     np.random.seed(vae_seed)
 
     # List frequencies, filenames and samples
-    freqs = ("250_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
+    freqs = ("050_kHz", "100_kHz", "125_kHz", "150_kHz", "200_kHz", "250_kHz")
     filenames = ["FFT_FT_Reduced", "HLB_FT_Reduced"]
     panels = ("L103", "L104", "L105", "L109", "L123")
 
@@ -1026,144 +1036,147 @@ def VAE_single_fold(n_calls_per_fold):
     num_freqs = 6
     num_panels = 5
 
-    for file_type in filenames:
+    #for file_type in filenames:
+    file_type = "HLB_FT_Reduced"
 
-        hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
+    hi_full_array = np.zeros((num_panels, num_freqs, num_HIs, time_steps))
 
-        filename_opt = os.path.join(dir, f"hyperparameters-opt-{file_type}.csv")
-        if not os.path.exists(filename_opt):
-            hyperparameters_df = pd.DataFrame(index=freqs, columns=panels)
+    filename_opt = os.path.join(dir, f"hyperparameters-opt-{file_type}.csv")
+    if not os.path.exists(filename_opt):
+        hyperparameters_df = pd.DataFrame(index=freqs, columns=panels)
 
-        else:
-            hyperparameters_df = pd.read_csv(filename_opt, index_col=0)
-        skip = 0
-        for freq in freqs:
-            for panel in panels:
+    else:
+        hyperparameters_df = pd.read_csv(filename_opt, index_col=0)
+    skip = 0
+    for freq in freqs:
+        for panel in panels:
 
-                if pd.notna(hyperparameters_df.loc[freq, panel]):
-                    print(f"Skipping fold {panel}-{freq} for file type {file_type} as it's already optimized.")
-                    continue
+            if pd.notna(hyperparameters_df.loc[freq, panel]):
+                print(f"Skipping fold {panel}-{freq} for file type {file_type} as it's already optimized.")
+                continue
 
-                # Create list of file paths for training data
-                train_filenames = []
-                for i in tuple(x for x in panels if x != panel):
-                    filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
-                    train_filenames.append(filename)
+            # Create list of file paths for training data
+            train_filenames = []
+            for i in tuple(x for x in panels if x != panel):
+                filename = os.path.join(dir, f"concatenated_{freq}_{i}_{file_type}.csv")
+                train_filenames.append(filename)
 
-                # Output progress
-                print(f"Optimizing for file type: {file_type}")
-                print(f"Panel: {panel}, Frequency: {freq}")
+            # Output progress
+            print(f"Optimizing for file type: {file_type}")
+            print(f"Panel: {panel}, Frequency: {freq}")
 
-                # Merge train data and delete the last column
-                vae_train_data = VAE_merge_data(train_filenames)
-                vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
+            # Merge train data and delete the last column
+            vae_train_data = VAE_merge_data(train_filenames)
+            vae_train_data.drop(vae_train_data.columns[len(vae_train_data.columns) - 1], axis=1, inplace=True)
 
-                # Read test data
-                test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
-                vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
-                vae_test_data = np.delete(vae_test_data, -1, axis=1)
+            # Read test data
+            test_filename = os.path.join(dir, f"concatenated_{freq}_{panel}_{file_type}.csv")
+            vae_test_data = pd.read_csv(test_filename, header=None).values.transpose()
+            vae_test_data = np.delete(vae_test_data, -1, axis=1)
 
-                # Normalize the train and test data
-                vae_scaler = StandardScaler()
-                vae_scaler.fit(vae_train_data)
-                vae_train_data = vae_scaler.transform(vae_train_data)
-                vae_test_data = vae_scaler.transform(vae_test_data)
+            # Normalize the train and test data
+            vae_scaler = StandardScaler()
+            vae_scaler.fit(vae_train_data)
+            vae_train_data = vae_scaler.transform(vae_train_data)
+            vae_test_data = vae_scaler.transform(vae_test_data)
 
-                # Apply PCA
-                vae_pca = PCA(n_components=30)
-                vae_pca.fit(vae_train_data)
-                vae_train_data = vae_pca.transform(vae_train_data)
-                vae_test_data = vae_pca.transform(vae_test_data)
+            # Apply PCA
+            #vae_pca = PCA(n_components=30)
+            #vae_pca.fit(vae_train_data)
+            #vae_train_data = vae_pca.transform(vae_train_data)
+            #vae_test_data = vae_pca.transform(vae_test_data)
 
-                # Perform hyperparameter optimization for the selected panel-frequency combination
-                hyperparameters = VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler, vae_pca,
-                                                                  vae_seed, file_type, panel, freq, dir, n_calls=n_calls_per_fold)
-                simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
-                print(f"Optimized fold {panel}-{freq} for file type {file_type}.")
+            # Perform hyperparameter optimization for the selected panel-frequency combination
+            hyperparameters = VAE_hyperparameter_optimisation(vae_train_data, vae_test_data, vae_scaler,
+                                                              #vae_pca,
+                                                              vae_seed, file_type, panel, freq, dir, n_calls=n_calls_per_fold)
+            simple_store_hyperparameters(hyperparameters, file_type, panel, freq, dir)
+            print(f"Optimized fold {panel}-{freq} for file type {file_type}.")
 
-                counter = 0
+            counter = 0
 
-                # Read hyperparameters from CSV and initialize array to save HIs
-                hyperparameters_df = pd.read_csv(os.path.join(dir, f'hyperparameters-opt-{file_type}.csv'), index_col=0)
+            # Read hyperparameters from CSV and initialize array to save HIs
+            hyperparameters_df = pd.read_csv(os.path.join(dir, f'hyperparameters-opt-{file_type}.csv'), index_col=0)
 
-                # Output progress
-                counter += 1
-                print("Counter: ", counter)
-                print("Panel: ", panel)
-                print("Freq: ", freq)
-                print("SP Features: ", file_type)
+            # Output progress
+            counter += 1
+            print("Counter: ", counter)
+            print("Panel: ", panel)
+            print("Freq: ", freq)
+            print("SP Features: ", file_type)
 
-                # Convert hyperparameter dataframe
-                hyperparameters_str = hyperparameters_df.loc[freq, panel]
-                hyperparameters = eval(hyperparameters_str)
+            # Convert hyperparameter dataframe
+            hyperparameters_str = hyperparameters_df.loc[freq, panel]
+            hyperparameters = eval(hyperparameters_str)
 
-                # Generate HIs with train_vae function
-                health_indicators = VAE_train(hyperparameters[0][0], hyperparameters[0][1],
-                                              hyperparameters[0][2], hyperparameters[0][3],
-                                              hyperparameters[0][4],
-                                              hyperparameters[0][5], hyperparameters[0][6],
-                                              vae_train_data, vae_test_data, vae_scaler, vae_pca,
-                                              vae_seed,
-                                              file_type, panel, freq, dir)
+            # Generate HIs with train_vae function
+            health_indicators = VAE_train(hyperparameters[0][0], hyperparameters[0][1],
+                                          hyperparameters[0][2], hyperparameters[0][3],
+                                          hyperparameters[0][4],
+                                          hyperparameters[0][5], hyperparameters[0][6],
+                                          vae_train_data, vae_test_data, vae_scaler,
+                                          #vae_pca,
+                                          vae_seed,
+                                          file_type, panel, freq, dir)
 
-                # Evaluate and output fitness for all 5 HIs and only for the test HI
-                fitness_all = fitness(health_indicators[0])
-                fitness_test = test_fitness(health_indicators[2], health_indicators[1])
-                print("Fitness all", fitness_all)
-                print("Fitness test", fitness_test)
+            # Evaluate and output fitness for all 5 HIs and only for the test HI
+            fitness_all = fitness(health_indicators[0])
+            fitness_test = test_fitness(health_indicators[2], health_indicators[1])
+            print("Fitness all", fitness_all)
+            print("Fitness test", fitness_test)
 
-                # Generate directory for graphs
-                graph_hi_filename = f"HI_graph_{freq}_{panel}_{file_type}_seed_{vae_seed}"
-                graph_hi_dir = os.path.join(dir, graph_hi_filename)
+            # Generate directory for graphs
+            graph_hi_filename = f"HI_graph_{freq}_{panel}_{file_type}_seed_{vae_seed}"
+            graph_hi_dir = os.path.join(dir, graph_hi_filename)
 
-                # Save train_panel names, and create x variable to scale y-axis from 0-100
-                train_panels = [k for k in panels if k != panel]
-                x = np.arange(0, health_indicators[2].shape[1], 1)
-                x = x * (1 / (x.shape[0] - 1))
-                x = x * 100
+            # Save train_panel names, and create x variable to scale y-axis from 0-100
+            train_panels = [k for k in panels if k != panel]
+            x = np.arange(0, health_indicators[2].shape[1], 1)
+            x = x * (1 / (x.shape[0] - 1))
+            x = x * 100
 
-                # Initialize figure
-                fig = plt.figure()
+            # Initialize figure
+            fig = plt.figure()
 
-                # Define panel colors for graph
-                panel_colors = {
-                    "L103": "blue",
-                    "L105": "green",
-                    "L109": "orange",
-                    "L104": "purple",
-                    "L123": "brown"
-                }
+            # Define panel colors for graph
+            panel_colors = {
+                "L103": "blue",
+                "L105": "green",
+                "L109": "orange",
+                "L104": "purple",
+                "L123": "brown"
+            }
 
-                # Iterate over panels
-                for i, panel_name in enumerate(panels):
-                    if panel_name == panel:
-                        # Plot test HI
-                        plt.plot(x, health_indicators[2][0], label=f"Sample {i + 1}: {panel_name} (Test)",
-                                 color=panel_colors[panel_name])
-                    elif panel_name in train_panels:
-                        # Plot train HIs
-                        idx = train_panels.index(panel_name)
-                        plt.plot(x, health_indicators[1][idx], label=f"Sample {i + 1}: {panel_name}",
-                                 color=panel_colors[panel_name])
+            # Iterate over panels
+            for i, panel_name in enumerate(panels):
+                if panel_name == panel:
+                    # Plot test HI
+                    plt.plot(x, health_indicators[2][0], label=f"Sample {i + 1}: {panel_name} (Test)",
+                             color=panel_colors[panel_name])
+                elif panel_name in train_panels:
+                    # Plot train HIs
+                    idx = train_panels.index(panel_name)
+                    plt.plot(x, health_indicators[1][idx], label=f"Sample {i + 1}: {panel_name}",
+                             color=panel_colors[panel_name])
 
-                # Graph formatting
-                plt.xlabel('Lifetime (%)')
-                plt.ylabel('Health Indicators')
-                plt.title('Train and Test Health Indicators over Time')
-                plt.legend()
+            # Graph formatting
+            plt.xlabel('Lifetime (%)')
+            plt.ylabel('Health Indicators')
+            plt.title('Train and Test Health Indicators over Time')
+            plt.legend()
 
-                # Saving and closing figure
-                plt.savefig(graph_hi_dir)
-                plt.show()
-                plt.close(fig)
+            # Saving and closing figure
+            plt.savefig(graph_hi_dir)
+            #plt.show()
+            plt.close(fig)
 
-                # Putting fitness values in parantheses
-                fitness_test = (fitness_test)
-                fitness_all = (fitness_all)
+            # Putting fitness values in parantheses
+            fitness_test = (fitness_test)
+            fitness_all = (fitness_all)
 
-                break
             break
+        break
 
 vae_seed = 42
-csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2"
+csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2_NO_PCA"
 VAE_train_run(csv_dir)
