@@ -126,10 +126,10 @@ def eval_wae(filepath, type, transform):
         waeFit.append(fitness(waeHI)[0])
 
         waeSumHI = wae(sumHIs[:][fold], fold)
-        waeStdFit.append(abs(fitness(waeSumHI)[0]-waeFit[fold]))
+        waeStdFit.append(abs(waeFit[fold] - fitness(waeSumHI)[0]))
 
         waeTestFit.append(test_fitness(waeHI[fold], waeHI)[0])
-        waeTestStdFit.append(abs(test_fitness(waeSumHI[fold], waeSumHI)[0]-waeTestFit[fold]))
+        waeTestStdFit.append(abs(waeTestFit[fold] - test_fitness(waeSumHI[fold], waeSumHI)[0]))
         
     pd.DataFrame(np.stack((waeFit, waeStdFit), axis=0)).to_csv(os.path.join(filepath, f"weighted_{type}_{transform}.csv"), index=False)
     pd.DataFrame(np.stack((waeTestFit, waeTestStdFit), axis=0)).to_csv(os.path.join(filepath, f"test_weighted_{type}_{transform}.csv"), index=False)
