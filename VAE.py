@@ -161,10 +161,6 @@ def simple_store_hyperparameters(hyperparameters, file, panel, freq, dir):
         - dir (str): Directory where CSV file should be saved
     Returns: None
     """
-    global vae_seed
-    random.seed(vae_seed)
-    tf.random.set_seed(vae_seed)
-    np.random.seed(vae_seed)
 
     # Create the filename
     filename_opt = os.path.join(dir, f"hyperparameters-opt-{file}.csv")
