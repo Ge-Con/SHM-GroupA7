@@ -118,7 +118,7 @@ def big_plot(dir, type, transform):
     # Add row labels
     for ax, row in zip(axs[:, 0], freqs):
         ax.annotate(f'{row}', (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold', fontsize=40)
-    axs[-1, 0].annotate("All", (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold', fontsize=40)
+    axs[-1, 0].annotate("Fusion", (-0.1, 0.5), xycoords='axes fraction', rotation=90, va='center', fontweight='bold', fontsize=40)
 
     # Add column labels
     for ax, col in zip(axs[0], panels):
