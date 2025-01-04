@@ -65,7 +65,9 @@ def eval_wae(filepath, type, transform):
         HIs = []
         for rep in range(repnum):
             filename = f"{type}_{transform}_seed_{seeds[rep]}.npy"
-            HIs.append(np.load(os.path.join(filepath, filename), allow_pickle=True))
+            HI = np.load(os.path.join(filepath, filename), allow_pickle=True)
+            HI = HI.transpose(1, 0, 2, 3)
+            HIs.append(HI)
         HIs = np.stack(HIs)
 
     else:
@@ -139,7 +141,7 @@ def eval_wae(filepath, type, transform):
             HI_graph(HIs[rep, freq, fold], filepath, f"{freqs[freq]}kHz_{type}_{transform}_{fold}", False)
     big_plot(filepath, type, transform)
 
-#csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_New"
+#csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2_NO_PCA"
 csv_dir = r"C:\Users\Jamie\Documents\Uni\Year 2\Q3+4\Project\CSV-FFT-HLB-Reduced"
 eval_wae(csv_dir, "DeepSAD", "FFT")
 eval_wae(csv_dir, "DeepSAD", "HLB")
