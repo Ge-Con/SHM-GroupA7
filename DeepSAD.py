@@ -787,11 +787,11 @@ def save_evaluation(features, label, dir):
     pd.DataFrame(criteria[2]).to_csv(os.path.join(dir, label + "_seed_" + str(ds_seed) + "_Tre.csv"), index=False)
     pd.DataFrame(criteria[3]).to_csv(os.path.join(dir, label + "_seed_" + str(ds_seed) + "_Pro.csv"), index=False)
 
-    # Generate graphs of Health Indices (HIs)
-    for freq in range(6):
-        print("Graphing: " + frequencies[freq] + "kHz")
-        for feat in range(len(features[0])):
-            Graphs.HI_graph(features[freq][feat], dir=dir, name=f"HI_graph_{frequencies[freq]}_{feat}_{label}_seed_{ds_seed}")
+    ## Generate graphs of Health Indices (HIs)
+    #for freq in range(6):
+    #    print("Graphing: " + frequencies[freq] + "kHz")
+    #    for feat in range(len(features[0])):
+    #        Graphs.HI_graph(features[freq][feat], dir=dir, name=f"HI_graph_{frequencies[freq]}_{feat}_{label}_seed_{ds_seed}")
 
 
 def DeepSAD_HPC():
