@@ -454,15 +454,17 @@ def load_data(dir, filename, labelled_fraction, ignore):
         # Add artificial labels
         teol = data.shape[0]
 
-        x_values = np.arange(1, teol + 1)
+        x_values = np.arange(0, teol)
         #health_indicators = ((x_values ** 2) / (teol ** 2)) * 2 - 1  # Equation scaled from -1 to 1
-        health_indicators = -1+2*x_values/teol
+        health_indicators = 1-2*x_values/teol
 
         for i in range(int(len(labels) * labelled_fraction)):  # Originally 5
-            labels[i] = health_indicators[-i - 1]  # Healthy
+            labels[i] = health_indicators[i]  # Healthy
 
         for i in range(int(len(labels) * labelled_fraction)):  # Originally 3
-            labels[-i - 1] = health_indicators[i]  # Unhealthy
+            labels[-i - 1] = health_indicators[-i - 1]  # Unhealthy
+
+        print(labels)
 
         return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.float)
     else:
@@ -810,7 +812,7 @@ def DeepSAD_HPC():
     global ds_seed
     torch.manual_seed(ds_seed)
 
-    optimise = False
+    optimise = True
 
     # List frequencies, filenames and samples
     frequencies = ["050", "100", "125", "150", "200", "250"]
@@ -839,7 +841,8 @@ def DeepSAD_HPC():
         save_evaluation(np.array(HIs[1]), "DeepSAD_HLB", csv_dir)
 
 
-for repeats in [42, 52, 62, 72, 82]:
+#for repeats in [42, 52, 62, 72, 82]:
+for repeats in [42]:
     global ds_seed
     ds_seed = repeats
     DeepSAD_HPC()

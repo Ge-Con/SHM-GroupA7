@@ -1173,6 +1173,6 @@ def VAE_single_fold(n_calls_per_fold):
             break
         break
 
-vae_seed = 42
-csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2_NO_PCA"
-VAE_train_run(csv_dir)
+#vae_seed = 42
+#csv_dir = r"C:\Users\pablo\Downloads\VAE_Ultimate_2_NO_PCA"
+#VAE_train_run(csv_dir)
